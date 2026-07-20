@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
+import { fetchVenues } from '@/lib/data';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -48,76 +49,6 @@ export default function MapTab() {
   const [clickedLocation, setClickedLocation] = useState<{lat: number, lng: number} | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced mock data for locations
-  const mockLocations = [
-    {
-      id: '1',
-      name: 'Central Coffee House',
-      description: 'Popular coffee shop and co-working space',
-      latitude: 40.7128,
-      longitude: -74.0060,
-      radius: 50,
-      count: 12,
-      category: 'cafe',
-      isHot: true,
-    },
-    {
-      id: '2',
-      name: 'Downtown Bar & Grill',
-      description: 'Trendy bar with live music',
-      latitude: 40.7150,
-      longitude: -74.0080,
-      radius: 75,
-      count: 28,
-      category: 'bar',
-      isHot: true,
-    },
-    {
-      id: '3',
-      name: 'Tech Hub Workspace',
-      description: 'Modern co-working space for professionals',
-      latitude: 40.7100,
-      longitude: -74.0050,
-      radius: 100,
-      count: 45,
-      category: 'workspace',
-      isHot: false,
-    },
-    {
-      id: '4',
-      name: 'Rooftop Lounge',
-      description: 'Upscale rooftop bar with city views',
-      latitude: 40.7180,
-      longitude: -74.0040,
-      radius: 60,
-      count: 8,
-      category: 'bar',
-      isHot: false,
-    },
-    {
-      id: '5',
-      name: 'Artisan Bistro',
-      description: 'Farm-to-table restaurant',
-      latitude: 40.7090,
-      longitude: -74.0070,
-      radius: 40,
-      count: 15,
-      category: 'restaurant',
-      isHot: true,
-    },
-    {
-      id: '6',
-      name: 'Creative Collective',
-      description: 'Art studio and event space',
-      latitude: 40.7160,
-      longitude: -74.0020,
-      radius: 80,
-      count: 22,
-      category: 'event',
-      isHot: false,
-    },
-  ];
-
   const categories = [
     { id: 'all', label: 'All', icon: '📍' },
     { id: 'cafe', label: 'Cafes', icon: '☕' },
@@ -151,15 +82,29 @@ export default function MapTab() {
       );
     }
     
-    // Set mock locations
-    setNearbyLocations(mockLocations);
+    // Load real venues from Supabase
+    fetchVenues()
+      .then((venues) => {
+        setNearbyLocations(
+          venues
+            .filter((v) => v.lat != null && v.lng != null)
+            .map((v) => ({
+              id: v.id,
+              name: v.name,
+              description: v.description ?? '',
+              latitude: v.lat as number,
+              longitude: v.lng as number,
+              radius: v.geofence_radius_meters ?? 50,
+              count: 0,
+              category: 'venue',
+              isHot: false,
+            }))
+        );
+      })
+      .catch((err) => console.error('Failed to load venues:', err));
   }, [setCurrentLocation, setNearbyLocations]);
 
-  const allLocations = [...mockLocations, ...nearbyLocations.filter(loc => 
-    !mockLocations.some(mockLoc => mockLoc.id === loc.id)
-  )];
-
-  const filteredLocations = allLocations.filter(location => {
+  const filteredLocations = nearbyLocations.filter(location => {
     const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           location.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || location.category === selectedCategory;

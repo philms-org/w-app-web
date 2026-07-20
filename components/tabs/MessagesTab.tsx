@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import { fetchConversations } from '@/lib/data';
 import { Search, MoreVertical, Check, CheckCheck, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 
@@ -9,42 +10,28 @@ export default function MessagesTab() {
   const { setActiveChat, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // all, unread, groups
+  const [conversations, setConversations] = useState<any[]>([]);
 
-  // Mock messages data
-  const mockMessages = [
-    {
-      id: '1',
-      userId: 'user1',
-      userName: 'Sarah Johnson',
-      userImage: '',
-      lastMessage: 'Hey! Nice meeting you at the coffee shop',
-      timestamp: '2 min ago',
-      unread: true,
-      online: true,
-    },
-    {
-      id: '2',
-      userId: 'user2',
-      userName: 'Mike Chen',
-      userImage: '',
-      lastMessage: 'Sure, let\'s discuss the project tomorrow',
-      timestamp: '1 hour ago',
-      unread: false,
-      online: true,
-    },
-    {
-      id: '3',
-      userId: 'user3',
-      userName: 'Emma Wilson',
-      userImage: '',
-      lastMessage: 'Thanks for the recommendations!',
-      timestamp: 'Yesterday',
-      unread: false,
-      online: false,
-    },
-  ];
+  useEffect(() => {
+    fetchConversations()
+      .then((rows) => {
+        setConversations(
+          rows.map((c) => ({
+            id: c.id,
+            userId: c.other_profile?.id ?? c.id,
+            userName: c.is_group ? (c.name ?? 'Group') : (c.other_profile?.display_name ?? 'Unknown'),
+            userImage: c.other_profile?.avatar_url ?? '',
+            lastMessage: c.last_message ?? 'No messages yet',
+            timestamp: c.last_message_at ?? '',
+            unread: false,
+            online: false,
+          }))
+        );
+      })
+      .catch((err) => console.error('Failed to load conversations:', err));
+  }, []);
 
-  const filteredMessages = mockMessages.filter(message => {
+  const filteredMessages = conversations.filter(message => {
     const matchesSearch = message.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           message.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = activeFilter === 'all' || 

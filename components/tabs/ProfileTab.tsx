@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { 
-  Camera, Edit2, Settings, Bell, Shield, HelpCircle, 
-  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users 
+import { signOut } from '@/lib/auth';
+import {
+  Camera, Edit2, Settings, Bell, Shield, HelpCircle,
+  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
 } from 'lucide-react';
 
 export default function ProfileTab() {
@@ -13,7 +14,12 @@ export default function ProfileTab() {
   const { user, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
     logout();
     router.push('/auth/login');
   };

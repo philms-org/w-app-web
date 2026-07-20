@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import { checkIn, checkOut, fetchPresence } from '@/lib/data';
 import { MapPin, Users, MessageCircle, Share2, LogOut, User, Heart, Briefcase } from 'lucide-react';
 import Image from 'next/image';
 
@@ -9,42 +10,28 @@ export default function LocationTab() {
   const { selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [peopleHere, setPeopleHere] = useState<any[]>([]);
 
-  // Mock data for people at location
-  const mockPeople = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      age: 28,
-      image: '',
-      bio: 'Coffee enthusiast, loves hiking',
-      lookingFor: ['socializing', 'business'],
-      distance: '5m away',
-    },
-    {
-      id: '2',
-      name: 'Mike Chen',
-      age: 32,
-      image: '',
-      bio: 'Entrepreneur, tech lover',
-      lookingFor: ['business', 'socializing'],
-      distance: '12m away',
-    },
-    {
-      id: '3',
-      name: 'Emma Wilson',
-      age: 26,
-      image: '',
-      bio: 'Designer, foodie, traveler',
-      lookingFor: ['socializing', 'love'],
-      distance: '8m away',
-    },
-  ];
-
   useEffect(() => {
-    if (selectedLocation) {
-      // Simulate loading people at location
-      setPeopleHere(mockPeople);
-    }
+    if (!selectedLocation) return;
+
+    checkIn(selectedLocation.id).catch((err) => console.error('Check-in failed:', err));
+
+    fetchPresence(selectedLocation.id)
+      .then((rows) => {
+        setPeopleHere(
+          rows.map((row) => ({
+            id: row.id,
+            name: row.profiles?.display_name ?? 'Someone',
+            bio: row.profiles?.profession ?? '',
+            lookingFor: [
+              ...(row.profiles?.socialising_id ? ['socializing'] : []),
+              ...(row.profiles?.networking_id ? ['business'] : []),
+              ...(row.profiles?.dating_id ? ['love'] : []),
+            ],
+            distance: 'here now',
+          }))
+        );
+      })
+      .catch((err) => console.error('Failed to load presence:', err));
   }, [selectedLocation]);
 
   const handleCheckIn = (person: any) => {
@@ -53,6 +40,9 @@ export default function LocationTab() {
   };
 
   const handleLeaveLocation = () => {
+    if (selectedLocation) {
+      checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
+    }
     setSelectedLocation(null);
     setActiveTab('map');
   };
@@ -294,9 +284,8 @@ export default function LocationTab() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-semibold">{person.name}</h4>
-                    <span className="text-w-dark-gray text-sm">• {person.age}</span>
                   </div>
-                  <p className="text-w-dark-gray text-sm mb-2">{person.bio}</p>
+                  {person.bio && <p className="text-w-dark-gray text-sm mb-2">{person.bio}</p>}
                   
                   {/* Looking For Tags */}
                   <div className="flex gap-2 mb-3">

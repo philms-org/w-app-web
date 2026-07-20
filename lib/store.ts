@@ -30,6 +30,8 @@ interface Location {
   longitude: number;
   radius: number;
   count: number;
+  category?: string;
+  isHot?: boolean;
 }
 
 interface Message {
