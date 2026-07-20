@@ -6,7 +6,7 @@ import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the map to avoid SSR issues
-const WingMeMap = dynamic(() => import('@/components/WingMeMap'), {
+const WMap = dynamic(() => import('@/components/WMap'), {
   ssr: false,
   loading: () => (
     <div style={{
@@ -311,7 +311,7 @@ export default function MapTab() {
 
       {/* Real Interactive Map */}
       <div style={{ position: 'relative', height: '100vh' }}>
-        <WingMeMap
+        <WMap
           locations={filteredLocations}
           onLocationSelect={handleLocationSelect}
           onMapClick={handleMapClick}

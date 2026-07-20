@@ -9,13 +9,13 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Wing Me",
+  title: "The W App",
   description: "Connect with people at your location",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Wing Me",
+    title: "The W App",
   },
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={montserrat.variable}>
-      <body className="font-montserrat bg-wing-back-gray text-wing-black antialiased">
+      <body className="font-montserrat bg-w-back-gray text-w-black antialiased">
         {children}
       </body>
     </html>

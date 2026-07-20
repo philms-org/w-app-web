@@ -44,7 +44,7 @@ export default function LoginPage() {
       // Save to store and localStorage
       setToken('demo-token-123');
       setUser(demoUser);
-      localStorage.setItem('wing_me_token', 'demo-token-123');
+      localStorage.setItem('w_app_token', 'demo-token-123');
       
       setIsLoading(false);
       router.push('/main');
@@ -61,7 +61,7 @@ export default function LoginPage() {
         // Save to store and localStorage
         setToken(token);
         setUser(user);
-        localStorage.setItem('wing_me_token', token);
+        localStorage.setItem('w_app_token', token);
         
         // Check if profile setup is complete
         if (user.setupComplete) {
@@ -150,7 +150,7 @@ export default function LoginPage() {
           fontSize: '16px',
           fontFamily: 'Montserrat, system-ui, sans-serif'
         }}>
-          Sign in to continue to Wing Me
+          Sign in to continue to The W App
         </p>
 
         {/* Error message */}

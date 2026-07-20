@@ -132,7 +132,7 @@ export const useStore = create<AppState>()(
       setError: (error) => set({ error }),
     }),
     {
-      name: 'wing-me-storage',
+      name: 'w-app-storage',
       partialize: (state) => ({
         user: state.user,
         token: state.token,

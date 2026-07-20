@@ -11,7 +11,7 @@ export default function WelcomePage() {
 
   const slides = [
     {
-      title: "Welcome to Wing Me",
+      title: "Welcome to The W App",
       description: "Connect with people at your location",
       emoji: "📍",
     },

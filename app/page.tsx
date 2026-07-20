@@ -35,7 +35,7 @@ export default function LaunchPage() {
       }}
     >
       <div style={{ animation: 'scaleIn 0.6s ease-out' }}>
-        {/* Wing Me Logo */}
+        {/* W App Logo */}
         <div 
           style={{
             display: 'flex',
@@ -72,7 +72,7 @@ export default function LaunchPage() {
           marginBottom: '8px',
           fontFamily: 'Montserrat, system-ui, sans-serif'
         }}>
-          Wing Me
+          The W App
         </h1>
         <p style={{ 
           textAlign: 'center', 

@@ -102,7 +102,7 @@ export default function RegisterPage() {
         
         // Save token
         setToken(token);
-        localStorage.setItem('wing_me_token', token);
+        localStorage.setItem('w_app_token', token);
         
         // Navigate to profile setup
         router.push('/setup/profile');

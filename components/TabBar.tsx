@@ -13,7 +13,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
   const tabs = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'map', label: 'Map', icon: MapPin },
-    { id: 'location', label: 'My Location', icon: Navigation, isWingLogo: true },
+    { id: 'location', label: 'My Location', icon: Navigation, isBrandLogo: true },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'profile', label: 'Profile', icon: User },
   ];
@@ -57,7 +57,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
             }}
           >
             <div style={{ position: 'relative' }}>
-              {/* Wing Me Logo for Location Tab */}
+              {/* W App logo for Location Tab */}
               {tab.id === 'location' ? (
                 <div style={{
                   width: '32px',
@@ -67,7 +67,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
                   justifyContent: 'center',
                   transition: 'all 0.2s ease'
                 }}>
-                  {/* Wing Me Logo - Stylized W with Wings */}
+                  {/* Stylized W logo */}
                   <svg 
                     width="28" 
                     height="28" 

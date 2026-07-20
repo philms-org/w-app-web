@@ -234,7 +234,7 @@ export default function HomeTab() {
                 borderRadius: '50%'
               }}></div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: '500', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Welcome to Wing Me!</p>
+                <p style={{ fontWeight: '500', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Welcome to The W App!</p>
                 <p style={{ color: '#919191', fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Complete your profile to get started</p>
               </div>
             </div>

@@ -25,7 +25,7 @@ export default function MainPage() {
     }
 
     // Show location prompt if not asked before and no current location
-    const hasAskedPermission = localStorage.getItem('wingme_location_permission_asked');
+    const hasAskedPermission = localStorage.getItem('w_app_location_permission_asked');
     if (!hasAskedPermission && !currentLocation && !locationPermissionAsked) {
       setShowLocationPrompt(true);
     }
@@ -33,7 +33,7 @@ export default function MainPage() {
 
   const handleAllowLocation = () => {
     setLocationPermissionAsked(true);
-    localStorage.setItem('wingme_location_permission_asked', 'true');
+    localStorage.setItem('w_app_location_permission_asked', 'true');
     
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -65,7 +65,7 @@ export default function MainPage() {
 
   const handleDenyLocation = () => {
     setLocationPermissionAsked(true);
-    localStorage.setItem('wingme_location_permission_asked', 'true');
+    localStorage.setItem('w_app_location_permission_asked', 'true');
     // Use default location (New York City)
     setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
     setShowLocationPrompt(false);
@@ -93,7 +93,7 @@ export default function MainPage() {
   }
 
   return (
-    <div className="min-h-screen bg-wing-back-gray">
+    <div className="min-h-screen bg-w-back-gray">
       {/* Main content */}
       <div className="pb-16">
         {renderTab()}
@@ -165,7 +165,7 @@ export default function MainPage() {
               marginBottom: '32px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              Wing Me works best when we know your location. This helps us show you nearby people and places to connect.
+              The W App works best when we know your location. This helps us show you nearby people and places to connect.
             </p>
 
             <div style={{

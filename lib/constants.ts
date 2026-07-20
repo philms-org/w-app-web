@@ -74,12 +74,12 @@ export const DEFAULT_LOCATION = {
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  TOKEN: 'wing_me_token',
-  USER_ID: 'wing_me_user_id',
-  LOCATION_ID: 'wing_me_location_id',
-  LOCATION_NAME: 'wing_me_location_name',
-  SETUP_COMPLETE: 'wing_me_setup_complete',
-  LAST_DATE: 'wing_me_last_date',
-  LAST_LOCATION_ALERT: 'wing_me_last_location_alert',
-  LAST_LOCATION_NOTIFICATION: 'wing_me_last_location_notification',
+  TOKEN: 'w_app_token',
+  USER_ID: 'w_app_user_id',
+  LOCATION_ID: 'w_app_location_id',
+  LOCATION_NAME: 'w_app_location_name',
+  SETUP_COMPLETE: 'w_app_setup_complete',
+  LAST_DATE: 'w_app_last_date',
+  LAST_LOCATION_ALERT: 'w_app_last_location_alert',
+  LAST_LOCATION_NOTIFICATION: 'w_app_last_location_notification',
 };

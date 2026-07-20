@@ -40,14 +40,14 @@ class ApiService {
 
   private getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('wing_me_token');
+      return localStorage.getItem('w_app_token');
     }
     return null;
   }
 
   private clearToken(): void {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('wing_me_token');
+      localStorage.removeItem('w_app_token');
     }
   }
 

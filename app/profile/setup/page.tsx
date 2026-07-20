@@ -60,7 +60,7 @@ export default function ProfileSetupPage() {
     }, 1000);
   };
 
-  // Step 1: Height Slider (exactly like real Wing Me app)
+  // Step 1: Height Slider (matches the native W App design)
   const renderStep1 = () => (
     <div style={{ 
       minHeight: '100vh',

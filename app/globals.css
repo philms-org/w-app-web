@@ -2,26 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Wing Me Custom Classes - Force Include */
-.bg-gradient-wing {
+/* The W App Custom Classes - Force Include */
+.bg-gradient-w {
   background: linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%);
 }
 
-.bg-wing-blue { background-color: #17BFD9; }
-.bg-wing-pink { background-color: #EC2C91; }
-.bg-wing-gray { background-color: #D5D5D5; }
-.bg-wing-light-gray { background-color: #F3F3F3; }
-.bg-wing-back-gray { background-color: #F0F6FA; }
-.bg-wing-light-blue { background-color: #D0F2F7; }
+.bg-w-blue { background-color: #17BFD9; }
+.bg-w-pink { background-color: #EC2C91; }
+.bg-w-gray { background-color: #D5D5D5; }
+.bg-w-light-gray { background-color: #F3F3F3; }
+.bg-w-back-gray { background-color: #F0F6FA; }
+.bg-w-light-blue { background-color: #D0F2F7; }
 
-.text-wing-blue { color: #17BFD9; }
-.text-wing-pink { color: #EC2C91; }
-.text-wing-black { color: #231E20; }
-.text-wing-dark-gray { color: #919191; }
+.text-w-blue { color: #17BFD9; }
+.text-w-pink { color: #EC2C91; }
+.text-w-black { color: #231E20; }
+.text-w-dark-gray { color: #919191; }
 
-.border-wing-blue { border-color: #17BFD9; }
-.border-wing-gray { border-color: #D5D5D5; }
-.border-wing-light-gray { border-color: #F3F3F3; }
+.border-w-blue { border-color: #17BFD9; }
+.border-w-gray { border-color: #D5D5D5; }
+.border-w-light-gray { border-color: #F3F3F3; }
 
 .text-gradient {
   background: linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%);
@@ -70,39 +70,39 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-wing-gray rounded-full;
+    @apply bg-w-gray rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-wing-dark-gray;
+    @apply bg-w-dark-gray;
   }
 }
 
 @layer components {
-  /* Button styles matching Wing Me */
+  /* Button styles matching the W App brand */
   .btn-primary {
-    @apply bg-wing-blue text-white font-semibold py-3 px-6 rounded-full 
+    @apply bg-w-blue text-white font-semibold py-3 px-6 rounded-full 
            hover:opacity-90 active:scale-95 transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-wing-pink text-white font-semibold py-3 px-6 rounded-full 
+    @apply bg-w-pink text-white font-semibold py-3 px-6 rounded-full 
            hover:opacity-90 active:scale-95 transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
-    @apply border-2 border-wing-blue text-wing-blue font-semibold py-3 px-6 rounded-full 
-           hover:bg-wing-blue hover:text-white active:scale-95 transition-all duration-200
+    @apply border-2 border-w-blue text-w-blue font-semibold py-3 px-6 rounded-full 
+           hover:bg-w-blue hover:text-white active:scale-95 transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Input styles */
   .input-field {
-    @apply w-full px-4 py-3 bg-white border border-wing-gray rounded-xl
-           focus:border-wing-blue focus:outline-none focus:ring-2 focus:ring-wing-blue/20
-           placeholder:text-wing-dark-gray transition-all duration-200;
+    @apply w-full px-4 py-3 bg-white border border-w-gray rounded-xl
+           focus:border-w-blue focus:outline-none focus:ring-2 focus:ring-w-blue/20
+           placeholder:text-w-dark-gray transition-all duration-200;
   }
 
   /* Card styles */
@@ -116,42 +116,42 @@
 
   /* Tab bar styles */
   .tab-bar {
-    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-wing-light-gray
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-w-light-gray
            flex justify-around items-center h-16 safe-bottom z-50;
   }
 
   .tab-item {
     @apply flex flex-col items-center justify-center flex-1 h-full
-           text-wing-dark-gray transition-colors duration-200;
+           text-w-dark-gray transition-colors duration-200;
   }
 
   .tab-item.active {
-    @apply text-wing-blue;
+    @apply text-w-blue;
   }
 
   /* Header styles */
   .header {
-    @apply fixed top-0 left-0 right-0 bg-white border-b border-wing-light-gray
+    @apply fixed top-0 left-0 right-0 bg-white border-b border-w-light-gray
            flex items-center justify-between px-4 h-14 safe-top z-40;
   }
 
   /* Loading spinner */
   .spinner {
-    @apply inline-block w-5 h-5 border-2 border-wing-blue border-t-transparent rounded-full animate-spin;
+    @apply inline-block w-5 h-5 border-2 border-w-blue border-t-transparent rounded-full animate-spin;
   }
 
   /* Message bubble styles */
   .message-sent {
-    @apply bg-wing-blue text-white rounded-2xl rounded-br-sm px-4 py-2 max-w-[80%] ml-auto;
+    @apply bg-w-blue text-white rounded-2xl rounded-br-sm px-4 py-2 max-w-[80%] ml-auto;
   }
 
   .message-received {
-    @apply bg-wing-light-gray text-wing-black rounded-2xl rounded-bl-sm px-4 py-2 max-w-[80%];
+    @apply bg-w-light-gray text-w-black rounded-2xl rounded-bl-sm px-4 py-2 max-w-[80%];
   }
 
   /* Location card styles */
   .location-card {
-    @apply bg-white rounded-xl p-4 shadow-sm border border-wing-light-gray
+    @apply bg-white rounded-xl p-4 shadow-sm border border-w-light-gray
            hover:shadow-md transition-all duration-200 cursor-pointer;
   }
 
@@ -172,11 +172,11 @@
 @layer utilities {
   /* Text styles */
   .text-gradient {
-    @apply bg-gradient-wing bg-clip-text text-transparent;
+    @apply bg-gradient-w bg-clip-text text-transparent;
   }
 
   /* Shadow styles */
-  .shadow-wing {
+  .shadow-w {
     box-shadow: 0 4px 20px rgba(23, 191, 217, 0.15);
   }
 

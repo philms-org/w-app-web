@@ -90,7 +90,7 @@ export default function ProfileTab() {
             color: 'rgba(255, 255, 255, 0.8)',
             fontSize: '16px',
             fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{user?.email || 'guest@wingme.app'}</p>
+          }}>{user?.email || 'guest@example.com'}</p>
           
           {/* Stats */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginTop: '24px' }}>
@@ -131,7 +131,7 @@ export default function ProfileTab() {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>Wings</p>
+              }}>Check-ins</p>
             </div>
           </div>
         </div>

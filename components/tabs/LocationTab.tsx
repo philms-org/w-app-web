@@ -47,7 +47,7 @@ export default function LocationTab() {
     }
   }, [selectedLocation]);
 
-  const handleWingMe = (person: any) => {
+  const handleCheckIn = (person: any) => {
     setActiveTab('messages');
     // In real app, this would open a chat with the person
   };
@@ -101,7 +101,7 @@ export default function LocationTab() {
           width: '100%',
           maxWidth: '350px'
         }}>
-          {/* Wing Me Location Pin */}
+          {/* Location Pin */}
           <div style={{
             position: 'relative',
             display: 'inline-block',
@@ -133,7 +133,7 @@ export default function LocationTab() {
               boxShadow: '0 0 40px rgba(23, 191, 217, 0.8), inset 0 0 20px rgba(23, 191, 217, 0.2)',
               position: 'relative'
             }}>
-              {/* Wing Me W Logo */}
+              {/* W App logo */}
               <span style={{
                 fontSize: '32px',
                 fontWeight: 'bold',
@@ -160,7 +160,7 @@ export default function LocationTab() {
             marginBottom: '48px',
             textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
           }}>
-            You are not winged into a location. Go to the Wing map to see nearby locations.
+            You are not checked into a location. Go to the map to see nearby locations.
           </p>
         </div>
 
@@ -236,7 +236,7 @@ export default function LocationTab() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA' }}>
       {/* Header */}
-      <div className="bg-gradient-wing px-6 pt-12 pb-6 safe-top">
+      <div className="bg-gradient-w px-6 pt-12 pb-6 safe-top">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h1 className="text-white text-2xl font-bold mb-1">{selectedLocation.name}</h1>
@@ -268,10 +268,10 @@ export default function LocationTab() {
       {/* Action Buttons */}
       <div className="px-6 -mt-3 mb-6">
         <div className="bg-white rounded-xl p-3 shadow-sm flex gap-2">
-          <button className="flex-1 py-2 bg-wing-light-blue text-wing-blue rounded-lg font-medium">
+          <button className="flex-1 py-2 bg-w-light-blue text-w-blue rounded-lg font-medium">
             Share Location
           </button>
-          <button className="flex-1 py-2 bg-pink-50 text-wing-pink rounded-lg font-medium">
+          <button className="flex-1 py-2 bg-pink-50 text-w-pink rounded-lg font-medium">
             Invite Friends
           </button>
         </div>
@@ -286,17 +286,17 @@ export default function LocationTab() {
             <div key={person.id} className="bg-white rounded-xl p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 {/* Profile Image */}
-                <div className="w-14 h-14 bg-wing-light-gray rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-wing-dark-gray" />
+                <div className="w-14 h-14 bg-w-light-gray rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-w-dark-gray" />
                 </div>
                 
                 {/* Info */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-semibold">{person.name}</h4>
-                    <span className="text-wing-dark-gray text-sm">• {person.age}</span>
+                    <span className="text-w-dark-gray text-sm">• {person.age}</span>
                   </div>
-                  <p className="text-wing-dark-gray text-sm mb-2">{person.bio}</p>
+                  <p className="text-w-dark-gray text-sm mb-2">{person.bio}</p>
                   
                   {/* Looking For Tags */}
                   <div className="flex gap-2 mb-3">
@@ -322,13 +322,13 @@ export default function LocationTab() {
                   
                   {/* Distance & Action */}
                   <div className="flex items-center justify-between">
-                    <span className="text-wing-dark-gray text-sm">{person.distance}</span>
+                    <span className="text-w-dark-gray text-sm">{person.distance}</span>
                     <button
-                      onClick={() => handleWingMe(person)}
-                      className="bg-wing-blue text-white px-4 py-1.5 rounded-full text-sm font-medium
+                      onClick={() => handleCheckIn(person)}
+                      className="bg-w-blue text-white px-4 py-1.5 rounded-full text-sm font-medium
                                 hover:opacity-90 active:scale-95 transition-all"
                     >
-                      Wing Me
+                      Check In
                     </button>
                   </div>
                 </div>
@@ -339,9 +339,9 @@ export default function LocationTab() {
 
         {peopleHere.length === 0 && (
           <div className="bg-white rounded-xl p-6 text-center">
-            <Users className="w-12 h-12 text-wing-light-gray mx-auto mb-3" />
-            <p className="text-wing-dark-gray">No one else is here yet</p>
-            <p className="text-wing-dark-gray text-sm mt-1">Be the first to check in!</p>
+            <Users className="w-12 h-12 text-w-light-gray mx-auto mb-3" />
+            <p className="text-w-dark-gray">No one else is here yet</p>
+            <p className="text-w-dark-gray text-sm mt-1">Be the first to check in!</p>
           </div>
         )}
       </div>

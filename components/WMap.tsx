@@ -4,10 +4,10 @@ import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
 
-// Custom Wing Me marker icon
-const createWingMeIcon = (count: number, isHot: boolean = false) => {
+// Custom location marker icon
+const createLocationIcon = (count: number, isHot: boolean = false) => {
   const color = isHot ? '#EC2C91' : '#17BFD9';
-  
+
   return L.divIcon({
     html: `
       <div style="
@@ -37,14 +37,14 @@ const createWingMeIcon = (count: number, isHot: boolean = false) => {
         border-top: 8px solid ${color};
       "></div>
     `,
-    className: 'wing-me-marker',
+    className: 'w-marker',
     iconSize: [48, 56],
     iconAnchor: [24, 56],
     popupAnchor: [0, -56],
   });
 };
 
-interface WingMeMapProps {
+interface WMapProps {
   locations: any[];
   onLocationSelect: (location: any) => void;
   onMapClick?: (lat: number, lng: number) => void;
@@ -52,13 +52,13 @@ interface WingMeMapProps {
   zoom?: number;
 }
 
-export default function WingMeMap({ 
-  locations, 
+export default function WMap({
+  locations,
   onLocationSelect,
   onMapClick,
-  center = { lat: 40.7128, lng: -74.0060 }, 
-  zoom = 13 
-}: WingMeMapProps) {
+  center = { lat: 40.7128, lng: -74.0060 },
+  zoom = 13
+}: WMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
@@ -81,10 +81,10 @@ export default function WingMeMap({
       position: 'bottomright'
     }).addTo(map);
 
-    // Add Wing Me location markers
+    // Add location markers
     locations.forEach((location) => {
       const marker = L.marker([location.latitude, location.longitude], {
-        icon: createWingMeIcon(location.count, location.isHot)
+        icon: createLocationIcon(location.count, location.isHot)
       }).addTo(map);
 
       // Add popup with location info
@@ -97,8 +97,8 @@ export default function WingMeMap({
             <span style="color: #919191;">•</span>
             <span style="color: #919191;">${location.radius}m radius</span>
           </div>
-          <button 
-            onclick="window.wingMeSelectLocation('${location.id}')"
+          <button
+            onclick="window.wSelectLocation('${location.id}')"
             style="
               width: 100%;
               background-color: #17BFD9;
@@ -111,7 +111,7 @@ export default function WingMeMap({
               font-family: Montserrat, system-ui, sans-serif;
             "
           >
-            Wing Me Here
+            Check In Here
           </button>
         </div>
       `);
@@ -152,7 +152,7 @@ export default function WingMeMap({
     mapInstanceRef.current = map;
 
     // Global function for popup buttons
-    (window as any).wingMeSelectLocation = (locationId: string) => {
+    (window as any).wSelectLocation = (locationId: string) => {
       const location = locations.find(loc => loc.id === locationId);
       if (location) {
         onLocationSelect(location);
@@ -176,15 +176,15 @@ export default function WingMeMap({
 
   return (
     <>
-      <div 
-        ref={mapRef} 
+      <div
+        ref={mapRef}
         style={{
           height: '100vh',
           width: '100%',
           zIndex: 1
         }}
       />
-      
+
       {/* App Download Banner */}
       <div style={{
         position: 'absolute',
@@ -219,7 +219,7 @@ export default function WingMeMap({
               margin: 0,
               opacity: 0.9,
               fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Download the Wing Me app for full features, messaging, and real-time updates</p>
+            }}>Download The W App for full features, messaging, and real-time updates</p>
           </div>
           <button style={{
             backgroundColor: 'white',
@@ -236,35 +236,35 @@ export default function WingMeMap({
           </button>
         </div>
       </div>
-      
+
       {/* Add Leaflet CSS */}
       <style jsx global>{`
         @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-        
-        .wing-me-marker {
+
+        .w-marker {
           background: none !important;
           border: none !important;
         }
-        
+
         .user-location-marker {
           background: none !important;
           border: none !important;
         }
-        
+
         .leaflet-popup-content-wrapper {
           border-radius: 12px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
         }
-        
+
         .leaflet-popup-tip {
           background: white !important;
         }
-        
+
         .leaflet-control-zoom {
           border: none !important;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
         }
-        
+
         .leaflet-control-zoom a {
           background-color: white !important;
           color: #17BFD9 !important;
@@ -272,7 +272,7 @@ export default function WingMeMap({
           font-weight: bold !important;
           font-size: 18px !important;
         }
-        
+
         .leaflet-control-zoom a:hover {
           background-color: #f3f3f3 !important;
         }
