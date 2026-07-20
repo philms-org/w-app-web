@@ -1,0 +1,40 @@
+
+.DS_Store
+.env
+.env.local
+.env*.local
+.idea/
+.next
+.pnp.js
+.vercel
+.vscode/
+.yarn/install-state.gz
+*.log
+*.pem
+*.swo
+*.swp
+*.tsbuildinfo
+/.next/
+/.pnp
+/build
+/coverage
+/node_modules
+/out/
+# debug
+# dependencies
+# IDE
+# local env files
+# misc
+# next.js
+# OS
+# production
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# testing
+# typescript
+# vercel
+next-env.d.ts
+node_modules
+npm-debug.log*
+Thumbs.db
+yarn-debug.log*
+yarn-error.log*

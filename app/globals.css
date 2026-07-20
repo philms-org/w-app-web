@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Wing Me Custom Classes - Force Include */
+.bg-gradient-wing {
+  background: linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%);
+}
+
+.bg-wing-blue { background-color: #17BFD9; }
+.bg-wing-pink { background-color: #EC2C91; }
+.bg-wing-gray { background-color: #D5D5D5; }
+.bg-wing-light-gray { background-color: #F3F3F3; }
+.bg-wing-back-gray { background-color: #F0F6FA; }
+.bg-wing-light-blue { background-color: #D0F2F7; }
+
+.text-wing-blue { color: #17BFD9; }
+.text-wing-pink { color: #EC2C91; }
+.text-wing-black { color: #231E20; }
+.text-wing-dark-gray { color: #919191; }
+
+.border-wing-blue { border-color: #17BFD9; }
+.border-wing-gray { border-color: #D5D5D5; }
+.border-wing-light-gray { border-color: #F3F3F3; }
+
+.text-gradient {
+  background: linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@layer base {
+  :root {
+    --font-montserrat: 'Montserrat', system-ui, sans-serif;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply min-h-screen;
+    overscroll-behavior: none;
+  }
+
+  /* iOS Safe Area */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-wing-gray rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-wing-dark-gray;
+  }
+}
+
+@layer components {
+  /* Button styles matching Wing Me */
+  .btn-primary {
+    @apply bg-wing-blue text-white font-semibold py-3 px-6 rounded-full 
+           hover:opacity-90 active:scale-95 transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-wing-pink text-white font-semibold py-3 px-6 rounded-full 
+           hover:opacity-90 active:scale-95 transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline {
+    @apply border-2 border-wing-blue text-wing-blue font-semibold py-3 px-6 rounded-full 
+           hover:bg-wing-blue hover:text-white active:scale-95 transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-wing-gray rounded-xl
+           focus:border-wing-blue focus:outline-none focus:ring-2 focus:ring-wing-blue/20
+           placeholder:text-wing-dark-gray transition-all duration-200;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-sm p-4;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-md transition-shadow duration-200 cursor-pointer;
+  }
+
+  /* Tab bar styles */
+  .tab-bar {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-wing-light-gray
+           flex justify-around items-center h-16 safe-bottom z-50;
+  }
+
+  .tab-item {
+    @apply flex flex-col items-center justify-center flex-1 h-full
+           text-wing-dark-gray transition-colors duration-200;
+  }
+
+  .tab-item.active {
+    @apply text-wing-blue;
+  }
+
+  /* Header styles */
+  .header {
+    @apply fixed top-0 left-0 right-0 bg-white border-b border-wing-light-gray
+           flex items-center justify-between px-4 h-14 safe-top z-40;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply inline-block w-5 h-5 border-2 border-wing-blue border-t-transparent rounded-full animate-spin;
+  }
+
+  /* Message bubble styles */
+  .message-sent {
+    @apply bg-wing-blue text-white rounded-2xl rounded-br-sm px-4 py-2 max-w-[80%] ml-auto;
+  }
+
+  .message-received {
+    @apply bg-wing-light-gray text-wing-black rounded-2xl rounded-bl-sm px-4 py-2 max-w-[80%];
+  }
+
+  /* Location card styles */
+  .location-card {
+    @apply bg-white rounded-xl p-4 shadow-sm border border-wing-light-gray
+           hover:shadow-md transition-all duration-200 cursor-pointer;
+  }
+
+  /* Profile badge styles */
+  .badge-socializing {
+    @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-business {
+    @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-love {
+    @apply bg-pink-100 text-pink-800 px-2 py-1 rounded-full text-xs font-semibold;
+  }
+}
+
+@layer utilities {
+  /* Text styles */
+  .text-gradient {
+    @apply bg-gradient-wing bg-clip-text text-transparent;
+  }
+
+  /* Shadow styles */
+  .shadow-wing {
+    box-shadow: 0 4px 20px rgba(23, 191, 217, 0.15);
+  }
+
+  /* Animation utilities */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* iOS bounce scroll */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}/* Force rebuild */
