@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { api } from '@/lib/api';
+import { signUp } from '@/lib/auth';
+import { upsertProfile, uploadAvatar } from '@/lib/data';
 import { Eye, EyeOff, ChevronLeft, Camera, Calendar, ChevronDown } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -81,36 +82,48 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Generate a unique device ID for web
-      const uid = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const response = await api.register({
+      const { user: authUser, session } = await signUp(formData.email, formData.password);
+      if (!authUser) {
+        setError('Registration failed');
+        return;
+      }
+
+      let avatarUrl: string | undefined;
+      if (profileImage) {
+        try {
+          avatarUrl = await uploadAvatar(profileImage, authUser.id);
+        } catch {
+          avatarUrl = undefined;
+        }
+      }
+
+      await upsertProfile({
+        id: authUser.id,
+        display_name: formData.name,
+        email: formData.email,
+        phone: countryCode + formData.phone,
+        avatar_url: avatarUrl ?? null,
+      });
+
+      if (session) {
+        setToken(session.access_token);
+      }
+      setUser({
+        id: authUser.id,
         name: formData.name,
         email: formData.email,
         phone: countryCode + formData.phone,
-        password: formData.password,
         gender: formData.gender,
         birth: formData.birthDate,
-        uid: uid,
-        image: profileImage || undefined,
+        image: avatarUrl,
+        setupComplete: false,
       });
-      
-      if (response.error === '0') {
-        const { token } = response.message;
-        
-        // Save token
-        setToken(token);
-        localStorage.setItem('w_app_token', token);
-        
-        // Navigate to profile setup
-        router.push('/setup/profile');
-      } else {
-        setError(response.message || 'Registration failed');
-      }
-    } catch (err) {
-      setError('Connection error. Please try again.');
+
+      router.push('/profile/setup');
+    } catch (err: any) {
+      setError(err?.message ?? 'Registration failed');
     } finally {
       setIsLoading(false);
     }

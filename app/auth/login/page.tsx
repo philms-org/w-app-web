@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { api } from '@/lib/api';
+import { signIn } from '@/lib/auth';
+import { fetchProfile } from '@/lib/data';
 import { Eye, EyeOff, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -27,57 +28,54 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    
-    // Demo login - bypass API for testing
-    setTimeout(() => {
-      // Create demo user
-      const demoUser = {
-        id: 'demo-user',
-        name: 'Demo User',
-        email: email,
-        phone: '+1234567890',
-        gender: 'M',
-        birth: '1990-01-01',
-        setupComplete: true
-      };
-      
-      // Save to store and localStorage
-      setToken('demo-token-123');
-      setUser(demoUser);
-      localStorage.setItem('w_app_token', 'demo-token-123');
-      
-      setIsLoading(false);
-      router.push('/main');
-    }, 1000);
 
-    // Original API code commented out for demo
-    /*
     try {
-      const response = await api.login(email, password);
-      
-      if (response.error === '0') {
-        const { token, user } = response.message;
-        
-        // Save to store and localStorage
-        setToken(token);
-        setUser(user);
-        localStorage.setItem('w_app_token', token);
-        
-        // Check if profile setup is complete
-        if (user.setupComplete) {
-          router.push('/main');
-        } else {
-          router.push('/setup/profile');
-        }
-      } else {
-        setError(response.message || 'Invalid email or password');
+      const { user: authUser, session } = await signIn(email, password);
+      if (!authUser || !session) {
+        setError('Invalid email or password');
+        return;
       }
-    } catch (err) {
-      setError('Connection error. Please try again.');
+
+      setToken(session.access_token);
+
+      let profile = null;
+      try {
+        profile = await fetchProfile(authUser.id);
+      } catch {
+        profile = null;
+      }
+
+      setUser({
+        id: authUser.id,
+        name: profile?.display_name ?? authUser.email ?? email,
+        email: authUser.email ?? email,
+        phone: profile?.phone ?? '',
+        gender: '',
+        birth: '',
+        image: profile?.avatar_url ?? undefined,
+        height: profile?.height != null ? String(profile.height) : undefined,
+        relationship: profile?.relationship ?? undefined,
+        datingId: profile?.dating_id != null ? String(profile.dating_id) : undefined,
+        socialisingId: profile?.socialising_id != null ? String(profile.socialising_id) : undefined,
+        networkingId: profile?.networking_id != null ? String(profile.networking_id) : undefined,
+        nationality: profile?.nationality ?? undefined,
+        city: profile?.city ?? undefined,
+        drink: profile?.fave_drink ?? undefined,
+        activity: profile?.friday_night ?? undefined,
+        profession: profile?.profession ?? undefined,
+        setupComplete: !!profile?.city,
+      });
+
+      if (profile?.city) {
+        router.push('/main');
+      } else {
+        router.push('/profile/setup');
+      }
+    } catch (err: any) {
+      setError(err?.message ?? 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
-    */
   };
 
   const handleFacebookLogin = () => {

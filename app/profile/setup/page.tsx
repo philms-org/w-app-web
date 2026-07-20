@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { upsertProfile } from '@/lib/data';
 import { ChevronLeft, Users, Briefcase, Heart } from 'lucide-react';
 import { LOOKING_FOR_OPTIONS, RELATIONSHIP_OPTIONS } from '@/lib/constants';
 
@@ -44,20 +45,38 @@ export default function ProfileSetupPage() {
   };
 
   const handleSave = async () => {
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
     setIsLoading(true);
-    
-    // Demo save - bypass API
-    setTimeout(() => {
-      if (user) {
-        setUser({
-          ...user,
-          ...formData,
-          setupComplete: true
-        });
-      }
-      setIsLoading(false);
+
+    try {
+      await upsertProfile({
+        id: user.id,
+        height: parseFloat(formData.height),
+        relationship: formData.relationship || null,
+        dating_id: formData.datingId ? parseInt(formData.datingId, 10) : null,
+        socialising_id: formData.socialisingId ? parseInt(formData.socialisingId, 10) : null,
+        networking_id: formData.networkingId ? parseInt(formData.networkingId, 10) : null,
+        nationality: formData.nationality || null,
+        city: formData.city || null,
+        fave_drink: formData.drink || null,
+        friday_night: formData.activity || null,
+        profession: formData.profession || null,
+      });
+
+      setUser({
+        ...user,
+        ...formData,
+        setupComplete: true,
+      });
       router.push('/main');
-    }, 1000);
+    } catch (err) {
+      console.error('Profile save failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Step 1: Height Slider (matches the native W App design)

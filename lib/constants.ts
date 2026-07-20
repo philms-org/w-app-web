@@ -1,21 +1,3 @@
-// API Configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app.wingme.app/v03/';
-export const APP_URL = 'https://wingme.app/';
-export const DELETE_ACCOUNT_URL = 'https://app.wingme.app/delete_account';
-
-// Google Maps Configuration
-export const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-// Firebase Configuration (for future use)
-export const FIREBASE_CONFIG = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
 // Looking For Options
 export const LOOKING_FOR_OPTIONS = {
   socializing: {
