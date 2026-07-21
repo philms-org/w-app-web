@@ -14,12 +14,16 @@ However, the current UI does not match the actual W App design:
   on core screens, with light `back_gray` pill fields on top for contrast. The web app currently
   uses a light `#F0F6FA` background with a cyan→pink gradient header — the inverse of the real
   design.
-- **Wrong nav structure.** The design PDFs specify a 3-icon tab bar (pin/location | winged W |
-  envelope), with Profile, History, and Rewards reached via quick-access buttons on the Main
-  Feed screen — not as their own persistent tabs. The web app currently has 5 tabs (Home, Map,
-  Location, Messages, Profile).
+- **Wrong nav structure.** The design PDFs specify a 3-icon tab bar (pin/location | W | envelope),
+  with Profile, History, and Rewards reached via quick-access buttons on the Main Feed screen —
+  not as their own persistent tabs. The web app currently has 5 tabs (Home, Map, Location,
+  Messages, Profile).
 - **Invented content.** "Socializing/Business/Love" quick-action categories and a
   Settings/Notifications/Privacy/Help menu appear in the web app but not in any design PDF.
+- **Leftover "wing" language.** The design PDFs (and this app's terminology generally) still
+  carry wordplay from the old "Wing Me" brand — "winged into a location," a wing-flourished W
+  icon in the tab bar. Now that the product is "The W App," this is retired: no wing imagery,
+  no wing-themed terminology, in code, docs, or UI copy.
 
 Brand colors are already correct: web app's `#17BFD9` and `#EC2C91` are exact matches to the
 iOS asset catalog's `blue.colorset` and `pink.colorset`. This phase is a structural and
@@ -31,17 +35,19 @@ compositional fix, not a color-scheme change.
 - Shared color tokens matching the real iOS asset catalog
 - Tab bar reduced from 5 items to 3 (Map, Main Feed, Messages)
 - Merge `HomeTab` + `LocationTab` into one `MainFeedTab` with two states (no-location /
-  winged-in), matching the PDF's "Main Feed" screen
+  checked-in), matching the PDF's "Main Feed" screen
 - Restyle `MapTab`, `MessagesTab`, `ProfileTab`, and the location-permission modal to the dark
   theme
 - Quick-access row (History, Rewards, Profile) on the Main Feed's no-location state
+- Redesign the tab bar's center W icon as a plain wordmark/icon with no wing-shaped flourishes
+  (currently drawn as literal "Left Wing"/"Right Wing" SVG paths in `TabBar.tsx`)
 
 **Out of scope (Phase 2 — separate future spec):**
 - Building the real Profile screen per the design PDF (hero carousel, flags, links pill, etc.)
 - QR / Contacts screen
 - History screen (past check-ins)
 - Rewards screen
-- "Winged into location" tabs beyond the basic people-here list (Who's Here / Connections /
+- Checked-in-state tabs beyond the basic people-here list (Who's Here / Connections /
   Jukebox / Photo Booth / What's up / Announcements)
 
 Phase 1 leaves History and Rewards quick-access buttons in place but inert ("Coming soon"),
@@ -71,7 +77,9 @@ classes would be an unrelated refactor outside this phase's scope.
 
 `components/TabBar.tsx` drops from 5 tabs to 3:
 - `map` (pin icon) — unchanged destination (`MapTab`)
-- `feed` (winged W logo, center) — new destination (`MainFeedTab`, replaces `home` + `location`)
+- `feed` (plain W icon, center, no wing flourishes) — new destination (`MainFeedTab`, replaces
+  `home` + `location`); the existing SVG's `{/* Left Wing */}` / `{/* Right Wing */}` paths are
+  replaced with a simple W glyph
 - `messages` (envelope icon) — unchanged destination (`MessagesTab`)
 
 `profile` is removed from the tab bar's rendered icon list but remains a valid `activeTab`
@@ -89,7 +97,7 @@ pattern `LocationTab` already uses internally):
   circle buttons — History, Rewards, Profile — per the design spec.
   - Profile button → `setActiveTab('profile')`
   - History / Rewards buttons → "Coming soon" state (Phase 2 builds real destinations)
-- **Winged-in state:** `LocationTab`'s existing `selectedLocation` branch (check-in/out,
+- **Checked-in state:** `LocationTab`'s existing `selectedLocation` branch (check-in/out,
   people-here list via `fetchPresence`), reused as-is aside from restyling any remaining
   light-mode elements.
 
@@ -117,7 +125,7 @@ codebase. No new error UI introduced — this is a UI-only phase.
 No automated test suite exists in this repo. Verification is manual, via the dev server:
 
 1. Load Main Feed with no location selected → confirm dark empty-state renders with quick-access row
-2. Browse Map tab → select a venue → confirm winged-in Main Feed state renders (check-in fires, people-here list loads)
+2. Browse Map tab → select a venue → confirm checked-in Main Feed state renders (check-in fires, people-here list loads)
 3. Check out → confirm return to no-location state
 4. Messages tab renders in dark theme
 5. Profile quick-access button → confirm navigation to Profile tab
@@ -126,4 +134,5 @@ No automated test suite exists in this repo. Verification is manual, via the dev
 ## Open questions / risks
 
 None outstanding — all decisions confirmed with user during brainstorming (color values
-verified against iOS asset catalog; 3-tab structure confirmed over keeping 5 tabs).
+verified against iOS asset catalog; 3-tab structure confirmed over keeping 5 tabs; "wing"
+language/imagery confirmed fully retired, wording and the tab-bar logo motif both).
