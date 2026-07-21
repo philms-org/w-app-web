@@ -62,10 +62,10 @@ New file `lib/theme.ts`, values sourced directly from
 
 ```ts
 export const theme = {
-  bg: '#23201F',      // Colors.black (view background)
-  pill: '#F0F6FA',     // Colors.back_gray (field/card background)
-  accent: '#17BFD9',   // Colors.blue (cyan)
-  accent2: '#EC2C91',  // Colors.pink
+  bg: '#231E20',       // Colors.black (view background) — matches existing .text-w-black in globals.css
+  pill: '#F0F6FA',      // Colors.back_gray (field/card background)
+  accent: '#17BFD9',    // Colors.blue (cyan)
+  accent2: '#EC2C91',   // Colors.pink
 };
 ```
 
