@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import TabBar from '@/components/TabBar';
-import HomeTab from '@/components/tabs/HomeTab';
+import MainFeedTab from '@/components/tabs/MainFeedTab';
 import MapTab from '@/components/tabs/MapTab';
-import LocationTab from '@/components/tabs/LocationTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
-import { MapPin, X } from 'lucide-react';
+import { theme } from '@/lib/theme';
+import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
@@ -73,18 +73,16 @@ export default function MainPage() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'home':
-        return <HomeTab />;
       case 'map':
         return <MapTab />;
-      case 'location':
-        return <LocationTab />;
+      case 'feed':
+        return <MainFeedTab />;
       case 'messages':
         return <MessagesTab />;
       case 'profile':
         return <ProfileTab />;
       default:
-        return <HomeTab />;
+        return <MainFeedTab />;
     }
   };
 
@@ -188,8 +186,8 @@ export default function MainPage() {
                   fontFamily: 'Montserrat, system-ui, sans-serif',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#0EA5E9'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#17BFD9'}
+                onMouseOver={(e) => e.target.style.backgroundColor = theme.accent2}
+                onMouseOut={(e) => e.target.style.backgroundColor = theme.accent}
               >
                 Allow Location Access
               </button>
