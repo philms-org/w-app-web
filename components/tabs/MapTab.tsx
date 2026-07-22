@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { fetchVenues } from '@/lib/data';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { theme } from '@/lib/theme';
 
 // Dynamically import the map to avoid SSR issues
 const WMap = dynamic(() => import('@/components/WMap'), {
@@ -113,7 +114,7 @@ export default function MapTab() {
 
   const handleLocationSelect = (location: any) => {
     setSelectedLocation(location);
-    setActiveTab('location');
+    setActiveTab('feed');
   };
 
   const handleMapClick = (lat: number, lng: number) => {
@@ -154,7 +155,7 @@ export default function MapTab() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, position: 'relative' }}>
       {/* Header */}
       <div style={{
         position: 'absolute',
