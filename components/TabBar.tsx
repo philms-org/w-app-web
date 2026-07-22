@@ -1,7 +1,7 @@
 'use client';
 
-import { Home, MapPin, Navigation, MessageCircle, User } from 'lucide-react';
-import { useStore } from '@/lib/store';
+import { MapPin, MessageCircle } from 'lucide-react';
+import { theme } from '@/lib/theme';
 
 interface TabBarProps {
   activeTab: string;
@@ -11,11 +11,9 @@ interface TabBarProps {
 
 export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabBarProps) {
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
     { id: 'map', label: 'Map', icon: MapPin },
-    { id: 'location', label: 'My Location', icon: Navigation, isBrandLogo: true },
+    { id: 'feed', label: 'Main Feed', icon: null },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
-    { id: 'profile', label: 'Profile', icon: User },
   ];
 
   return (
@@ -24,8 +22,8 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: 'white',
-      borderTop: '1px solid #F3F3F3',
+      backgroundColor: theme.bg,
+      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
@@ -36,7 +34,8 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
-        
+        const color = isActive ? theme.accent : '#919191';
+
         return (
           <button
             key={tab.id}
@@ -48,7 +47,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
               justifyContent: 'center',
               flex: 1,
               height: '100%',
-              color: isActive ? '#17BFD9' : '#919191',
+              color,
               transition: 'color 0.2s ease',
               background: 'none',
               border: 'none',
@@ -57,42 +56,20 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
             }}
           >
             <div style={{ position: 'relative' }}>
-              {/* W App logo for Location Tab */}
-              {tab.id === 'location' ? (
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
+              {tab.id === 'feed' ? (
+                <span style={{
+                  fontSize: '22px',
+                  fontWeight: 'bold',
+                  lineHeight: 1,
+                  color,
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
                 }}>
-                  {/* Stylized W logo */}
-                  <svg 
-                    width="28" 
-                    height="28" 
-                    viewBox="0 0 28 28" 
-                    style={{
-                      fill: isActive ? '#17BFD9' : '#919191',
-                      transition: 'fill 0.2s ease'
-                    }}
-                  >
-                    {/* Left Wing */}
-                    <path d="M2 14 Q6 8 14 14 Q10 10 6 12 Q4 13 2 14" opacity="0.8"/>
-                    {/* Right Wing */}  
-                    <path d="M26 14 Q22 8 14 14 Q18 10 22 12 Q24 13 26 14" opacity="0.8"/>
-                    {/* Center W */}
-                    <path d="M8 8 L10 18 L12 12 L14 18 L16 12 L18 18 L20 8" 
-                          strokeWidth="1.5" 
-                          stroke="currentColor" 
-                          fill="none"/>
-                  </svg>
-                </div>
+                  W
+                </span>
               ) : (
-                <Icon style={{ width: '24px', height: '24px' }} strokeWidth={isActive ? 2.5 : 2} />
+                Icon && <Icon style={{ width: '24px', height: '24px' }} strokeWidth={isActive ? 2.5 : 2} />
               )}
-              
-              {/* Badge for messages */}
+
               {tab.id === 'messages' && unreadCount > 0 && (
                 <div style={{
                   position: 'absolute',
@@ -100,25 +77,19 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
                   right: '-4px',
                   width: '20px',
                   height: '20px',
-                  backgroundColor: '#EC2C91',
+                  backgroundColor: theme.accent2,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <span style={{
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}>
+                  <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 </div>
               )}
             </div>
-            <span style={{ fontSize: '12px', marginTop: '4px' }}>
-              {tab.id === 'location' ? 'My Location' : tab.label}
-            </span>
+            <span style={{ fontSize: '12px', marginTop: '4px' }}>{tab.label}</span>
           </button>
         );
       })}
