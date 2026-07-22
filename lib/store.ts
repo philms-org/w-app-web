@@ -94,7 +94,7 @@ export const useStore = create<AppState>()(
       messages: [],
       unreadCount: 0,
       activeChat: null,
-      activeTab: 'home',
+      activeTab: 'feed',
       isLoading: false,
       error: null,
       
