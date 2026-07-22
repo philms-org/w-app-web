@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchConversations } from '@/lib/data';
-import { Search, MoreVertical, Check, CheckCheck, MessageCircle } from 'lucide-react';
-import Image from 'next/image';
+import { Search, MessageCircle } from 'lucide-react';
+import { theme } from '@/lib/theme';
 
 export default function MessagesTab() {
   const { setActiveChat, setActiveTab } = useStore();
@@ -45,7 +45,7 @@ export default function MessagesTab() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
       {/* Header */}
       <div style={{
         backgroundColor: 'white',
@@ -278,6 +278,7 @@ export default function MessagesTab() {
               fontSize: '24px',
               fontWeight: 'bold',
               marginBottom: '8px',
+              color: 'white',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>No Messages Yet</h2>
             <p style={{
