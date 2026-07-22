@@ -38,15 +38,6 @@ export const RELATIONSHIP_OPTIONS = [
   { id: '5', label: 'Other' },
 ];
 
-// Navigation Items
-export const NAV_ITEMS = [
-  { id: 'home', label: 'Home', icon: 'home' },
-  { id: 'map', label: 'Map', icon: 'map' },
-  { id: 'location', label: 'My Location', icon: 'pin' },
-  { id: 'messages', label: 'Messages', icon: 'message' },
-  { id: 'profile', label: 'Profile', icon: 'user' },
-];
-
 // Default Location Settings
 export const DEFAULT_LOCATION = {
   lat: 40.7128,
