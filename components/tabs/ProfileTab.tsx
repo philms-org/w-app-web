@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
+import { theme } from '@/lib/theme';
 import {
   Camera, Edit2, Settings, Bell, Shield, HelpCircle,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
@@ -39,7 +40,7 @@ export default function ProfileTab() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
       {/* Header with Profile Info */}
       <div style={{
         background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
