@@ -302,86 +302,172 @@ export default function MainFeedTab() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
-      <div className="bg-gradient-w px-6 pt-12 pb-6 safe-top">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <h1 className="text-white text-2xl font-bold mb-1">{selectedLocation.name}</h1>
-            <p className="text-white/80 text-sm">{selectedLocation.description}</p>
+      <div style={{
+        background: `linear-gradient(135deg, ${theme.accent} 0%, ${theme.accent2} 100%)`,
+        padding: '48px 24px 24px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>{selectedLocation.name}</h1>
+            <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>{selectedLocation.description}</p>
           </div>
-          <button onClick={handleLeaveLocation} className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-            <LogOut className="w-5 h-5 text-white" />
+          <button
+            onClick={handleLeaveLocation}
+            style={{
+              padding: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '9999px',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <LogOut style={{ width: '20px', height: '20px', color: 'white' }} />
           </button>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-white/80" />
-            <span className="text-white font-medium">
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users style={{ width: '20px', height: '20px', color: 'rgba(255, 255, 255, 0.8)' }} />
+            <span style={{ color: 'white', fontWeight: 500 }}>
               {selectedLocation.count} {selectedLocation.count === 1 ? 'person' : 'people'} here
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-white/80" />
-            <span className="text-white font-medium">{selectedLocation.radius}m radius</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MapPin style={{ width: '20px', height: '20px', color: 'rgba(255, 255, 255, 0.8)' }} />
+            <span style={{ color: 'white', fontWeight: 500 }}>{selectedLocation.radius}m radius</span>
           </div>
         </div>
       </div>
 
-      <div className="px-6 -mt-3 mb-6">
-        <div className="bg-w-back-gray rounded-xl p-3 shadow-sm flex gap-2">
-          <button className="flex-1 py-2 bg-w-light-blue text-w-blue rounded-lg font-medium">
+      <div style={{ padding: '0 24px', marginTop: '-12px', marginBottom: '24px' }}>
+        <div style={{
+          backgroundColor: theme.pill,
+          borderRadius: '12px',
+          padding: '12px',
+          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          gap: '8px'
+        }}>
+          <button style={{
+            flex: 1,
+            padding: '8px 0',
+            backgroundColor: '#D0F2F7',
+            color: theme.accent,
+            borderRadius: '8px',
+            fontWeight: 500,
+            border: 'none',
+            cursor: 'pointer'
+          }}>
             Share Location
           </button>
-          <button className="flex-1 py-2 bg-pink-50 text-w-pink rounded-lg font-medium">
+          <button style={{
+            flex: 1,
+            padding: '8px 0',
+            backgroundColor: '#FDF2F8',
+            color: theme.accent2,
+            borderRadius: '8px',
+            fontWeight: 500,
+            border: 'none',
+            cursor: 'pointer'
+          }}>
             Invite Friends
           </button>
         </div>
       </div>
 
-      <div className="px-6">
-        <h3 className="font-semibold mb-4 text-white">People Here Now</h3>
+      <div style={{ padding: '0 24px' }}>
+        <h3 style={{ fontWeight: 600, marginBottom: '16px', color: 'white' }}>People Here Now</h3>
 
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {peopleHere.map((person) => (
-            <div key={person.id} className="bg-w-back-gray rounded-xl p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-14 h-14 bg-w-light-gray rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-w-dark-gray" />
+            <div key={person.id} style={{ backgroundColor: theme.pill, borderRadius: '12px', padding: '16px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  backgroundColor: '#F3F3F3',
+                  borderRadius: '9999px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <User style={{ width: '24px', height: '24px', color: '#919191' }} />
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold">{person.name}</h4>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <h4 style={{ fontWeight: 600 }}>{person.name}</h4>
                   </div>
-                  {person.bio && <p className="text-w-dark-gray text-sm mb-2">{person.bio}</p>}
+                  {person.bio && <p style={{ color: '#919191', fontSize: '14px', marginBottom: '8px' }}>{person.bio}</p>}
 
-                  <div className="flex gap-2 mb-3">
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                     {person.lookingFor.includes('socializing') && (
-                      <span className="badge-socializing flex items-center gap-1">
-                        <Users className="w-3 h-3" />
+                      <span style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: '#DBEAFE',
+                        color: '#1E40AF',
+                        padding: '4px 8px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>
+                        <Users style={{ width: '12px', height: '12px' }} />
                         Socializing
                       </span>
                     )}
                     {person.lookingFor.includes('business') && (
-                      <span className="badge-business flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" />
+                      <span style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: '#DCFCE7',
+                        color: '#166534',
+                        padding: '4px 8px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>
+                        <Briefcase style={{ width: '12px', height: '12px' }} />
                         Business
                       </span>
                     )}
                     {person.lookingFor.includes('love') && (
-                      <span className="badge-love flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
+                      <span style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: '#FCE7F3',
+                        color: '#9D174D',
+                        padding: '4px 8px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>
+                        <Heart style={{ width: '12px', height: '12px' }} />
                         Love
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-w-dark-gray text-sm">{person.distance}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#919191', fontSize: '14px' }}>{person.distance}</span>
                     <button
                       onClick={handleCheckIn}
-                      className="bg-w-blue text-white px-4 py-1.5 rounded-full text-sm font-medium
-                                hover:opacity-90 active:scale-95 transition-all"
+                      style={{
+                        backgroundColor: theme.accent,
+                        color: 'white',
+                        padding: '6px 16px',
+                        borderRadius: '9999px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s, transform 0.2s'
+                      }}
                     >
                       Check In
                     </button>
@@ -393,10 +479,10 @@ export default function MainFeedTab() {
         </div>
 
         {peopleHere.length === 0 && (
-          <div className="bg-w-back-gray rounded-xl p-6 text-center">
-            <Users className="w-12 h-12 text-w-light-gray mx-auto mb-3" />
-            <p className="text-w-dark-gray">No one else is here yet</p>
-            <p className="text-w-dark-gray text-sm mt-1">Be the first to check in!</p>
+          <div style={{ backgroundColor: theme.pill, borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+            <Users style={{ width: '48px', height: '48px', color: '#F3F3F3', display: 'block', margin: '0 auto 12px' }} />
+            <p style={{ color: '#919191' }}>No one else is here yet</p>
+            <p style={{ color: '#919191', fontSize: '14px', marginTop: '4px' }}>Be the first to check in!</p>
           </div>
         )}
       </div>
