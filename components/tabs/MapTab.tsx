@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchVenues } from '@/lib/data';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
@@ -105,22 +105,27 @@ export default function MapTab() {
       .catch((err) => console.error('Failed to load venues:', err));
   }, [setCurrentLocation, setNearbyLocations]);
 
-  const filteredLocations = nearbyLocations.filter(location => {
+  const filteredLocations = useMemo(() => nearbyLocations.filter(location => {
     const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           location.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || location.category === selectedCategory;
     return matchesSearch && matchesCategory;
-  });
+  }), [nearbyLocations, searchQuery, selectedCategory]);
 
-  const handleLocationSelect = (location: any) => {
+  const handleLocationSelect = useCallback((location: any) => {
     setSelectedLocation(location);
     setActiveTab('feed');
-  };
+  }, [setSelectedLocation, setActiveTab]);
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     setClickedLocation({ lat, lng });
     setShowAddLocation(true);
-  };
+  }, []);
+
+  const mapCenter = useMemo(
+    () => currentLocation || { lat: 40.7128, lng: -74.0060 },
+    [currentLocation]
+  );
 
   const handleAddLocation = () => {
     if (!newLocationName.trim() || !clickedLocation) return;
@@ -261,7 +266,7 @@ export default function MapTab() {
           locations={filteredLocations}
           onLocationSelect={handleLocationSelect}
           onMapClick={handleMapClick}
-          center={currentLocation || { lat: 40.7128, lng: -74.0060 }}
+          center={mapCenter}
           zoom={13}
         />
       </div>

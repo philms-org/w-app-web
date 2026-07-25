@@ -62,33 +62,54 @@ export default function WMap({
 }: WMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
 
+  // Create the map once on mount; never recreated on prop changes.
   useEffect(() => {
     if (typeof window === 'undefined' || !mapRef.current) return;
 
-    // Initialize map
     const map = L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false,
+      zoomAnimation: false,
     }).setView([center.lat, center.lng], zoom);
 
-    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
     }).addTo(map);
 
-    // Add custom zoom control
     L.control.zoom({
       position: 'bottomright'
     }).addTo(map);
 
-    // Add location markers
-    locations.forEach((location) => {
+    map.on('click', (e) => {
+      onMapClickRef.current?.(e.latlng.lat, e.latlng.lng);
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markersRef.current = [];
+      userMarkerRef.current = null;
+    };
+  }, []);
+
+  // Rebuild location markers whenever the location list (or its handler) changes.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = locations.map((location) => {
       const marker = L.marker([location.latitude, location.longitude], {
         icon: createLocationIcon(location.count, location.isHot)
       }).addTo(map);
 
-      // Add popup with location info
       marker.bindPopup(`
         <div style="font-family: Montserrat, system-ui, sans-serif; min-width: 200px;">
           <h3 style="font-weight: 600; margin-bottom: 4px; color: #231E20;">${location.name}</h3>
@@ -117,40 +138,12 @@ export default function WMap({
         </div>
       `);
 
-      // Add click handler
       marker.on('click', () => {
         onLocationSelect(location);
       });
+
+      return marker;
     });
-
-    // Add user location marker (current position)
-    const userIcon = L.divIcon({
-      html: `
-        <div style="
-          width: 20px;
-          height: 20px;
-          background-color: #17BFD9;
-          border: 4px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        "></div>
-      `,
-      className: 'user-location-marker',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-    });
-
-    L.marker([center.lat, center.lng], { icon: userIcon }).addTo(map)
-      .bindPopup('Your Location');
-
-    // Add map click handler for adding new locations
-    if (onMapClick) {
-      map.on('click', (e) => {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      });
-    }
-
-    mapInstanceRef.current = map;
 
     // Global function for popup buttons
     (window as any).wSelectLocation = (locationId: string) => {
@@ -159,19 +152,36 @@ export default function WMap({
         onLocationSelect(location);
       }
     };
+  }, [locations, onLocationSelect]);
 
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [locations, center, zoom, onLocationSelect]);
-
-  // Update map when center changes
+  // Move the user-location marker (and recenter) when center/zoom changes.
   useEffect(() => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([center.lat, center.lng], zoom);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    map.setView([center.lat, center.lng], zoom);
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setLatLng([center.lat, center.lng]);
+    } else {
+      const userIcon = L.divIcon({
+        html: `
+          <div style="
+            width: 20px;
+            height: 20px;
+            background-color: #17BFD9;
+            border: 4px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          "></div>
+        `,
+        className: 'user-location-marker',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      userMarkerRef.current = L.marker([center.lat, center.lng], { icon: userIcon }).addTo(map)
+        .bindPopup('Your Location');
     }
   }, [center, zoom]);
 
