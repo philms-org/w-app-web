@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: `theme.bg`, `theme.pill`, `theme.accent`, `theme.accent2` (all `string`, hex colors) — imported as `import { theme } from '@/lib/theme'` by Tasks 2, 4, 6, 7, 8.
 
-- [ ] **Step 1: Create `lib/theme.ts`**
+- [x] **Step 1: Create `lib/theme.ts`**
 
 ```ts
 export const theme = {
@@ -40,7 +40,7 @@ export const theme = {
 } as const;
 ```
 
-- [ ] **Step 2: Add a dark-background utility class to `app/globals.css`**
+- [x] **Step 2: Add a dark-background utility class to `app/globals.css`**
 
 Find this existing block (around line 17-20):
 
@@ -62,12 +62,12 @@ Add a matching background utility directly above it:
 .text-w-dark-gray { color: #919191; }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No new errors (the file has no imports to break).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/theme.ts app/globals.css
@@ -85,7 +85,7 @@ git commit -m "Add shared color tokens matching the iOS asset catalog"
 - Consumes: `theme` from Task 1 (`lib/theme.ts`).
 - Produces: `TabBar` now renders tab ids `'map' | 'feed' | 'messages'` only (no `'home'`, `'location'`, `'profile'` icons). `activeTab`/`onTabChange`/`unreadCount` props unchanged.
 
-- [ ] **Step 1: Replace the full contents of `components/TabBar.tsx`**
+- [x] **Step 1: Replace the full contents of `components/TabBar.tsx`**
 
 ```tsx
 'use client';
@@ -190,12 +190,12 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
 
 Note: this removes the old SVG icon entirely — including its `{/* Left Wing */}` / `{/* Right Wing */}` comments — replacing it with a plain bold "W" glyph. No wing imagery remains anywhere in this file.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: New errors referencing `'home'`, `'location'`, `'profile'` tab ids in `app/main/page.tsx` are expected at this point (Task 5 fixes them) — confirm no errors *inside* `components/TabBar.tsx` itself.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/TabBar.tsx
@@ -213,7 +213,7 @@ git commit -m "Restructure tab bar to 3 tabs (Map/Main Feed/Messages), drop wing
 - Consumes: nothing new.
 - Produces: `useStore.getState().activeTab` now defaults to `'feed'` instead of `'home'`.
 
-- [ ] **Step 1: Change the default `activeTab` value**
+- [x] **Step 1: Change the default `activeTab` value**
 
 In `lib/store.ts`, find (around line 97):
 
@@ -229,12 +229,12 @@ Replace with:
 
 Note: `activeTab` is not in the store's `partialize` list (only `user`, `token`, `isAuthenticated` persist to localStorage), so this default change is safe with no migration needed for existing users.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: Same pre-existing errors as after Task 2 (still waiting on Task 5), nothing new from this file.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add lib/store.ts
@@ -252,7 +252,7 @@ git commit -m "Default activeTab to 'feed' (renamed from 'home')"
 - Consumes: `theme` (Task 1); `useStore` for `selectedLocation`, `setSelectedLocation`, `setActiveTab` (unchanged store shape); `checkIn`, `checkOut`, `fetchPresence` from `lib/data.ts` (unchanged signatures, reused verbatim from the old `LocationTab.tsx`).
 - Produces: default export `MainFeedTab` — a self-contained component with no props, used by Task 5.
 
-- [ ] **Step 1: Create `components/tabs/MainFeedTab.tsx`**
+- [x] **Step 1: Create `components/tabs/MainFeedTab.tsx`**
 
 ```tsx
 'use client';
@@ -662,12 +662,12 @@ export default function MainFeedTab() {
 }
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors inside `components/tabs/MainFeedTab.tsx` itself.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/tabs/MainFeedTab.tsx
@@ -687,7 +687,7 @@ git commit -m "Add MainFeedTab: merges Home+Location empty/checked-in states, ad
 - Consumes: `MainFeedTab` (Task 4), `theme` (Task 1).
 - Produces: `app/main/page.tsx` no longer imports or renders `HomeTab`/`LocationTab`; tab switch handles `'map' | 'feed' | 'messages' | 'profile'` only.
 
-- [ ] **Step 1: Update imports in `app/main/page.tsx`**
+- [x] **Step 1: Update imports in `app/main/page.tsx`**
 
 Find:
 
@@ -715,7 +715,7 @@ import { MapPin } from 'lucide-react';
 
 (Drops the unused `X` import — it was never referenced in this file's JSX.)
 
-- [ ] **Step 2: Update the `renderTab` switch**
+- [x] **Step 2: Update the `renderTab` switch**
 
 Find:
 
@@ -757,7 +757,7 @@ Replace with:
   };
 ```
 
-- [ ] **Step 3: Fix the off-brand hover color on the location-permission modal's primary button**
+- [x] **Step 3: Fix the off-brand hover color on the location-permission modal's primary button**
 
 Find (inside the `showLocationPrompt` modal JSX):
 
@@ -775,13 +775,13 @@ Replace with:
 
 (`#0EA5E9` is not a brand color anywhere else in the app; the modal card itself — white on a dark scrim — already matches the brand's light-pill-on-dark pattern and needs no other change.)
 
-- [ ] **Step 4: Delete the superseded tab files**
+- [x] **Step 4: Delete the superseded tab files**
 
 ```bash
 git rm components/tabs/HomeTab.tsx components/tabs/LocationTab.tsx
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors. This is the first point where the full app should type-check cleanly again.
@@ -792,7 +792,7 @@ Open `http://localhost:3000/main` in a browser (logged in as an existing test us
 - Main Feed loads with the dark empty-state (no crash, no light-background flash)
 - Quick-access row (History, Rewards, Profile) renders below the empty-state message
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/main/page.tsx
@@ -810,7 +810,7 @@ git commit -m "Wire MainFeedTab into app, drop Home/Location tabs, fix modal hov
 - Consumes: `theme` (Task 1).
 - Produces: no interface changes — same default export, same props (none).
 
-- [ ] **Step 1: Add the theme import**
+- [x] **Step 1: Add the theme import**
 
 Find:
 
@@ -827,7 +827,7 @@ import dynamic from 'next/dynamic';
 import { theme } from '@/lib/theme';
 ```
 
-- [ ] **Step 2: Fix the stale `setActiveTab('location')` call**
+- [x] **Step 2: Fix the stale `setActiveTab('location')` call**
 
 Find (in `handleLocationSelect`):
 
@@ -849,7 +849,7 @@ Replace with:
 
 (`'location'` no longer maps to any case in `app/main/page.tsx`'s `renderTab` switch after Task 5 — without this fix, selecting a venue would silently fall through to the `default` case instead of showing the checked-in Main Feed state.)
 
-- [ ] **Step 3: Restyle the outer page background**
+- [x] **Step 3: Restyle the outer page background**
 
 Find:
 
@@ -865,14 +865,14 @@ Replace with:
 
 This is the only background change needed in this file: the floating search header, the "Nearby Locations" bottom sheet, and the "Add New Location" modal all already have their own explicit white/light backgrounds (the brand's light-pill-on-dark pattern), and the map itself covers most of the viewport regardless.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then in the running dev server, open the Map tab and confirm: any visible page background (edges outside the map/header/list) is dark, not light; selecting a venue navigates to the Main Feed's checked-in state (not a blank/default screen).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/tabs/MapTab.tsx
@@ -890,7 +890,7 @@ git commit -m "MapTab: fix stale 'location' tab id, restyle page background to d
 - Consumes: `theme` (Task 1).
 - Produces: no interface changes.
 
-- [ ] **Step 1: Add the theme import, drop unused imports**
+- [x] **Step 1: Add the theme import, drop unused imports**
 
 Find:
 
@@ -908,7 +908,7 @@ import { theme } from '@/lib/theme';
 
 (Drops `MoreVertical`, `Check`, `CheckCheck`, and the unused `Image` import — none were referenced anywhere in this file's JSX.)
 
-- [ ] **Step 2: Restyle the outer page background**
+- [x] **Step 2: Restyle the outer page background**
 
 Find:
 
@@ -922,7 +922,7 @@ Replace with:
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
 ```
 
-- [ ] **Step 3: Fix a real contrast bug this introduces**
+- [x] **Step 3: Fix a real contrast bug this introduces**
 
 The "No Messages Yet" empty state sits directly on this outer background (unlike the searchable list above it, which has its own white container). Its heading currently has no explicit color, so it would inherit the page's default dark text color (`text-w-black`, set on `<body>` in `app/layout.tsx`) and become invisible against the new dark background.
 
@@ -949,14 +949,14 @@ Replace with:
             }}>No Messages Yet</h2>
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then in the running dev server, open the Messages tab with no conversations and confirm "No Messages Yet" is clearly legible (white text on dark background), and with conversations present confirm the message list (white card) still renders with normal dark-on-light text.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/tabs/MessagesTab.tsx
@@ -974,7 +974,7 @@ git commit -m "MessagesTab: restyle page background to dark, fix empty-state con
 - Consumes: `theme` (Task 1).
 - Produces: no interface changes.
 
-- [ ] **Step 1: Add the theme import**
+- [x] **Step 1: Add the theme import**
 
 Find:
 
@@ -997,7 +997,7 @@ import {
 } from 'lucide-react';
 ```
 
-- [ ] **Step 2: Restyle the outer page background**
+- [x] **Step 2: Restyle the outer page background**
 
 Find:
 
@@ -1013,14 +1013,14 @@ Replace with:
 
 This is the only change needed: the gradient header, and every card below it (Looking For, About Me, Menu Items, Logout button), already have their own explicit backgrounds and don't rely on the page's default text/background colors.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then in the running dev server, navigate to Profile via the Main Feed's quick-access button and confirm the page background is dark, and every card (Looking For / About Me / Menu Items / Logout) is still fully legible.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add components/tabs/ProfileTab.tsx
@@ -1035,11 +1035,11 @@ git commit -m "ProfileTab: restyle page background to dark"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Start the dev server**
+- [x] **Step 1: Start the dev server**
 
 Run: `cd /Users/sr/w-app-web && npm run dev`
 
-- [ ] **Step 2: Run the full click-through from the spec's Testing section**
+- [x] **Step 2: Run the full click-through from the spec's Testing section**
 
 1. Load Main Feed with no location selected → confirm dark empty-state renders with the History/Rewards/Profile quick-access row
 2. Browse Map tab → select a venue → confirm the Main Feed's checked-in state renders (header shows venue name, check-in fires without a console error, people-here list loads or shows the empty state)
@@ -1048,17 +1048,17 @@ Run: `cd /Users/sr/w-app-web && npm run dev`
 5. Tap the Profile quick-access button from Main Feed → confirm navigation to the Profile tab, dark background, all cards legible
 6. Tap History and Rewards quick-access buttons → confirm each shows the "Coming Soon" modal (no dead link, no crash), and tapping outside the modal dismisses it
 
-- [ ] **Step 3: Run a final typecheck across the whole repo**
+- [x] **Step 3: Run a final typecheck across the whole repo**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
-- [ ] **Step 4: Confirm no wing language remains**
+- [x] **Step 4: Confirm no wing language remains**
 
 Run: `cd /Users/sr/w-app-web && grep -rniI "wing" --include="*.tsx" --include="*.ts" . | grep -v node_modules | grep -v "/.next/"`
 Expected: No output (the two `TabBar.tsx` wing-shape comments were removed in Task 2; nothing else referenced "wing").
 
-- [ ] **Step 5: Fix anything verification turned up, then commit**
+- [x] **Step 5: Fix anything verification turned up, then commit**
 
 If Steps 2-4 found no issues, skip this step entirely — Task 8's commit is the last one needed.
 
