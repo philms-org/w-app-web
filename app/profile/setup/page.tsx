@@ -54,6 +54,7 @@ export default function ProfileSetupPage() {
     try {
       await upsertProfile({
         id: user.id,
+        display_name: user.name,
         height: parseFloat(formData.height),
         relationship: formData.relationship || null,
         dating_id: formData.datingId ? parseInt(formData.datingId, 10) : null,
