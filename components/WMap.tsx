@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Custom location marker icon
 const createLocationIcon = (count: number, isHot: boolean = false) => {
@@ -239,8 +240,6 @@ export default function WMap({
 
       {/* Add Leaflet CSS */}
       <style jsx global>{`
-        @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-
         .w-marker {
           background: none !important;
           border: none !important;

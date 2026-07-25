@@ -186,8 +186,8 @@ export default function MainPage() {
                   fontFamily: 'Montserrat, system-ui, sans-serif',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = theme.accent2}
-                onMouseOut={(e) => e.target.style.backgroundColor = theme.accent}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.accent2}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.accent}
               >
                 Allow Location Access
               </button>
@@ -208,12 +208,12 @@ export default function MainPage() {
                   transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#F9FAFB';
-                  e.target.style.borderColor = '#D1D5DB';
+                  e.currentTarget.style.backgroundColor = '#F9FAFB';
+                  e.currentTarget.style.borderColor = '#D1D5DB';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.borderColor = '#E5E7EB';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = '#E5E7EB';
                 }}
               >
                 Maybe Later
