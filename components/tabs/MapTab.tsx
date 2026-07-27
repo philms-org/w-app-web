@@ -99,6 +99,7 @@ export default function MapTab() {
               count: 0,
               category: 'venue',
               isHot: false,
+              banner_image: v.banner_image ?? null,
             }))
         );
       })

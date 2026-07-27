@@ -32,6 +32,7 @@ interface Location {
   count: number;
   category?: string;
   isHot?: boolean;
+  banner_image?: string | null;
 }
 
 interface Message {
