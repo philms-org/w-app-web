@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { checkIn, checkOut, fetchPresence } from '@/lib/data';
 import { theme } from '@/lib/theme';
-import { MapPin, Users, LogOut, User, Heart, Briefcase, Clock, Trophy, UserCircle } from 'lucide-react';
+import { MapPin, Users, User, Heart, Briefcase, Clock, Trophy, UserCircle, BadgeCheck, UserPlus } from 'lucide-react';
+import HeroCarousel from '@/components/HeroCarousel';
 
 export default function MainFeedTab() {
   const { selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [peopleHere, setPeopleHere] = useState<any[]>([]);
   const [comingSoon, setComingSoon] = useState<'history' | 'rewards' | null>(null);
+  const [venueTab, setVenueTab] = useState<'who' | 'connections'>('who');
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     if (!selectedLocation) return;
@@ -23,6 +26,8 @@ export default function MainFeedTab() {
             id: row.id,
             name: row.profiles?.display_name ?? 'Someone',
             bio: row.profiles?.profession ?? '',
+            role: row.profiles?.role ?? '',
+            isVerified: !!row.profiles?.is_verified,
             lookingFor: [
               ...(row.profiles?.socialising_id ? ['socializing'] : []),
               ...(row.profiles?.networking_id ? ['business'] : []),
@@ -300,55 +305,68 @@ export default function MainFeedTab() {
     );
   }
 
+  const description = selectedLocation.description ?? '';
+  const isLongDescription = description.length > 90;
+  const bannerImages = selectedLocation.banner_image ? [selectedLocation.banner_image] : [];
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
-      <div style={{
-        background: `linear-gradient(135deg, ${theme.accent} 0%, ${theme.accent2} 100%)`,
-        padding: '48px 24px 24px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>{selectedLocation.name}</h1>
-            <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>{selectedLocation.description}</p>
-          </div>
-          <button
-            onClick={handleLeaveLocation}
-            style={{
-              padding: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '9999px',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <LogOut style={{ width: '20px', height: '20px', color: 'white' }} />
-          </button>
-        </div>
+      <HeroCarousel images={bannerImages} title={selectedLocation.name} onBack={handleLeaveLocation} />
 
-        <div style={{ display: 'flex', gap: '16px' }}>
+      <div style={{ padding: '16px 24px 0' }}>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users style={{ width: '20px', height: '20px', color: 'rgba(255, 255, 255, 0.8)' }} />
-            <span style={{ color: 'white', fontWeight: 500 }}>
+            <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
+            <span style={{ color: 'white', fontWeight: 500, fontSize: '14px' }}>
               {selectedLocation.count} {selectedLocation.count === 1 ? 'person' : 'people'} here
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin style={{ width: '20px', height: '20px', color: 'rgba(255, 255, 255, 0.8)' }} />
-            <span style={{ color: 'white', fontWeight: 500 }}>{selectedLocation.radius}m radius</span>
+            <MapPin style={{ width: '18px', height: '18px', color: theme.accent }} />
+            <span style={{ color: 'white', fontWeight: 500, fontSize: '14px' }}>{selectedLocation.radius}m radius</span>
           </div>
         </div>
-      </div>
 
-      <div style={{ padding: '0 24px', marginTop: '-12px', marginBottom: '24px' }}>
+        {description && (
+          <div style={{
+            backgroundColor: theme.pill,
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '16px'
+          }}>
+            <p style={{ color: theme.bg, fontSize: '14px', lineHeight: 1.4 }}>
+              Welcome to {selectedLocation.name}, we have for you{' '}
+              {isLongDescription && !descriptionExpanded
+                ? `${description.slice(0, 90)}... `
+                : `${description} `}
+              {isLongDescription && (
+                <button
+                  onClick={() => setDescriptionExpanded((v) => !v)}
+                  style={{
+                    color: theme.accent,
+                    fontWeight: 600,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: '14px'
+                  }}
+                >
+                  {descriptionExpanded ? 'Show Less' : 'Read More'}
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+
         <div style={{
           backgroundColor: theme.pill,
           borderRadius: '12px',
           padding: '12px',
           boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
           display: 'flex',
-          gap: '8px'
+          gap: '8px',
+          marginBottom: '20px'
         }}>
           <button style={{
             flex: 1,
@@ -375,11 +393,61 @@ export default function MainFeedTab() {
             Invite Friends
           </button>
         </div>
+
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '20px'
+        }}>
+          <button
+            onClick={() => setVenueTab('who')}
+            style={{
+              flex: 1,
+              padding: '0 0 12px',
+              background: 'none',
+              border: 'none',
+              borderBottom: `2px solid ${venueTab === 'who' ? theme.accent : 'transparent'}`,
+              color: venueTab === 'who' ? theme.accent : '#919191',
+              fontWeight: 700,
+              fontSize: '14px',
+              letterSpacing: '0.03em',
+              cursor: 'pointer'
+            }}
+          >
+            WHO&apos;S HERE
+          </button>
+          <button
+            onClick={() => setVenueTab('connections')}
+            style={{
+              flex: 1,
+              padding: '0 0 12px',
+              background: 'none',
+              border: 'none',
+              borderBottom: `2px solid ${venueTab === 'connections' ? theme.accent : 'transparent'}`,
+              color: venueTab === 'connections' ? theme.accent : '#919191',
+              fontWeight: 700,
+              fontSize: '14px',
+              letterSpacing: '0.03em',
+              cursor: 'pointer'
+            }}
+          >
+            CONNECTIONS
+          </button>
+        </div>
       </div>
 
+      {venueTab === 'connections' ? (
+        <div style={{ padding: '0 24px' }}>
+          <div style={{ backgroundColor: theme.pill, borderRadius: '12px', padding: '32px 24px', textAlign: 'center' }}>
+            <UserPlus style={{ width: '40px', height: '40px', color: '#B9B9B9', display: 'block', margin: '0 auto 12px' }} />
+            <p style={{ color: theme.bg, fontWeight: 600 }}>No connections here yet</p>
+            <p style={{ color: '#919191', fontSize: '14px', marginTop: '4px' }}>
+              People you connect with will show up here when they&apos;re at this location.
+            </p>
+          </div>
+        </div>
+      ) : (
       <div style={{ padding: '0 24px' }}>
-        <h3 style={{ fontWeight: 600, marginBottom: '16px', color: 'white' }}>People Here Now</h3>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {peopleHere.map((person) => (
             <div key={person.id} style={{ backgroundColor: theme.pill, borderRadius: '12px', padding: '16px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
@@ -397,8 +465,14 @@ export default function MainFeedTab() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                     <h4 style={{ fontWeight: 600 }}>{person.name}</h4>
+                    {person.isVerified && (
+                      <BadgeCheck style={{ width: '16px', height: '16px', color: theme.accent }} />
+                    )}
+                    {person.role && (
+                      <span style={{ color: '#919191', fontSize: '13px' }}>· {person.role}</span>
+                    )}
                   </div>
                   {person.bio && <p style={{ color: '#919191', fontSize: '14px', marginBottom: '8px' }}>{person.bio}</p>}
 
@@ -486,6 +560,7 @@ export default function MainFeedTab() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
