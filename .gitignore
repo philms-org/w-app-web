@@ -38,3 +38,5 @@ npm-debug.log*
 Thumbs.db
 yarn-debug.log*
 yarn-error.log*
+scripts/camoufox/venv/
+.env*
