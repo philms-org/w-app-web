@@ -8,6 +8,7 @@ import MainFeedTab from '@/components/tabs/MainFeedTab';
 import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
+import HistoryTab from '@/components/tabs/HistoryTab';
 import { theme } from '@/lib/theme';
 import { MapPin } from 'lucide-react';
 
@@ -81,6 +82,8 @@ export default function MainPage() {
         return <MessagesTab />;
       case 'profile':
         return <ProfileTab />;
+      case 'history':
+        return <HistoryTab />;
       default:
         return <MainFeedTab />;
     }

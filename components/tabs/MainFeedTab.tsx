@@ -10,7 +10,7 @@ import HeroCarousel from '@/components/HeroCarousel';
 export default function MainFeedTab() {
   const { selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [peopleHere, setPeopleHere] = useState<any[]>([]);
-  const [comingSoon, setComingSoon] = useState<'history' | 'rewards' | null>(null);
+  const [comingSoon, setComingSoon] = useState<'rewards' | null>(null);
   const [venueTab, setVenueTab] = useState<'who' | 'connections'>('who');
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
@@ -61,6 +61,10 @@ export default function MainFeedTab() {
   const handleQuickAccess = (id: 'history' | 'rewards' | 'profile') => {
     if (id === 'profile') {
       setActiveTab('profile');
+      return;
+    }
+    if (id === 'history') {
+      setActiveTab('history');
       return;
     }
     setComingSoon(id);

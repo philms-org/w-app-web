@@ -115,6 +115,30 @@ export async function updateEvent(venue: Venue): Promise<void> {
   if (error) throw error;
 }
 
+// ---- Check-in History ----
+
+export async function fetchLastVisited(limit = 50): Promise<Venue[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('checked_in_at, locations(*)')
+    .eq('user_id', uid)
+    .order('checked_in_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  const seen = new Set<string>();
+  const result: Venue[] = [];
+  for (const row of (data ?? []) as unknown as { locations: Venue }[]) {
+    const venue = row.locations;
+    if (!venue || seen.has(venue.id)) continue;
+    seen.add(venue.id);
+    result.push(venue);
+  }
+  return result;
+}
+
 // ---- Feed ----
 
 export async function fetchFeed(locationId: string): Promise<FeedItem[]> {
