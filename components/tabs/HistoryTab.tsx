@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLastVisited, fetchFeed } from '@/lib/data';
+import { fetchLastVisited, fetchFeed, fetchAttendeeHistory } from '@/lib/data';
 import { theme } from '@/lib/theme';
-import type { Venue, FeedItem } from '@/lib/types';
+import type { Venue, FeedItem, Profile } from '@/lib/types';
 import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 
@@ -35,6 +35,8 @@ export default function HistoryTab() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [attendees, setAttendees] = useState<Profile[]>([]);
+  const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLastVisited(50)
@@ -52,6 +54,15 @@ export default function HistoryTab() {
       .finally(() => setDetailLoading(false));
   }, [selectedVenue]);
 
+  useEffect(() => {
+    if (!selectedVenue) return;
+    setAttendees([]);
+    setSelectedAttendeeId(null);
+    fetchAttendeeHistory(selectedVenue.id)
+      .then(setAttendees)
+      .catch((err) => console.error('Failed to load attendee history:', err));
+  }, [selectedVenue]);
+
   if (selectedVenue) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -66,6 +77,64 @@ export default function HistoryTab() {
           <p style={{ color: '#919191', fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             {selectedVenue.address}
           </p>
+        )}
+
+        {attendees.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{
+              color: '#919191',
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: '10px',
+              fontFamily: 'Montserrat, system-ui, sans-serif'
+            }}>Who was there</p>
+            <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {attendees.map((attendee) => (
+                <button
+                  key={attendee.id}
+                  onClick={() => setSelectedAttendeeId(attendee.id === selectedAttendeeId ? null : attendee.id)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    width: '56px'
+                  }}
+                >
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: theme.pill,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: attendee.id === selectedAttendeeId ? `2px solid ${theme.accent}` : '2px solid transparent'
+                  }}>
+                    <span style={{ color: theme.bg, fontSize: '16px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      {(attendee.display_name ?? '?').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span style={{
+                    color: 'white',
+                    fontSize: '10px',
+                    textAlign: 'center',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}>{attendee.display_name ?? 'Someone'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {detailLoading && (
