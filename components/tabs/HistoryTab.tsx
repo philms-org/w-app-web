@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { fetchLastVisited, fetchFeed } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem } from '@/lib/types';
-import { ChevronRight, ChevronLeft, Clock, User, BadgeCheck } from 'lucide-react';
+import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
+import HeroCarousel from '@/components/HeroCarousel';
 
 interface DayGroup {
   dateLabel: string;
@@ -53,41 +54,19 @@ export default function HistoryTab() {
 
   if (selectedVenue) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: theme.bg, padding: '16px 24px 24px' }}>
-        <button
-          onClick={() => setSelectedVenue(null)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: 'none',
-            border: 'none',
-            color: theme.accent,
-            fontSize: '15px',
-            fontWeight: 600,
-            padding: '8px 0 16px',
-            cursor: 'pointer',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}
-        >
-          <ChevronLeft style={{ width: '20px', height: '20px' }} />
-          History
-        </button>
+      <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
+        <HeroCarousel
+          images={selectedVenue.banner_image ? [selectedVenue.banner_image] : []}
+          title={selectedVenue.name}
+          onBack={() => setSelectedVenue(null)}
+        />
 
-        <div style={{ backgroundColor: theme.pill, borderRadius: '16px', padding: '16px 20px' }}>
-          <h1 style={{
-            color: theme.bg,
-            fontSize: '20px',
-            fontWeight: 700,
-            marginBottom: selectedVenue.address ? '6px' : 0,
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{selectedVenue.name}</h1>
-          {selectedVenue.address && (
-            <p style={{ color: '#919191', fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              {selectedVenue.address}
-            </p>
-          )}
-        </div>
+        <div style={{ padding: '16px 24px 24px' }}>
+        {selectedVenue.address && (
+          <p style={{ color: '#919191', fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            {selectedVenue.address}
+          </p>
+        )}
 
         {detailLoading && (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}>
@@ -166,6 +145,7 @@ export default function HistoryTab() {
             ))}
           </div>
         ))}
+        </div>
       </div>
     );
   }
