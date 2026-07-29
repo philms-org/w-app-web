@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLastVisited, fetchFeed, fetchAttendeeHistory } from '@/lib/data';
+import { fetchLastVisited, fetchFeed, fetchAttendeeHistory, startConversation } from '@/lib/data';
+import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
 import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
@@ -30,6 +31,7 @@ function groupByDay(items: FeedItem[]): DayGroup[] {
 }
 
 export default function HistoryTab() {
+  const { setActiveTab } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -62,6 +64,29 @@ export default function HistoryTab() {
       .then(setAttendees)
       .catch((err) => console.error('Failed to load attendee history:', err));
   }, [selectedVenue]);
+
+  const [messageText, setMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const selectedAttendee = attendees.find((a) => a.id === selectedAttendeeId) ?? null;
+
+  const handleSendReconnect = () => {
+    if (!selectedAttendee || !messageText.trim()) return;
+    setSending(true);
+    setSendError(null);
+    startConversation([selectedAttendee.id], null, false, messageText.trim())
+      .then(() => {
+        setMessageText('');
+        setSelectedAttendeeId(null);
+        setActiveTab('messages');
+      })
+      .catch((err) => {
+        console.error('Failed to start conversation:', err);
+        setSendError("Couldn't send — try again");
+      })
+      .finally(() => setSending(false));
+  };
 
   if (selectedVenue) {
     return (
@@ -134,6 +159,52 @@ export default function HistoryTab() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {selectedAttendee && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder={`Say hi to ${selectedAttendee.display_name ?? 'them'}...`}
+                style={{
+                  flex: 1,
+                  backgroundColor: theme.pill,
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  color: theme.bg,
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
+                }}
+              />
+              <button
+                onClick={handleSendReconnect}
+                disabled={sending || !messageText.trim()}
+                style={{
+                  backgroundColor: theme.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: sending || !messageText.trim() ? 'default' : 'pointer',
+                  opacity: sending || !messageText.trim() ? 0.6 : 1,
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
+                }}
+              >
+                {sending ? 'Sending...' : 'Message'}
+              </button>
+            </div>
+            {sendError && (
+              <p style={{ color: '#EC2C91', fontSize: '12px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                {sendError}
+              </p>
+            )}
           </div>
         )}
 
