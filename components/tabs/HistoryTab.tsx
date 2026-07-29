@@ -60,6 +60,9 @@ export default function HistoryTab() {
     if (!selectedVenue) return;
     setAttendees([]);
     setSelectedAttendeeId(null);
+    setMessageText('');
+    setSendError(null);
+    setSending(false);
     fetchAttendeeHistory(selectedVenue.id)
       .then(setAttendees)
       .catch((err) => console.error('Failed to load attendee history:', err));
@@ -201,7 +204,7 @@ export default function HistoryTab() {
               </button>
             </div>
             {sendError && (
-              <p style={{ color: '#EC2C91', fontSize: '12px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              <p style={{ color: theme.accent2, fontSize: '12px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                 {sendError}
               </p>
             )}
