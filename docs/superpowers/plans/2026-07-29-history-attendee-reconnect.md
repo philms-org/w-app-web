@@ -28,7 +28,7 @@
 - Consumes: `HeroCarousel` from `@/components/HeroCarousel` — `{ images: string[], title: string, onBack: () => void }` (existing, unmodified).
 - Produces: no new exports. The detail view's outer `<div>` no longer carries page padding directly — a new inner padded `<div>` wraps everything below the carousel. Tasks 2 and 3 add their JSX inside that inner div, directly after the address paragraph.
 
-- [ ] **Step 1: Add the import**
+- [x] **Step 1: Add the import**
 
 At the top of `components/tabs/HistoryTab.tsx`, find:
 
@@ -51,7 +51,7 @@ import HeroCarousel from '@/components/HeroCarousel';
 
 (Drops `ChevronLeft` — it was only used by the back button this task removes; the carousel's own back arrow replaces it.)
 
-- [ ] **Step 2: Replace the detail view's header**
+- [x] **Step 2: Replace the detail view's header**
 
 Find (the full `if (selectedVenue)` block's opening, through the end of the pill header):
 
@@ -119,7 +119,7 @@ Replace with:
         {detailLoading && (
 ```
 
-- [ ] **Step 3: Close the new wrapping div**
+- [x] **Step 3: Close the new wrapping div**
 
 Find the very end of the `if (selectedVenue)` return statement:
 
@@ -142,14 +142,14 @@ Replace with:
   }
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then run: `cd /Users/sr/w-app-web && npm run dev`, open the History tab, tap a venue. Confirm: the carousel renders full-bleed at the top (photo if the venue has `banner_image`, brand-gradient fallback if not), "W [venue name]" overlay text is legible, tapping the back arrow returns to the list, and the address line + feed below still render correctly inside their own padding.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/tabs/HistoryTab.tsx
@@ -167,7 +167,7 @@ git commit -m "HistoryTab: use HeroCarousel for the organizer banner in the deta
 - Consumes: `fetchAttendeeHistory(locationId: string): Promise<Profile[]>` from `@/lib/data` (existing, unmodified). `Profile` type from `@/lib/types` (existing — has `id`, `display_name`, `avatar_url?`, `is_verified?`).
 - Produces: `attendees: Profile[]` and `selectedAttendeeId: string | null` state, both consumed by Task 3.
 
-- [ ] **Step 1: Extend imports**
+- [x] **Step 1: Extend imports**
 
 Find:
 
@@ -185,7 +185,7 @@ import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
 ```
 
-- [ ] **Step 2: Add attendee state and fetch effect**
+- [x] **Step 2: Add attendee state and fetch effect**
 
 Find:
 
@@ -246,7 +246,7 @@ Replace with:
   }, [selectedVenue]);
 ```
 
-- [ ] **Step 3: Render the attendee strip**
+- [x] **Step 3: Render the attendee strip**
 
 Find (the address paragraph added in Task 1, immediately before `{detailLoading && (`):
 
@@ -330,14 +330,14 @@ Replace with:
         {detailLoading && (
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then in the running dev server, open a venue in History that has prior check-ins from other users. Confirm the "Who was there" strip renders with an avatar (initial letter) and name per attendee, and tapping one highlights it with a cyan ring (tap again to un-highlight). For a venue with no other attendees, confirm the strip section doesn't render at all (no empty box).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/tabs/HistoryTab.tsx
@@ -355,7 +355,7 @@ git commit -m "HistoryTab: add 'Who was there' attendee strip via fetchAttendeeH
 - Consumes: `startConversation(recipientIds: string[], name: string | null, isGroup: boolean, firstMessage: string): Promise<Conversation>` from `@/lib/data` (existing, unmodified — requires non-empty `firstMessage`). `useStore` from `@/lib/store` for `setActiveTab` (existing, unmodified).
 - Produces: no new exports.
 
-- [ ] **Step 1: Import `useStore`**
+- [x] **Step 1: Import `useStore`**
 
 Find:
 
@@ -370,7 +370,7 @@ import { fetchLastVisited, fetchFeed, fetchAttendeeHistory, startConversation } 
 import { useStore } from '@/lib/store';
 ```
 
-- [ ] **Step 2: Add compose state and the send handler**
+- [x] **Step 2: Add compose state and the send handler**
 
 Find:
 
@@ -440,7 +440,7 @@ Replace with:
   if (selectedVenue) {
 ```
 
-- [ ] **Step 3: Render the compose row**
+- [x] **Step 3: Render the compose row**
 
 Find (the end of the attendee-strip block added in Task 2, right before `{detailLoading && (`):
 
@@ -508,14 +508,14 @@ Replace with:
         {detailLoading && (
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
 
 Then in the running dev server: open a venue with attendees, tap one, confirm the input + Message button appear. Type a message and tap Message. Confirm: the button shows "Sending...", then the app switches to the Messages tab, and the new conversation appears in that list with your message as the preview. Tap a different attendee first, then tap the same one again to confirm the un-highlight/hide-row toggle still works. Test the empty-input case (Message button stays disabled).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/tabs/HistoryTab.tsx
@@ -530,7 +530,7 @@ git commit -m "HistoryTab: add reconnect message flow via startConversation"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Start the dev server**
+- [x] **Step 1: Start the dev server**
 
 Run: `cd /Users/sr/w-app-web && npm run dev`
 
@@ -543,7 +543,7 @@ Run: `cd /Users/sr/w-app-web && npm run dev`
 5. Venue with zero other attendees → strip is absent, feed section renders normally with no gap/empty box.
 6. Day-grouped feed below (unchanged pre-existing behavior) still shows every attendee's posts with names and timestamps.
 
-- [ ] **Step 3: Final typecheck**
+- [x] **Step 3: Final typecheck**
 
 Run: `cd /Users/sr/w-app-web && npx tsc --noEmit`
 Expected: No errors.
