@@ -58,14 +58,20 @@ export default function HistoryTab() {
 
   useEffect(() => {
     if (!selectedVenue) return;
+    let ignore = false;
     setAttendees([]);
     setSelectedAttendeeId(null);
     setMessageText('');
     setSendError(null);
     setSending(false);
     fetchAttendeeHistory(selectedVenue.id)
-      .then(setAttendees)
+      .then((result) => {
+        if (!ignore) setAttendees(result);
+      })
       .catch((err) => console.error('Failed to load attendee history:', err));
+    return () => {
+      ignore = true;
+    };
   }, [selectedVenue]);
 
   const [messageText, setMessageText] = useState('');
