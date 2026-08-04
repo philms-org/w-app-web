@@ -71,7 +71,7 @@ export default function MapTab() {
           });
         },
         (error) => {
-          console.error('Location error:', error);
+          console.warn('Location error:', error.code, error.message);
           // Use default location (New York City)
           setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
         },
@@ -115,7 +115,7 @@ export default function MapTab() {
 
   const handleLocationSelect = useCallback((location: any) => {
     setSelectedLocation(location);
-    setActiveTab('feed');
+    setActiveTab('home');
   }, [setSelectedLocation, setActiveTab]);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {

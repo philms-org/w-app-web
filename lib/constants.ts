@@ -21,22 +21,12 @@ export const LOOKING_FOR_OPTIONS = {
   love: {
     title: 'Love',
     options: [
-      { id: 0, emoji: '🚫', label: 'None' },
-      { id: 1, emoji: '❤️', label: 'Open to love' },
-      { id: 2, emoji: '🔓', label: 'Taken' },
-      { id: 3, emoji: '🪩', label: 'Fun' },
+      { id: 1, emoji: '❤️', label: 'Open' },
+      { id: 2, emoji: '🙅', label: 'Not interested' },
+      { id: 3, emoji: '🔒', label: 'Taken' },
     ],
   },
 };
-
-// Relationship Status Options
-export const RELATIONSHIP_OPTIONS = [
-  { id: '1', label: 'Single' },
-  { id: '2', label: 'Dating' },
-  { id: '3', label: 'In a Relationship' },
-  { id: '4', label: 'Married' },
-  { id: '5', label: 'Other' },
-];
 
 // Default Location Settings
 export const DEFAULT_LOCATION = {

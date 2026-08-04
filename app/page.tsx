@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import Image from 'next/image';
+import { theme } from '@/lib/theme';
 
 export default function LaunchPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function LaunchPage() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
+        background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         padding: '32px'
       }}
     >
@@ -53,7 +54,7 @@ export default function LaunchPage() {
             style={{
               fontSize: '64px',
               fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
+              background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',

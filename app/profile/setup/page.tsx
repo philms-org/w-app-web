@@ -5,19 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { upsertProfile } from '@/lib/data';
 import { ChevronLeft, Users, Briefcase, Heart } from 'lucide-react';
-import { LOOKING_FOR_OPTIONS, RELATIONSHIP_OPTIONS } from '@/lib/constants';
+import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
 
 export default function ProfileSetupPage() {
   const router = useRouter();
   const { user, setUser } = useStore();
-  
-  const [currentStep, setCurrentStep] = useState(1);
+
   const [isLoading, setIsLoading] = useState(false);
-  const [heightValue, setHeightValue] = useState(1.7); // meters, 1.2 to 2.6 range
-  
+
   const [formData, setFormData] = useState({
-    height: '1.7',
-    relationship: '',
     datingId: '0',
     socialisingId: '0',
     networkingId: '0',
@@ -28,20 +24,8 @@ export default function ProfileSetupPage() {
     profession: '',
   });
 
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleSave();
-    }
-  };
-
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      router.back();
-    }
+    router.back();
   };
 
   const handleSave = async () => {
@@ -55,8 +39,6 @@ export default function ProfileSetupPage() {
       await upsertProfile({
         id: user.id,
         display_name: user.name,
-        height: parseFloat(formData.height),
-        relationship: formData.relationship || null,
         dating_id: formData.datingId ? parseInt(formData.datingId, 10) : null,
         socialising_id: formData.socialisingId ? parseInt(formData.socialisingId, 10) : null,
         networking_id: formData.networkingId ? parseInt(formData.networkingId, 10) : null,
@@ -80,140 +62,7 @@ export default function ProfileSetupPage() {
     }
   };
 
-  // Step 1: Height Slider (matches the native W App design)
-  const renderStep1 = () => (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#231E20',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '48px 24px'
-    }}>
-      <div style={{ textAlign: 'center', maxWidth: '300px', width: '100%' }}>
-        <h2 style={{
-          fontSize: '28px',
-          fontWeight: 'bold',
-          marginBottom: '16px',
-          color: 'white',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>How tall are you?</h2>
-        
-        {/* Height Display */}
-        <div style={{
-          fontSize: '64px',
-          fontWeight: 'bold',
-          color: '#17BFD9',
-          marginBottom: '48px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>
-          {heightValue.toFixed(2)}m
-        </div>
-
-        {/* Height Slider */}
-        <div style={{
-          width: '100%',
-          marginBottom: '48px',
-          position: 'relative'
-        }}>
-          <input
-            type="range"
-            min="1.2"
-            max="2.6"
-            step="0.01"
-            value={heightValue}
-            onChange={(e) => {
-              const value = parseFloat(e.target.value);
-              setHeightValue(value);
-              setFormData(prev => ({ ...prev, height: value.toString() }));
-            }}
-            style={{
-              width: '100%',
-              height: '8px',
-              background: `
-                linear-gradient(to right, 
-                  #17BFD9 0%, 
-                  #17BFD9 ${((heightValue - 1.2) / (2.6 - 1.2)) * 100}%, 
-                  #444 ${((heightValue - 1.2) / (2.6 - 1.2)) * 100}%, 
-                  #444 100%
-                )
-              `,
-              borderRadius: '4px',
-              outline: 'none',
-              appearance: 'none',
-              WebkitAppearance: 'none',
-              cursor: 'pointer'
-            }}
-          />
-          
-          {/* Range Labels */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '12px',
-            fontSize: '14px',
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>
-            <span>1.2m</span>
-            <span>2.6m</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step 2: Relationship Status (like SecondSetupVC)
-  const renderStep2 = () => (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#231E20',
-      padding: '24px'
-    }}>
-      <h2 style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-        color: 'white',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>Relationship Status</h2>
-      <p style={{
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginBottom: '32px',
-        fontSize: '16px',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>What's your current relationship status?</p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px', margin: '0 auto' }}>
-        {RELATIONSHIP_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, relationship: option.id }))}
-            style={{
-              padding: '16px 24px',
-              borderRadius: '12px',
-              border: `2px solid ${formData.relationship === option.id ? '#17BFD9' : '#444'}`,
-              backgroundColor: formData.relationship === option.id ? '#17BFD9' : 'transparent',
-              color: formData.relationship === option.id ? 'white' : 'rgba(255, 255, 255, 0.8)',
-              fontSize: '18px',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textAlign: 'center'
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Step 3: Looking For (like ThirdSetupVC)
+  // Looking For (like ThirdSetupVC)
   const renderStep3 = () => (
     <div style={{ 
       minHeight: '100vh',
@@ -311,7 +160,7 @@ export default function ProfileSetupPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <Heart style={{ width: '24px', height: '24px', color: '#F59E0B' }} />
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            Love
+            Love is always in the air — let people know where you stand
           </h3>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -581,19 +430,12 @@ export default function ProfileSetupPage() {
           color: 'white',
           fontFamily: 'Montserrat, system-ui, sans-serif'
         }}>Setup Profile</h1>
-        <div style={{ 
-          fontSize: '16px', 
-          color: '#17BFD9', 
-          fontFamily: 'Montserrat, system-ui, sans-serif',
-          fontWeight: '600'
-        }}>{currentStep}/3</div>
+        <div style={{ width: '40px' }} />
       </div>
 
       {/* Content */}
       <div>
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
+        {renderStep3()}
       </div>
 
       {/* Bottom Button */}
@@ -608,7 +450,7 @@ export default function ProfileSetupPage() {
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
       }}>
         <button
-          onClick={handleNext}
+          onClick={handleSave}
           disabled={isLoading}
           style={{
             width: '100%',
@@ -637,7 +479,7 @@ export default function ProfileSetupPage() {
               animation: 'spin 1s linear infinite'
             }}></div>
           ) : (
-            currentStep === 3 ? 'Complete Setup' : 'Next'
+            'Complete Setup'
           )}
         </button>
       </div>
@@ -646,28 +488,6 @@ export default function ProfileSetupPage() {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-        
-        /* Custom slider styling */
-        input[type="range"]::-webkit-slider-thumb {
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: #17BFD9;
-          border: 2px solid white;
-          cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        input[type="range"]::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: #17BFD9;
-          border: 2px solid white;
-          cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
       `}</style>
     </div>

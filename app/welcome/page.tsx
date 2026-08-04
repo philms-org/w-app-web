@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { theme } from '@/lib/theme';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function WelcomePage() {
     },
     {
       title: "Make Connections",
-      description: "Chat with people who share your interests",
+      description: "Chat with people who share your space",
       emoji: "💬",
     },
   ];
@@ -45,7 +46,7 @@ export default function WelcomePage() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
+        background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         position: 'relative'
       }}
     >

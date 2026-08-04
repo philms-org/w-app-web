@@ -23,7 +23,7 @@ export default function HeroCarousel({ images, title, onBack }: HeroCarouselProp
         position: 'absolute',
         inset: 0,
         backgroundImage: hasImages ? `url(${images[index]})` : undefined,
-        background: hasImages ? undefined : `linear-gradient(135deg, ${theme.accent} 0%, ${theme.accent2} 100%)`,
+        background: hasImages ? undefined : `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }} />

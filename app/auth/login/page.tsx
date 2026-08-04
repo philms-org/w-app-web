@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { signIn } from '@/lib/auth';
 import { fetchProfile } from '@/lib/data';
+import { theme } from '@/lib/theme';
 import { Eye, EyeOff, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -117,7 +118,7 @@ export default function LoginPage() {
           <div style={{
             width: '96px',
             height: '96px',
-            background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
+            background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',

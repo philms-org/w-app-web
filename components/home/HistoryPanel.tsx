@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { fetchLastVisited, fetchFeed, fetchAttendeeHistory } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
-import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
-import HeroCarousel from '@/components/HeroCarousel';
+import { ChevronRight, ChevronLeft, Clock, User, BadgeCheck } from 'lucide-react';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 
@@ -32,7 +31,10 @@ function groupByDay(items: FeedItem[]): DayGroup[] {
   return order.map((key) => ({ dateLabel: key, items: buckets.get(key)! }));
 }
 
-export default function HistoryTab() {
+// Inline panel version of HistoryTab's list -> detail flow, meant to render
+// below QuickAccessRow on the Home tab (no tab-level back navigation — the
+// venue detail collapses back into the list within the same panel).
+export default function HistoryPanel() {
   const { setActiveTab } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,18 +77,43 @@ export default function HistoryTab() {
 
   const selectedAttendee = attendees.find((a) => a.id === selectedAttendeeId) ?? null;
 
+  const panelStyle: CSSProperties = {
+    backgroundColor: theme.surface,
+    borderRadius: '16px',
+    border: `1px solid ${theme.divider}`,
+    padding: '16px',
+    margin: '0 20px 20px'
+  };
+
   if (selectedVenue) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
-        <HeroCarousel
-          images={selectedVenue.banner_image ? [selectedVenue.banner_image] : []}
-          title={selectedVenue.name}
-          onBack={() => setSelectedVenue(null)}
-        />
+      <div style={panelStyle}>
+        <button
+          onClick={() => setSelectedVenue(null)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: theme.accent,
+            fontSize: '13px',
+            fontWeight: 600,
+            marginBottom: '12px',
+            padding: 0,
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}
+        >
+          <ChevronLeft style={{ width: '16px', height: '16px' }} />
+          History
+        </button>
 
-        <div style={{ padding: '16px 24px 24px' }}>
+        <h3 style={{ color: theme.text, fontSize: '18px', fontWeight: 700, marginBottom: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          {selectedVenue.name}
+        </h3>
         {selectedVenue.address && (
-          <p style={{ color: '#919191', fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          <p style={{ color: theme.muted, fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             {selectedVenue.address}
           </p>
         )}
@@ -94,7 +121,7 @@ export default function HistoryTab() {
         {attendees.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               fontSize: '11px',
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -123,35 +150,25 @@ export default function HistoryTab() {
         )}
 
         {detailLoading && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
             <span className="spinner" />
           </div>
         )}
 
         {!detailLoading && groups.length === 0 && (
-          <p style={{
-            color: '#919191',
-            fontSize: '14px',
-            textAlign: 'center',
-            marginTop: '40px',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>
+          <p style={{ color: theme.muted, fontSize: '14px', textAlign: 'center', marginTop: '24px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             No activity logged for this venue yet
           </p>
         )}
 
         {!detailLoading && groups.map((group) => (
-          <div key={group.dateLabel} style={{ marginTop: '20px' }}>
-            <h3 style={{
-              color: theme.accent,
-              fontSize: '13px',
-              fontWeight: 700,
-              marginBottom: '8px',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>{group.dateLabel}</h3>
+          <div key={group.dateLabel} style={{ marginTop: '16px' }}>
+            <h4 style={{ color: theme.accent, fontSize: '13px', fontWeight: 700, marginBottom: '8px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              {group.dateLabel}
+            </h4>
             {group.items.map((item) => (
               <div key={item.id} style={{
-                backgroundColor: theme.pill,
+                backgroundColor: theme.surface2,
                 borderRadius: '10px',
                 padding: '12px 14px',
                 marginBottom: '8px',
@@ -162,110 +179,84 @@ export default function HistoryTab() {
                   width: '36px',
                   height: '36px',
                   flexShrink: 0,
-                  backgroundColor: '#F3F3F3',
+                  backgroundColor: theme.pill,
                   borderRadius: '9999px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <User style={{ width: '16px', height: '16px', color: '#919191' }} />
+                  <User style={{ width: '16px', height: '16px', color: theme.bg }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{
-                      color: theme.bg,
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      fontFamily: 'Montserrat, system-ui, sans-serif'
-                    }}>{item.profiles?.display_name ?? 'Someone'}</span>
+                    <span style={{ color: theme.text, fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      {item.profiles?.display_name ?? 'Someone'}
+                    </span>
                     {item.profiles?.is_verified && (
                       <BadgeCheck style={{ width: '14px', height: '14px', color: theme.accent }} />
                     )}
                   </div>
-                  <p style={{
-                    color: theme.bg,
-                    fontSize: '15px',
-                    marginTop: '2px',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}>{item.content}</p>
-                  <p style={{
-                    color: '#919191',
-                    fontSize: '11px',
-                    marginTop: '6px',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}>{timeFormatter.format(new Date(item.created_at))}</p>
+                  <p style={{ color: theme.text, fontSize: '15px', marginTop: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                    {item.content}
+                  </p>
+                  <p style={{ color: theme.muted, fontSize: '11px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                    {timeFormatter.format(new Date(item.created_at))}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         ))}
-        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, padding: '16px' }}>
-      <div style={{
-        background: 'linear-gradient(135deg, #ED6BA1 0%, #EDB859 100%)',
-        borderRadius: '16px',
-        padding: '20px',
-        minHeight: 'calc(100vh - 32px)'
-      }}>
-        <h1 style={{
-          color: 'white',
-          fontSize: '22px',
-          fontWeight: 700,
-          marginBottom: '16px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>History</h1>
+    <div style={panelStyle}>
+      <h3 style={{ color: theme.text, fontSize: '16px', fontWeight: 700, marginBottom: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+        History
+      </h3>
 
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}>
-            <span className="spinner" />
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}>
+          <span className="spinner" />
+        </div>
+      )}
+
+      {!loading && venues.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <Clock style={{ width: '28px', height: '28px', color: theme.muted, margin: '0 auto 10px' }} />
+          <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>No check-ins yet</p>
+        </div>
+      )}
+
+      {!loading && venues.map((venue) => (
+        <button
+          key={venue.id}
+          onClick={() => setSelectedVenue(venue)}
+          style={{
+            width: '100%',
+            backgroundColor: theme.surface2,
+            borderRadius: '10px',
+            padding: '12px 16px',
+            marginBottom: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}
+        >
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ color: theme.text, fontSize: '15px', fontWeight: 600 }}>{venue.name}</div>
+            {venue.address && (
+              <div style={{ color: theme.muted, fontSize: '12px', marginTop: '2px' }}>{venue.address}</div>
+            )}
           </div>
-        )}
-
-        {!loading && venues.length === 0 && (
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <Clock style={{ width: '32px', height: '32px', color: 'rgba(255,255,255,0.8)', margin: '0 auto 12px' }} />
-            <p style={{
-              color: 'white',
-              fontSize: '15px',
-              fontWeight: 500,
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>No check-ins yet</p>
-          </div>
-        )}
-
-        {!loading && venues.map((venue) => (
-          <button
-            key={venue.id}
-            onClick={() => setSelectedVenue(venue)}
-            style={{
-              width: '100%',
-              backgroundColor: theme.pill,
-              borderRadius: '10px',
-              padding: '12px 16px',
-              marginBottom: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}
-          >
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ color: theme.bg, fontSize: '16px', fontWeight: 600 }}>{venue.name}</div>
-              {venue.address && (
-                <div style={{ color: '#919191', fontSize: '13px', marginTop: '2px' }}>{venue.address}</div>
-              )}
-            </div>
-            <ChevronRight style={{ width: '18px', height: '18px', color: '#919191', flexShrink: 0 }} />
-          </button>
-        ))}
-      </div>
+          <ChevronRight style={{ width: '18px', height: '18px', color: theme.muted, flexShrink: 0 }} />
+        </button>
+      ))}
     </div>
   );
 }

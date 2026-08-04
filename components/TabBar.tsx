@@ -12,7 +12,7 @@ interface TabBarProps {
 export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabBarProps) {
   const tabs = [
     { id: 'map', label: 'Map', icon: MapPin },
-    { id: 'feed', label: 'Main Feed', icon: null },
+    { id: 'home', label: 'Home', icon: null },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
   ];
 
@@ -56,7 +56,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
             }}
           >
             <div style={{ position: 'relative' }}>
-              {tab.id === 'feed' ? (
+              {tab.id === 'home' ? (
                 <span style={{
                   fontSize: '22px',
                   fontWeight: 'bold',

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import TabBar from '@/components/TabBar';
-import MainFeedTab from '@/components/tabs/MainFeedTab';
+import AppHeader from '@/components/AppHeader';
+import HomeTab from '@/components/tabs/HomeTab';
 import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
@@ -76,8 +77,8 @@ export default function MainPage() {
     switch (activeTab) {
       case 'map':
         return <MapTab />;
-      case 'feed':
-        return <MainFeedTab />;
+      case 'home':
+        return <HomeTab />;
       case 'messages':
         return <MessagesTab />;
       case 'profile':
@@ -85,7 +86,7 @@ export default function MainPage() {
       case 'history':
         return <HistoryTab />;
       default:
-        return <MainFeedTab />;
+        return <HomeTab />;
     }
   };
 
@@ -95,6 +96,8 @@ export default function MainPage() {
 
   return (
     <div className="min-h-screen bg-w-back-gray">
+      {activeTab === 'home' && <AppHeader />}
+
       {/* Main content */}
       <div className="pb-16">
         {renderTab()}

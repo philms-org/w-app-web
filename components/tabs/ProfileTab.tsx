@@ -43,7 +43,7 @@ export default function ProfileTab() {
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
       {/* Header with Profile Info */}
       <div style={{
-        background: 'linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%)',
+        background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         padding: '48px 24px 80px',
         paddingTop: 'max(48px, env(safe-area-inset-top) + 48px)'
       }}>
