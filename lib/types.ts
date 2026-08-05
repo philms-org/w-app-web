@@ -118,3 +118,12 @@ export interface VerificationTag {
   assigned_at: string;
   profiles?: Profile;
 }
+
+export interface Banner {
+  id: string;
+  location_id: string;
+  image_url: string;
+  link?: string | null;
+  display_order: number;
+  is_active: boolean;
+}

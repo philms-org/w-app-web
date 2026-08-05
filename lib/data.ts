@@ -10,6 +10,7 @@ import type {
   Conversation,
   Message,
   VerificationTag,
+  Banner,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -330,6 +331,62 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
     .upload(path, file, { contentType: 'image/jpeg', upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ---- Banners ----
+
+export async function fetchBanners(locationId: string, activeOnly = true): Promise<Banner[]> {
+  let query = supabase.from('banners').select().eq('location_id', locationId);
+  if (activeOnly) query = query.eq('is_active', true);
+  const { data, error } = await query.order('display_order');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createBanner(locationId: string, imageUrl: string, link: string | null): Promise<void> {
+  const { data: existing, error: existingError } = await supabase
+    .from('banners')
+    .select('display_order')
+    .eq('location_id', locationId)
+    .order('display_order', { ascending: false })
+    .limit(1);
+  if (existingError) throw existingError;
+
+  const nextOrder = existing?.[0]?.display_order != null ? existing[0].display_order + 1 : 0;
+
+  const { error } = await supabase.from('banners').insert({
+    location_id: locationId,
+    image_url: imageUrl,
+    link,
+    display_order: nextOrder,
+    is_active: true,
+  });
+  if (error) throw error;
+}
+
+export async function updateBanner(
+  id: string,
+  fields: Partial<Pick<Banner, 'link' | 'display_order' | 'is_active'>>
+): Promise<void> {
+  const { error } = await supabase.from('banners').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteBanner(id: string): Promise<void> {
+  const { error } = await supabase.from('banners').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---- Banner Image Storage ----
+
+export async function uploadBannerImage(file: File, locationId: string): Promise<string> {
+  const path = `${locationId}/${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from('banners')
+    .upload(path, file, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from('banners').getPublicUrl(path);
   return data.publicUrl;
 }
 
