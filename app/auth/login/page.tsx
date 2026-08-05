@@ -65,6 +65,7 @@ export default function LoginPage() {
         activity: profile?.friday_night ?? undefined,
         profession: profile?.profession ?? undefined,
         setupComplete: !!profile?.city,
+        isMasterAdmin: !!profile?.is_master_admin,
       });
 
       if (profile?.city) {

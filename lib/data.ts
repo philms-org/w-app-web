@@ -9,6 +9,7 @@ import type {
   Reward,
   Conversation,
   Message,
+  VerificationTag,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -293,6 +294,31 @@ export async function setAttendeeHistoryOptOut(locationId: string, hidden: boole
       .eq('location_id', locationId);
     if (error) throw error;
   }
+}
+
+// ---- Verification Tags ----
+
+export async function fetchVerificationTags(locationId: string): Promise<VerificationTag[]> {
+  const { data, error } = await supabase
+    .from('verification_tags')
+    .select('*, profiles(*)')
+    .eq('location_id', locationId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function assignVerificationTag(userId: string, locationId: string, tag: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  const { error } = await supabase
+    .from('verification_tags')
+    .insert({ user_id: userId, location_id: locationId, tag, assigned_by: uid });
+  if (error) throw error;
+}
+
+export async function removeVerificationTag(tagId: string): Promise<void> {
+  const { error } = await supabase.from('verification_tags').delete().eq('id', tagId);
+  if (error) throw error;
 }
 
 // ---- Avatar Storage ----

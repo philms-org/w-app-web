@@ -20,6 +20,7 @@ interface User {
   activity?: string;
   profession?: string;
   setupComplete?: boolean;
+  isMasterAdmin?: boolean;
 }
 
 interface Location {

@@ -2,13 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { checkIn, checkOut, fetchPresence, fetchAttendeeHistory } from '@/lib/data';
+import {
+  checkIn,
+  checkOut,
+  fetchPresence,
+  fetchAttendeeHistory,
+  fetchVerificationTags,
+  assignVerificationTag,
+  removeVerificationTag,
+} from '@/lib/data';
+import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
-import type { Profile } from '@/lib/types';
+import type { Profile, VerificationTag } from '@/lib/types';
 
 // Straight-line (haversine) distance in meters between two lat/lng points.
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -32,6 +41,12 @@ export default function CheckedInHero() {
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [tags, setTags] = useState<VerificationTag[]>([]);
+  const [tagText, setTagText] = useState('');
+  const [tagSaving, setTagSaving] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  const { canManage } = useIsOrganizer(selectedLocation?.id);
 
   const distanceMeters = useMemo(() => {
     if (!selectedLocation || !currentLocation) return null;
@@ -45,11 +60,29 @@ export default function CheckedInHero() {
 
   const withinGeofence = distanceMeters !== null && distanceMeters <= (selectedLocation?.radius ?? 0);
 
+  const tagsByUserId = useMemo(() => {
+    const map = new Map<string, VerificationTag[]>();
+    for (const t of tags) {
+      const existing = map.get(t.user_id);
+      if (existing) existing.push(t);
+      else map.set(t.user_id, [t]);
+    }
+    return map;
+  }, [tags]);
+
+  const loadTags = (locationId: string) => {
+    fetchVerificationTags(locationId)
+      .then(setTags)
+      .catch((err) => console.error('Failed to load verification tags:', err));
+  };
+
   useEffect(() => {
     if (!selectedLocation) return;
 
     setCheckedIn(false);
     setSelectedAttendeeId(null);
+    setTagText('');
+    setTagError(null);
 
     if (withinGeofence) {
       checkIn(selectedLocation.id)
@@ -81,6 +114,8 @@ export default function CheckedInHero() {
         });
       })
       .catch((err) => console.error('Failed to load attendee history:', err));
+
+    loadTags(selectedLocation.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocation, withinGeofence]);
 
@@ -94,7 +129,36 @@ export default function CheckedInHero() {
   if (!selectedLocation) return null;
 
   const selectedAttendee = presenceProfiles.find((p) => p.id === selectedAttendeeId) ?? null;
+  const selectedAttendeeTags = selectedAttendee ? tagsByUserId.get(selectedAttendee.id) ?? [] : [];
   const bannerImages = selectedLocation.banner_image ? [selectedLocation.banner_image] : [];
+
+  const handleAssignTag = () => {
+    if (!selectedAttendee || !tagText.trim()) return;
+    setTagSaving(true);
+    setTagError(null);
+    assignVerificationTag(selectedAttendee.id, selectedLocation.id, tagText.trim())
+      .then(() => {
+        setTagText('');
+        loadTags(selectedLocation.id);
+      })
+      .catch((err) => {
+        console.error('Failed to assign tag:', err);
+        setTagError("Couldn't assign tag — try again");
+      })
+      .finally(() => setTagSaving(false));
+  };
+
+  const handleRemoveTag = (tagId: string) => {
+    setTagSaving(true);
+    setTagError(null);
+    removeVerificationTag(tagId)
+      .then(() => loadTags(selectedLocation.id))
+      .catch((err) => {
+        console.error('Failed to remove tag:', err);
+        setTagError("Couldn't remove tag — try again");
+      })
+      .finally(() => setTagSaving(false));
+  };
 
   return (
     <div>
@@ -160,6 +224,7 @@ export default function CheckedInHero() {
               attendees={presenceProfiles}
               selectedId={selectedAttendeeId}
               onSelect={setSelectedAttendeeId}
+              tagsByUserId={tagsByUserId}
             />
           )}
 
@@ -169,6 +234,78 @@ export default function CheckedInHero() {
                 recipient={selectedAttendee}
                 onSent={() => setSelectedAttendeeId(null)}
               />
+            </div>
+          )}
+
+          {selectedAttendee && canManage && (
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={tagText}
+                  onChange={(e) => setTagText(e.target.value)}
+                  placeholder={`Tag ${selectedAttendee.display_name ?? 'them'} (e.g. DJ, Host)...`}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.pill,
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    color: theme.bg,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                />
+                <button
+                  onClick={handleAssignTag}
+                  disabled={tagSaving || !tagText.trim()}
+                  style={{
+                    backgroundColor: theme.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: tagSaving || !tagText.trim() ? 'default' : 'pointer',
+                    opacity: tagSaving || !tagText.trim() ? 0.6 : 1,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                >
+                  Assign tag
+                </button>
+              </div>
+
+              {selectedAttendeeTags.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {selectedAttendeeTags.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleRemoveTag(t.id)}
+                      disabled={tagSaving}
+                      style={{
+                        backgroundColor: theme.surface2,
+                        color: theme.text,
+                        border: 'none',
+                        borderRadius: '9999px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        cursor: tagSaving ? 'default' : 'pointer',
+                        opacity: tagSaving ? 0.6 : 1,
+                        fontFamily: 'Montserrat, system-ui, sans-serif'
+                      }}
+                    >
+                      Remove &ldquo;{t.tag}&rdquo;
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {tagError && (
+                <p style={{ color: theme.accent2, fontSize: '12px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                  {tagError}
+                </p>
+              )}
             </div>
           )}
         </div>

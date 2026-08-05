@@ -26,6 +26,7 @@ export interface Profile {
   dating_id?: number | null;
   socialising_id?: number | null;
   networking_id?: number | null;
+  is_master_admin?: boolean | null;
 }
 
 export interface Venue {
@@ -105,5 +106,15 @@ export interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  profiles?: Profile;
+}
+
+export interface VerificationTag {
+  id: string;
+  user_id: string;
+  location_id: string;
+  tag: string;
+  assigned_by: string;
+  assigned_at: string;
   profiles?: Profile;
 }
