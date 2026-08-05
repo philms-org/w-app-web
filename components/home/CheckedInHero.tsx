@@ -17,6 +17,7 @@ import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
+import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import type { Profile, VerificationTag } from '@/lib/types';
 
 // Straight-line (haversine) distance in meters between two lat/lng points.
@@ -45,6 +46,7 @@ export default function CheckedInHero() {
   const [tagText, setTagText] = useState('');
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -205,15 +207,35 @@ export default function CheckedInHero() {
           padding: '16px',
           marginBottom: '20px'
         }}>
-          <p style={{
-            color: theme.muted,
-            fontSize: '11px',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            marginBottom: '12px',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>Connections</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <p style={{
+              color: theme.muted,
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              fontFamily: 'Montserrat, system-ui, sans-serif'
+            }}>Connections</p>
+
+            {canManage && (
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                style={{
+                  backgroundColor: theme.surface2,
+                  color: theme.text,
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
+                }}
+              >
+                + Create Group
+              </button>
+            )}
+          </div>
 
           {presenceProfiles.length === 0 ? (
             <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
@@ -310,6 +332,13 @@ export default function CheckedInHero() {
           )}
         </div>
       </div>
+
+      {showCreateGroup && (
+        <CreateGroupModal
+          attendees={presenceProfiles}
+          onClose={() => setShowCreateGroup(false)}
+        />
+      )}
     </div>
   );
 }
