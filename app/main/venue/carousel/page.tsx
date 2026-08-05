@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import {
   fetchMyVenue,
+  fetchVenue,
   fetchBanners,
   createBanner,
   updateBanner,
@@ -20,7 +21,23 @@ import HeroCarousel from '@/components/HeroCarousel';
 const MAX_BANNERS = 5;
 
 export default function VenueCarouselPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading...</p>
+        </div>
+      }
+    >
+      <VenueCarouselPageInner />
+    </Suspense>
+  );
+}
+
+function VenueCarouselPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const locationId = searchParams.get('locationId');
 
   const [venue, setVenue] = useState<Venue | null>(null);
   const [venueLoading, setVenueLoading] = useState(true);
@@ -34,14 +51,16 @@ export default function VenueCarouselPage() {
   const { canManage } = useIsOrganizer(venue?.id);
 
   useEffect(() => {
-    fetchMyVenue()
+    setVenueLoading(true);
+    const venuePromise = locationId ? fetchVenue(locationId) : fetchMyVenue();
+    venuePromise
       .then(setVenue)
       .catch((err) => {
         console.error('Failed to load venue:', err);
         setVenue(null);
       })
       .finally(() => setVenueLoading(false));
-  }, []);
+  }, [locationId]);
 
   const loadBanners = (locationId: string) => {
     setBannersLoading(true);
