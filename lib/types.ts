@@ -127,3 +127,27 @@ export interface Banner {
   display_order: number;
   is_active: boolean;
 }
+
+// ---- Organizer report ----
+
+export interface AttendanceStats {
+  totalCheckins: number;
+  uniqueAttendees: number;
+  checkinsByHour: { hour: string; count: number }[];
+}
+
+export interface TagBreakdownEntry {
+  tag: string;
+  count: number;
+}
+
+export interface ConnectionsFormedStats {
+  scans: number;
+  peeksAccepted: number;
+}
+
+export interface EngagementStats {
+  feedPosts: number;
+  groupsCreated: number;
+  groupMessagesSent: number;
+}

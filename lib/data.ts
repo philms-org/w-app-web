@@ -11,6 +11,10 @@ import type {
   Message,
   VerificationTag,
   Banner,
+  AttendanceStats,
+  TagBreakdownEntry,
+  ConnectionsFormedStats,
+  EngagementStats,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -548,4 +552,87 @@ export async function fetchAllProfiles(): Promise<Profile[]> {
   const { data, error } = await supabase.from('profiles').select().neq('id', uid).limit(200);
   if (error) throw error;
   return data ?? [];
+}
+
+// ---- Organizer Report ----
+// All-time totals for now — there's no fixed "event window" concept in the
+// schema yet (locations don't have a report-scoped start/end for regular
+// venues, only for is_event rows), so a date-range filter would be
+// arbitrary. Simplest honest choice until that concept exists.
+
+const HOUR_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', { hour: 'numeric' });
+
+export async function fetchAttendanceStats(locationId: string): Promise<AttendanceStats> {
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('user_id, checked_in_at')
+    .eq('location_id', locationId);
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const totalCheckins = rows.length;
+  const uniqueAttendees = new Set(rows.map((r) => r.user_id)).size;
+
+  const hourCounts = new Array(24).fill(0);
+  for (const row of rows) {
+    if (!row.checked_in_at) continue;
+    hourCounts[new Date(row.checked_in_at).getHours()] += 1;
+  }
+  const checkinsByHour = hourCounts.map((count, hour) => ({
+    hour: HOUR_LABEL_FORMATTER.format(new Date(2000, 0, 1, hour)),
+    count,
+  }));
+
+  return { totalCheckins, uniqueAttendees, checkinsByHour };
+}
+
+export async function fetchTagBreakdown(locationId: string): Promise<TagBreakdownEntry[]> {
+  const { data, error } = await supabase
+    .from('verification_tags')
+    .select('tag')
+    .eq('location_id', locationId);
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as { tag: string }[]) {
+    counts.set(row.tag, (counts.get(row.tag) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// Deliberately does NOT join to `friendships` — whether every scan/peek
+// always produces a friendships row was never confirmed, so that join
+// risks silently wrong numbers. These two counts are directly observable
+// instead: QR-scan events and accepted peek invites, both scoped to venue.
+export async function fetchConnectionsFormed(locationId: string): Promise<ConnectionsFormedStats> {
+  const { count: scans, error: scansError } = await supabase
+    .from('connections')
+    .select('*', { count: 'exact', head: true })
+    .eq('location_id', locationId);
+  if (scansError) throw scansError;
+
+  const { count: peeksAccepted, error: peeksError } = await supabase
+    .from('peek_invites')
+    .select('*', { count: 'exact', head: true })
+    .eq('location_id', locationId)
+    .not('accepted_at', 'is', null);
+  if (peeksError) throw peeksError;
+
+  return { scans: scans ?? 0, peeksAccepted: peeksAccepted ?? 0 };
+}
+
+// groupsCreated/groupMessagesSent are hardcoded to 0: conversations and
+// conversation_participants carry no location_id, so there's currently no
+// way to attribute a group (or its messages) to the venue it was created
+// from. Returning 0 here is a known gap, not a real count — see report.
+export async function fetchEngagementStats(locationId: string): Promise<EngagementStats> {
+  const { count: feedPosts, error } = await supabase
+    .from('feed_posts')
+    .select('*', { count: 'exact', head: true })
+    .eq('location_id', locationId);
+  if (error) throw error;
+
+  return { feedPosts: feedPosts ?? 0, groupsCreated: 0, groupMessagesSent: 0 };
 }
