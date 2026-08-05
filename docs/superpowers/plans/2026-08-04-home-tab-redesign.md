@@ -1,6 +1,40 @@
 # Home Tab Redesign — Claude Design Import
 
-## Context
+## STATUS (2026-08-04): Phase 1 done and shipped. Phase 2/3 PAUSED — schema assumption was wrong, needs redesign.
+
+Phase 1 (visual shell, theme, nav restructure) is complete, committed, and pushed.
+
+Phase 2/3 as originally written below are **obsolete** — they assumed no connections/peek
+infrastructure existed, based only on grepping `w-app-web`'s client code (this repo has no
+migration files, so the real schema was invisible). Live inspection of the `w-app-qa` Supabase
+project found it already has:
+- **`friendships`** (`user_id`, `friend_id`, `connected_at`, `source`) — the real canonical
+  connection table, already used by `startConversation`. This, not a new table, is what "3
+  connections" should count against.
+- **`connections`** (`scanner_id`, `scannee_id`, `location_id`, `scanned_at`) — a QR-scan event
+  log, presumably writes a `friendships` row (source='qr_scan').
+- **`peek_invites`** (`sender_id`, `peeker_id`, `location_id`, `sent_at`, `accepted_at`) — the
+  real peek/invite mechanism, already has 3 RLS policies. Presumably writes a `friendships` row
+  on accept.
+
+No new tables are needed. `supabase/migrations/0001_connections_and_peeks.sql` was deleted —
+it duplicated/conflicted with the above and was never fully applied (one failed statement
+errored cleanly against the real `connections` table's different columns; no data was
+corrupted).
+
+**Open question before resuming**, unresolved when this was paused: `peek_invites` only models
+an invite from `sender_id` → `peeker_id`, with no standalone "I'm peeking" row — so there's no
+way for someone checked in at a venue to passively see "N people are peeking" the way the
+original verbal spec described. Two options, needs a decision with the user:
+1. Peeker requests an invite from a friend who's already checked in (fits existing schema, zero
+   new tables).
+2. Add one new lightweight table to track passive "who's currently peeking" state.
+
+Resume by re-confirming this with the user, then redo Phase 3 (lib/types.ts, lib/data.ts,
+component wiring) against the real `friendships`/`connections`/`peek_invites` tables instead of
+the invented schema below.
+
+## Context (original, Phase 1 still accurate; Phase 2/3 schema below is superseded)
 
 The user pulled a Claude Design mockup (`claude.ai/design/p/643102d9-9c49-429e-893f-e3dbdb81f31f`, file `W App.dc.html`) representing an optimized redesign of the app's home screen and navigation, and asked to implement it fully in `w-app-web` (Android/iOS are separate repos, handled in a later session). The mockup is a self-contained prototype with mock local state — it establishes the visual system and rough screen layout, but several pieces of the user's verbal spec (peek, connections-gated friends feed) aren't in the mockup at all and need fresh design.
 
