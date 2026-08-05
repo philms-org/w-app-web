@@ -45,4 +45,5 @@ export const STORAGE_KEYS = {
   LAST_DATE: 'w_app_last_date',
   LAST_LOCATION_ALERT: 'w_app_last_location_alert',
   LAST_LOCATION_NOTIFICATION: 'w_app_last_location_notification',
+  ORGANIZER_WELCOME_SEEN: 'w_app_organizer_welcome_seen',
 };

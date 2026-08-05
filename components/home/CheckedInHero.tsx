@@ -13,11 +13,13 @@ import {
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
+import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
+import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
 import type { Profile, VerificationTag } from '@/lib/types';
 
 // Straight-line (haversine) distance in meters between two lat/lng points.
@@ -47,8 +49,16 @@ export default function CheckedInHero() {
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showOrganizerWelcome, setShowOrganizerWelcome] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
+
+  // First-run instructions for organizers only, shown once per browser/device.
+  useEffect(() => {
+    if (canManage && !localStorage.getItem(STORAGE_KEYS.ORGANIZER_WELCOME_SEEN)) {
+      setShowOrganizerWelcome(true);
+    }
+  }, [canManage]);
 
   const distanceMeters = useMemo(() => {
     if (!selectedLocation || !currentLocation) return null;
@@ -338,6 +348,10 @@ export default function CheckedInHero() {
           attendees={presenceProfiles}
           onClose={() => setShowCreateGroup(false)}
         />
+      )}
+
+      {showOrganizerWelcome && (
+        <OrganizerWelcomeModal onClose={() => setShowOrganizerWelcome(false)} />
       )}
     </div>
   );
