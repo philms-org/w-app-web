@@ -636,3 +636,18 @@ export async function fetchEngagementStats(locationId: string): Promise<Engageme
 
   return { feedPosts: feedPosts ?? 0, groupsCreated: 0, groupMessagesSent: 0 };
 }
+
+// ---- Governance (master admin only, enforced server-side by the RPCs) ----
+
+export async function setMasterAdmin(targetUserId: string, value: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_master_admin', { target_user_id: targetUserId, value });
+  if (error) throw error;
+}
+
+export async function assignVenueOwner(targetLocationId: string, newOwnerId: string | null): Promise<void> {
+  const { error } = await supabase.rpc('assign_venue_owner', {
+    target_location_id: targetLocationId,
+    new_owner_id: newOwnerId,
+  });
+  if (error) throw error;
+}
