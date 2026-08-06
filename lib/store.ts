@@ -67,10 +67,16 @@ interface AppState {
   isLoading: boolean;
   error: string | null;
   
+  // Hydration (persist rehydrates from localStorage asynchronously on the
+  // client — any auth/role guard must wait for this before redirecting, or
+  // it races the default `user: null` against the real persisted value).
+  hasHydrated: boolean;
+
   // Actions
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   logout: () => void;
+  setHasHydrated: (value: boolean) => void;
   setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
   setSelectedLocation: (location: Location | null) => void;
   setNearbyLocations: (locations: Location[]) => void;
@@ -99,11 +105,14 @@ export const useStore = create<AppState>()(
       activeTab: 'home',
       isLoading: false,
       error: null,
-      
+      hasHydrated: false,
+
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
-      
+
       setToken: (token) => set({ token, isAuthenticated: !!token }),
+
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       
       logout: () => set({
         user: null,
@@ -142,6 +151,9 @@ export const useStore = create<AppState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

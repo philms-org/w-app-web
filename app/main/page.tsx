@@ -15,11 +15,16 @@ import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
-  
+
   useEffect(() => {
+    // Wait for the persisted store to rehydrate before deciding — otherwise
+    // this races the default isAuthenticated:false against the real value
+    // and can bounce a logged-in user back to login on a fresh page load.
+    if (!hasHydrated) return;
+
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
       router.push('/auth/login');
@@ -31,7 +36,7 @@ export default function MainPage() {
     if (!hasAskedPermission && !currentLocation && !locationPermissionAsked) {
       setShowLocationPrompt(true);
     }
-  }, [isAuthenticated, router, currentLocation, locationPermissionAsked]);
+  }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
 
   const handleAllowLocation = () => {
     setLocationPermissionAsked(true);
@@ -90,7 +95,7 @@ export default function MainPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!hasHydrated || !isAuthenticated) {
     return null;
   }
 

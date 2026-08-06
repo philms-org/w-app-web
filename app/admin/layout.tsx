@@ -7,16 +7,17 @@ import { theme } from '@/lib/theme';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, user } = useStore();
+  const { isAuthenticated, user, hasHydrated } = useStore();
   const isMasterAdmin = !!user?.isMasterAdmin;
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated || !isMasterAdmin) {
       router.push('/main');
     }
-  }, [isAuthenticated, isMasterAdmin, router]);
+  }, [hasHydrated, isAuthenticated, isMasterAdmin, router]);
 
-  if (!isAuthenticated || !isMasterAdmin) {
+  if (!hasHydrated || !isAuthenticated || !isMasterAdmin) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading...</p>
