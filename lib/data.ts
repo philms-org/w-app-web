@@ -127,6 +127,36 @@ export async function updateVenue(venue: Venue): Promise<void> {
   if (error) throw error;
 }
 
+export async function createVenue(fields: {
+  name: string;
+  address?: string;
+  city?: string;
+  lat: number;
+  lng: number;
+  geofence_radius_meters: number;
+  description?: string;
+  ownerId?: string | null;
+}): Promise<Venue> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('locations')
+    .insert({
+      name: fields.name,
+      address: fields.address ?? null,
+      city: fields.city ?? null,
+      lat: fields.lat,
+      lng: fields.lng,
+      geofence_radius_meters: fields.geofence_radius_meters,
+      description: fields.description ?? null,
+      is_event: false,
+      owner_id: fields.ownerId ?? uid ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function createEvent(
   name: string,
   description: string,

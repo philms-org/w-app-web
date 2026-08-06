@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchVenues, fetchProfile, fetchAllProfiles, setMasterAdmin, assignVenueOwner } from '@/lib/data';
+import { fetchVenues, fetchProfile, fetchAllProfiles, setMasterAdmin, assignVenueOwner, createVenue } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import PersonPicker from '@/components/shared/PersonPicker';
 import type { Venue, Profile } from '@/lib/types';
@@ -11,6 +11,18 @@ interface VenueRow {
   venue: Venue;
   organizer: Profile | null;
 }
+
+const inputStyle: React.CSSProperties = {
+  backgroundColor: theme.surface2,
+  border: `1px solid ${theme.divider}`,
+  borderRadius: '10px',
+  padding: '8px 12px',
+  color: theme.text,
+  fontSize: '13px',
+  fontFamily: 'Montserrat, system-ui, sans-serif',
+  boxSizing: 'border-box',
+  width: '100%',
+};
 
 const linkButtonStyle: React.CSSProperties = {
   color: theme.accent,
@@ -31,6 +43,19 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+
+  const [showCreateVenue, setShowCreateVenue] = useState(false);
+  const [venueForm, setVenueForm] = useState({
+    name: '',
+    address: '',
+    city: '',
+    lat: '',
+    lng: '',
+    radius: '150',
+    description: '',
+  });
+  const [creatingVenue, setCreatingVenue] = useState(false);
+  const [createVenueError, setCreateVenueError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -107,6 +132,37 @@ export default function AdminPage() {
         setError("Couldn't remove organizer — try again");
       })
       .finally(() => setBusy(null));
+  };
+
+  const handleCreateVenue = () => {
+    const lat = parseFloat(venueForm.lat);
+    const lng = parseFloat(venueForm.lng);
+    const radius = parseInt(venueForm.radius, 10);
+    if (!venueForm.name.trim() || Number.isNaN(lat) || Number.isNaN(lng) || Number.isNaN(radius)) {
+      setCreateVenueError('Name, latitude, longitude, and radius are required.');
+      return;
+    }
+    setCreatingVenue(true);
+    setCreateVenueError(null);
+    createVenue({
+      name: venueForm.name.trim(),
+      address: venueForm.address.trim() || undefined,
+      city: venueForm.city.trim() || undefined,
+      lat,
+      lng,
+      geofence_radius_meters: radius,
+      description: venueForm.description.trim() || undefined,
+    })
+      .then(() => {
+        setVenueForm({ name: '', address: '', city: '', lat: '', lng: '', radius: '150', description: '' });
+        setShowCreateVenue(false);
+        load();
+      })
+      .catch((err) => {
+        console.error('Failed to create venue:', err);
+        setCreateVenueError("Couldn't create venue — try again");
+      })
+      .finally(() => setCreatingVenue(false));
   };
 
   return (
@@ -186,6 +242,104 @@ export default function AdminPage() {
                 Grant master admin to:
               </p>
               <PersonPicker people={allProfiles} onPick={handleGrantAdmin} placeholder="Search by name or email…" />
+            </div>
+
+            {/* Create venue */}
+            <div style={{
+              backgroundColor: theme.surface,
+              borderRadius: '16px',
+              border: `1px solid ${theme.divider}`,
+              padding: '16px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p style={{
+                  fontSize: '11px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: theme.muted,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                }}>Venues</p>
+                <button
+                  onClick={() => setShowCreateVenue((v) => !v)}
+                  style={{ ...linkButtonStyle }}
+                >
+                  {showCreateVenue ? 'Cancel' : '+ Create Venue'}
+                </button>
+              </div>
+
+              {showCreateVenue && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                  <input
+                    value={venueForm.name}
+                    onChange={(e) => setVenueForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Venue name"
+                    style={{ ...inputStyle }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      value={venueForm.address}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, address: e.target.value }))}
+                      placeholder="Address"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <input
+                      value={venueForm.city}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, city: e.target.value }))}
+                      placeholder="City"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      value={venueForm.lat}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, lat: e.target.value }))}
+                      placeholder="Latitude"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <input
+                      value={venueForm.lng}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, lng: e.target.value }))}
+                      placeholder="Longitude"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <input
+                      value={venueForm.radius}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, radius: e.target.value }))}
+                      placeholder="Radius (m)"
+                      style={{ ...inputStyle, width: '110px', flex: 'none' }}
+                    />
+                  </div>
+                  <textarea
+                    value={venueForm.description}
+                    onChange={(e) => setVenueForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Description (optional)"
+                    rows={2}
+                    style={{ ...inputStyle, resize: 'vertical', fontFamily: 'Montserrat, system-ui, sans-serif' }}
+                  />
+                  {createVenueError && (
+                    <p style={{ color: theme.accent2, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>{createVenueError}</p>
+                  )}
+                  <button
+                    onClick={handleCreateVenue}
+                    disabled={creatingVenue}
+                    style={{
+                      backgroundColor: theme.accent,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '9999px',
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: creatingVenue ? 'default' : 'pointer',
+                      opacity: creatingVenue ? 0.6 : 1,
+                      fontFamily: 'Montserrat, system-ui, sans-serif',
+                    }}
+                  >
+                    {creatingVenue ? 'Creating…' : 'Create Venue (owned by you)'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Venues + organizer assignment */}
