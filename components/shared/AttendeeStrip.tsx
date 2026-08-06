@@ -70,7 +70,7 @@ export default function AttendeeStrip({ attendees, selectedId, onSelect, tagsByU
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>{tags.map((t) => t.tag).join(', ')}</span>
+              }}>{tags.map((t) => (t.icon ? `${t.icon} ` : '') + t.tag).join(', ')}</span>
             )}
           </button>
         );

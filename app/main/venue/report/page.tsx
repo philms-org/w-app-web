@@ -7,6 +7,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import {
   fetchMyVenue,
+  fetchMyVenues,
   fetchVenue,
   fetchAttendanceStats,
   fetchTagBreakdown,
@@ -14,6 +15,7 @@ import {
   fetchEngagementStats,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
+import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import type {
   Venue,
   AttendanceStats,
@@ -94,8 +96,10 @@ function StatTile({ label, value }: { label: string; value: number | string }) {
 function VenueReportPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const locationId = searchParams.get('locationId');
+  const paramLocationId = searchParams.get('locationId');
 
+  const [myVenues, setMyVenues] = useState<Venue[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
   const [venueLoading, setVenueLoading] = useState(true);
 
@@ -109,16 +113,41 @@ function VenueReportPageInner() {
   const { canManage } = useIsOrganizer(venue?.id);
 
   useEffect(() => {
+    if (paramLocationId) {
+      setVenueLoading(true);
+      fetchVenue(paramLocationId)
+        .then(setVenue)
+        .catch((err) => {
+          console.error('Failed to load venue:', err);
+          setVenue(null);
+        })
+        .finally(() => setVenueLoading(false));
+      return;
+    }
+
     setVenueLoading(true);
-    const venuePromise = locationId ? fetchVenue(locationId) : fetchMyVenue();
-    venuePromise
-      .then(setVenue)
+    fetchMyVenues()
+      .then((venues) => {
+        setMyVenues(venues);
+        setSelectedVenueId((current) => current ?? venues[0]?.id ?? null);
+        if (venues.length === 0) setVenue(null);
+      })
       .catch((err) => {
-        console.error('Failed to load venue:', err);
-        setVenue(null);
+        console.error('Failed to load venues:', err);
+        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
       })
       .finally(() => setVenueLoading(false));
-  }, [locationId]);
+  }, [paramLocationId]);
+
+  useEffect(() => {
+    if (paramLocationId || !selectedVenueId) return;
+    fetchVenue(selectedVenueId)
+      .then(setVenue)
+      .catch((err) => {
+        console.error('Failed to load selected venue:', err);
+        setVenue(null);
+      });
+  }, [selectedVenueId, paramLocationId]);
 
   useEffect(() => {
     if (!venue) return;
@@ -208,6 +237,8 @@ function VenueReportPageInner() {
         </h1>
         <div style={{ width: '40px' }} />
       </div>
+
+      <VenueSwitcher venues={myVenues} selectedId={selectedVenueId} onSelect={setSelectedVenueId} />
 
       <div style={{ padding: '20px 20px 40px' }}>
         {error && (

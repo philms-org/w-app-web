@@ -10,6 +10,7 @@ import {
   fetchVerificationTags,
   assignVerificationTag,
   removeVerificationTag,
+  startConversation,
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
@@ -46,10 +47,16 @@ export default function CheckedInHero() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [tags, setTags] = useState<VerificationTag[]>([]);
   const [tagText, setTagText] = useState('');
+  const [tagIcon, setTagIcon] = useState('');
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showOrganizerWelcome, setShowOrganizerWelcome] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  const [broadcastSent, setBroadcastSent] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -148,9 +155,10 @@ export default function CheckedInHero() {
     if (!selectedAttendee || !tagText.trim()) return;
     setTagSaving(true);
     setTagError(null);
-    assignVerificationTag(selectedAttendee.id, selectedLocation.id, tagText.trim())
+    assignVerificationTag(selectedAttendee.id, selectedLocation.id, tagText.trim(), tagIcon.trim() || null)
       .then(() => {
         setTagText('');
+        setTagIcon('');
         loadTags(selectedLocation.id);
       })
       .catch((err) => {
@@ -158,6 +166,31 @@ export default function CheckedInHero() {
         setTagError("Couldn't assign tag — try again");
       })
       .finally(() => setTagSaving(false));
+  };
+
+  const handleSendBroadcast = () => {
+    if (!broadcastText.trim() || presenceProfiles.length === 0) return;
+    setBroadcastSending(true);
+    setBroadcastError(null);
+    startConversation(
+      presenceProfiles.map((p) => p.id),
+      `${selectedLocation.name} — Live`,
+      true,
+      broadcastText.trim()
+    )
+      .then(() => {
+        setBroadcastText('');
+        setBroadcastSent(true);
+        setTimeout(() => {
+          setShowBroadcast(false);
+          setBroadcastSent(false);
+        }, 1200);
+      })
+      .catch((err) => {
+        console.error('Failed to send broadcast:', err);
+        setBroadcastError("Couldn't send message — try again");
+      })
+      .finally(() => setBroadcastSending(false));
   };
 
   const handleRemoveTag = (tagId: string) => {
@@ -228,24 +261,99 @@ export default function CheckedInHero() {
             }}>Connections</p>
 
             {canManage && (
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                style={{
-                  backgroundColor: theme.surface2,
-                  color: theme.text,
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '6px 14px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'Montserrat, system-ui, sans-serif'
-                }}
-              >
-                + Create Group
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowBroadcast(true)}
+                  disabled={presenceProfiles.length === 0}
+                  style={{
+                    backgroundColor: theme.surface2,
+                    color: theme.text,
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: presenceProfiles.length === 0 ? 'default' : 'pointer',
+                    opacity: presenceProfiles.length === 0 ? 0.5 : 1,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                >
+                  Message Everyone Live
+                </button>
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  style={{
+                    backgroundColor: theme.surface2,
+                    color: theme.text,
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                >
+                  + Create Group
+                </button>
+              </div>
             )}
           </div>
+
+          {showBroadcast && canManage && (
+            <div style={{
+              backgroundColor: theme.surface2,
+              borderRadius: '12px',
+              padding: '12px',
+              marginBottom: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Sends to all {presenceProfiles.length} {presenceProfiles.length === 1 ? 'person' : 'people'} currently checked in.
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={broadcastText}
+                  onChange={(e) => setBroadcastText(e.target.value)}
+                  placeholder="Message to everyone live…"
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.pill,
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    color: theme.bg,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                />
+                <button
+                  onClick={handleSendBroadcast}
+                  disabled={broadcastSending || !broadcastText.trim()}
+                  style={{
+                    backgroundColor: theme.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: broadcastSending || !broadcastText.trim() ? 'default' : 'pointer',
+                    opacity: broadcastSending || !broadcastText.trim() ? 0.6 : 1,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                >
+                  {broadcastSent ? 'Sent ✓' : 'Send'}
+                </button>
+              </div>
+              {broadcastError && (
+                <p style={{ color: theme.accent2, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>{broadcastError}</p>
+              )}
+            </div>
+          )}
 
           {presenceProfiles.length === 0 ? (
             <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
@@ -272,6 +380,25 @@ export default function CheckedInHero() {
           {selectedAttendee && canManage && (
             <div style={{ marginTop: '10px' }}>
               <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={tagIcon}
+                  onChange={(e) => setTagIcon(e.target.value)}
+                  placeholder="🎧"
+                  maxLength={4}
+                  style={{
+                    width: '48px',
+                    flexShrink: 0,
+                    backgroundColor: theme.pill,
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '10px 0',
+                    fontSize: '16px',
+                    textAlign: 'center',
+                    color: theme.bg,
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                />
                 <input
                   type="text"
                   value={tagText}
@@ -327,7 +454,7 @@ export default function CheckedInHero() {
                         fontFamily: 'Montserrat, system-ui, sans-serif'
                       }}
                     >
-                      Remove &ldquo;{t.tag}&rdquo;
+                      Remove {t.icon ? `${t.icon} ` : ''}&ldquo;{t.tag}&rdquo;
                     </button>
                   ))}
                 </div>

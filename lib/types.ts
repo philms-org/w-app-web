@@ -114,8 +114,18 @@ export interface VerificationTag {
   user_id: string;
   location_id: string;
   tag: string;
+  icon?: string | null;
   assigned_by: string;
   assigned_at: string;
+  profiles?: Profile;
+}
+
+export interface LocationManager {
+  id: string;
+  location_id: string;
+  user_id: string;
+  added_by?: string | null;
+  added_at: string;
   profiles?: Profile;
 }
 

@@ -3,20 +3,28 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronUp, ChevronDown, Trash2, Plus, X } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
+import { useStore } from '@/lib/store';
 import {
   fetchMyVenue,
+  fetchMyVenues,
   fetchVenue,
   fetchBanners,
   createBanner,
   updateBanner,
   deleteBanner,
   uploadBannerImage,
+  fetchLocationManagers,
+  addLocationManager,
+  removeLocationManager,
+  fetchAllProfiles,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
-import type { Venue, Banner } from '@/lib/types';
+import type { Venue, Banner, LocationManager, Profile } from '@/lib/types';
 import HeroCarousel from '@/components/HeroCarousel';
+import VenueSwitcher from '@/components/shared/VenueSwitcher';
+import PersonPicker from '@/components/shared/PersonPicker';
 
 const MAX_BANNERS = 5;
 
@@ -37,8 +45,11 @@ export default function VenueCarouselPage() {
 function VenueCarouselPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const locationId = searchParams.get('locationId');
+  const paramLocationId = searchParams.get('locationId');
+  const { user } = useStore();
 
+  const [myVenues, setMyVenues] = useState<Venue[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
   const [venueLoading, setVenueLoading] = useState(true);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -47,20 +58,89 @@ function VenueCarouselPageInner() {
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [managers, setManagers] = useState<LocationManager[]>([]);
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
 
-  const { canManage } = useIsOrganizer(venue?.id);
+  const { canManage, isMasterAdmin } = useIsOrganizer(venue?.id);
+  const isPrimaryOwner = !!user && venue?.owner_id === user.id;
 
+  // A direct ?locationId= link (e.g. from the admin panel) always wins and
+  // skips the "which of my venues" picker — this is how master admins (who
+  // don't own any venue via fetchMyVenues()) reach a specific one.
   useEffect(() => {
+    if (paramLocationId) {
+      setVenueLoading(true);
+      fetchVenue(paramLocationId)
+        .then(setVenue)
+        .catch((err) => {
+          console.error('Failed to load venue:', err);
+          setVenue(null);
+        })
+        .finally(() => setVenueLoading(false));
+      return;
+    }
+
     setVenueLoading(true);
-    const venuePromise = locationId ? fetchVenue(locationId) : fetchMyVenue();
-    venuePromise
-      .then(setVenue)
+    fetchMyVenues()
+      .then((venues) => {
+        setMyVenues(venues);
+        setSelectedVenueId((current) => current ?? venues[0]?.id ?? null);
+        if (venues.length === 0) setVenue(null);
+      })
       .catch((err) => {
-        console.error('Failed to load venue:', err);
-        setVenue(null);
+        console.error('Failed to load venues:', err);
+        // Fall back to the single-venue lookup in case fetchMyVenues fails
+        // for a reason fetchMyVenue wouldn't (defensive, shouldn't normally hit).
+        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
       })
       .finally(() => setVenueLoading(false));
-  }, [locationId]);
+  }, [paramLocationId]);
+
+  useEffect(() => {
+    if (paramLocationId || !selectedVenueId) return;
+    fetchVenue(selectedVenueId)
+      .then(setVenue)
+      .catch((err) => {
+        console.error('Failed to load selected venue:', err);
+        setVenue(null);
+      });
+  }, [selectedVenueId, paramLocationId]);
+
+  const loadManagers = (locationId: string) => {
+    Promise.all([fetchLocationManagers(locationId), fetchAllProfiles()])
+      .then(([mgrs, profiles]) => {
+        setManagers(mgrs);
+        setAllProfiles(profiles);
+      })
+      .catch((err) => console.error('Failed to load co-owners:', err));
+  };
+
+  useEffect(() => {
+    if (venue) loadManagers(venue.id);
+  }, [venue]);
+
+  const handleAddManager = (person: Profile) => {
+    if (!venue) return;
+    setError(null);
+    addLocationManager(venue.id, person.id)
+      .then(() => loadManagers(venue.id))
+      .catch((err) => {
+        console.error('Failed to add co-owner:', err);
+        setError("Couldn't add co-owner — try again");
+      });
+  };
+
+  const handleRemoveManager = (manager: LocationManager) => {
+    setError(null);
+    removeLocationManager(manager.id)
+      .then(() => {
+        if (venue) loadManagers(venue.id);
+      })
+      .catch((err) => {
+        console.error('Failed to remove co-owner:', err);
+        setError("Couldn't remove co-owner — try again");
+      });
+  };
 
   const loadBanners = (locationId: string) => {
     setBannersLoading(true);
@@ -238,6 +318,8 @@ function VenueCarouselPageInner() {
         }}>Manage Banners</h1>
         <div style={{ width: '40px' }} />
       </div>
+
+      <VenueSwitcher venues={myVenues} selectedId={selectedVenueId} onSelect={setSelectedVenueId} />
 
       <HeroCarousel
         images={previewImages}
@@ -418,6 +500,54 @@ function VenueCarouselPageInner() {
               style={{ display: 'none' }}
             />
           </label>
+        )}
+
+        {(isPrimaryOwner || isMasterAdmin) && (
+          <div style={{
+            marginTop: '32px',
+            backgroundColor: theme.surface,
+            borderRadius: '16px',
+            border: `1px solid ${theme.divider}`,
+            padding: '16px',
+          }}>
+            <p style={{
+              fontSize: '11px',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: theme.muted,
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              marginBottom: '10px',
+            }}>Co-Owners</p>
+            <p style={{
+              color: theme.muted,
+              fontSize: '12px',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              marginBottom: '10px',
+            }}>
+              Co-owners can manage this venue&apos;s carousel and tags, same as you — they just can&apos;t add or remove other co-owners.
+            </p>
+
+            {managers.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {managers.map((m) => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ flex: 1, color: theme.text, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      {m.profiles?.display_name ?? m.user_id}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveManager(m)}
+                      aria-label="Remove co-owner"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                    >
+                      <X style={{ width: '14px', height: '14px', color: theme.accent2 }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <PersonPicker people={allProfiles} onPick={handleAddManager} placeholder="Add a co-owner by name or email…" />
+          </div>
         )}
       </div>
     </div>

@@ -11,6 +11,7 @@ import type {
   Message,
   VerificationTag,
   Banner,
+  LocationManager,
   AttendanceStats,
   TagBreakdownEntry,
   ConnectionsFormedStats,
@@ -58,6 +59,59 @@ export async function fetchMyVenue(): Promise<Venue | null> {
     .limit(1);
   if (error) throw error;
   return data?.[0] ?? null;
+}
+
+// Every venue the current user can manage: venues they own outright, plus
+// venues where they've been added as a co-owner via location_managers.
+// Master admins should use fetchVenues() instead (all venues, no filter).
+export async function fetchMyVenues(): Promise<Venue[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+
+  const [ownedResult, managedResult] = await Promise.all([
+    supabase.from('locations').select().eq('owner_id', uid).eq('is_event', false),
+    supabase.from('location_managers').select('locations(*)').eq('user_id', uid),
+  ]);
+  if (ownedResult.error) throw ownedResult.error;
+  if (managedResult.error) throw managedResult.error;
+
+  const owned = ownedResult.data ?? [];
+  const managed = ((managedResult.data ?? []) as unknown as { locations: Venue }[])
+    .map((row) => row.locations)
+    .filter((v): v is Venue => !!v && !v.is_event);
+
+  const seen = new Set<string>();
+  const merged: Venue[] = [];
+  for (const venue of [...owned, ...managed]) {
+    if (seen.has(venue.id)) continue;
+    seen.add(venue.id);
+    merged.push(venue);
+  }
+  return merged;
+}
+
+// ---- Location Managers (co-owners) ----
+
+export async function fetchLocationManagers(locationId: string): Promise<LocationManager[]> {
+  const { data, error } = await supabase
+    .from('location_managers')
+    .select('*, profiles(*)')
+    .eq('location_id', locationId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addLocationManager(locationId: string, userId: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  const { error } = await supabase
+    .from('location_managers')
+    .insert({ location_id: locationId, user_id: userId, added_by: uid });
+  if (error) throw error;
+}
+
+export async function removeLocationManager(id: string): Promise<void> {
+  const { error } = await supabase.from('location_managers').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function updateVenue(venue: Venue): Promise<void> {
@@ -312,12 +366,17 @@ export async function fetchVerificationTags(locationId: string): Promise<Verific
   return data ?? [];
 }
 
-export async function assignVerificationTag(userId: string, locationId: string, tag: string): Promise<void> {
+export async function assignVerificationTag(
+  userId: string,
+  locationId: string,
+  tag: string,
+  icon?: string | null
+): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) return;
   const { error } = await supabase
     .from('verification_tags')
-    .insert({ user_id: userId, location_id: locationId, tag, assigned_by: uid });
+    .insert({ user_id: userId, location_id: locationId, tag, icon: icon ?? null, assigned_by: uid });
   if (error) throw error;
 }
 

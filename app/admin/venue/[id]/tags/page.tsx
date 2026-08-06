@@ -21,6 +21,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
   const [tags, setTags] = useState<VerificationTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [tagTextByUserId, setTagTextByUserId] = useState<Record<string, string>>({});
+  const [tagIconByUserId, setTagIconByUserId] = useState<Record<string, string>>({});
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +63,11 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
     if (!value) return;
     setSavingUserId(userId);
     setError(null);
-    assignVerificationTag(userId, locationId, value)
+    const icon = (tagIconByUserId[userId] ?? '').trim() || null;
+    assignVerificationTag(userId, locationId, value, icon)
       .then(() => {
         setTagTextByUserId((prev) => ({ ...prev, [userId]: '' }));
+        setTagIconByUserId((prev) => ({ ...prev, [userId]: '' }));
         loadTags();
       })
       .catch((err) => {
@@ -174,6 +177,27 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
+                      value={tagIconByUserId[attendee.id] ?? ''}
+                      onChange={(e) =>
+                        setTagIconByUserId((prev) => ({ ...prev, [attendee.id]: e.target.value }))
+                      }
+                      placeholder="🎧"
+                      maxLength={4}
+                      style={{
+                        width: '48px',
+                        flexShrink: 0,
+                        backgroundColor: theme.pill,
+                        border: 'none',
+                        borderRadius: '9999px',
+                        padding: '10px 0',
+                        fontSize: '16px',
+                        textAlign: 'center',
+                        color: theme.bg,
+                        fontFamily: 'Montserrat, system-ui, sans-serif',
+                      }}
+                    />
+                    <input
+                      type="text"
                       value={tagTextByUserId[attendee.id] ?? ''}
                       onChange={(e) =>
                         setTagTextByUserId((prev) => ({ ...prev, [attendee.id]: e.target.value }))
@@ -229,7 +253,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
                             fontFamily: 'Montserrat, system-ui, sans-serif',
                           }}
                         >
-                          Remove &ldquo;{t.tag}&rdquo;
+                          Remove {t.icon ? `${t.icon} ` : ''}&ldquo;{t.tag}&rdquo;
                         </button>
                       ))}
                     </div>
