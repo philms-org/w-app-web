@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchConversations } from '@/lib/data';
 import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
+import ChatView, { type ChatConversation } from '@/components/ChatView';
 
 export default function MessagesTab() {
   const { setActiveChat, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // all, unread, groups
   const [conversations, setConversations] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [openChat, setOpenChat] = useState<ChatConversation | null>(null);
 
-  useEffect(() => {
+  const loadConversations = useCallback(() => {
     fetchConversations()
       .then((rows) => {
+        setLoadError(false);
         setConversations(
           rows.map((c) => ({
             id: c.id,
@@ -25,27 +29,61 @@ export default function MessagesTab() {
             timestamp: c.last_message_at ?? '',
             unread: false,
             online: false,
+            isGroup: !!c.is_group,
+            myStatus: c.my_status ?? 'accepted',
           }))
         );
       })
-      .catch((err) => console.error('Failed to load conversations:', err));
+      .catch((err) => {
+        console.error('Failed to load conversations:', err);
+        setLoadError(true);
+      });
   }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   const filteredMessages = conversations.filter(message => {
     const matchesSearch = message.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           message.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = activeFilter === 'all' || 
-                          (activeFilter === 'unread' && message.unread);
+    const matchesFilter = activeFilter === 'all' ||
+                          (activeFilter === 'unread' && message.unread) ||
+                          (activeFilter === 'groups' && message.isGroup);
     return matchesSearch && matchesFilter;
   });
 
   const handleOpenChat = (message: any) => {
-    setActiveChat(message.userId);
-    // In a real app, this would navigate to the chat screen
+    setActiveChat(message.id);
+    setOpenChat({
+      id: message.id,
+      userName: message.userName,
+      userImage: message.userImage,
+      isGroup: message.isGroup,
+      myStatus: message.myStatus,
+    });
+  };
+
+  const handleCloseChat = () => {
+    setOpenChat(null);
+    setActiveChat(null);
+    loadConversations(); // refresh previews after chatting
+  };
+
+  const formatTimestamp = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
+      {openChat && <ChatView conversation={openChat} onClose={handleCloseChat} />}
       {/* Header */}
       <div style={{
         backgroundColor: 'white',
@@ -120,7 +158,32 @@ export default function MessagesTab() {
 
       {/* Messages List */}
       <div style={{ backgroundColor: 'white' }}>
-        {filteredMessages.length > 0 ? (
+        {loadError ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+            <h3 style={{ fontWeight: '600', marginBottom: '8px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              Couldn&apos;t load messages
+            </h3>
+            <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              Check your connection and try again
+            </p>
+            <button
+              onClick={loadConversations}
+              style={{
+                backgroundColor: '#17BFD9',
+                color: 'white',
+                fontWeight: '600',
+                padding: '10px 24px',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontFamily: 'Montserrat, system-ui, sans-serif'
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : filteredMessages.length > 0 ? (
           filteredMessages.map((message, index) => (
             <button
               key={message.id}
@@ -191,7 +254,7 @@ export default function MessagesTab() {
                     color: message.unread ? '#17BFD9' : '#919191',
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
-                    {message.timestamp}
+                    {formatTimestamp(message.timestamp)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
