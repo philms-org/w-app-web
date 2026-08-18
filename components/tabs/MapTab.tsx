@@ -40,7 +40,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, setCurrentLocation, locationDenied, setLocationDenied, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -60,29 +60,38 @@ export default function MapTab() {
     { id: 'custom', label: 'Custom', icon: '📌' },
   ];
 
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+      setLocationDenied(true);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationDenied(false);
+      },
+      (error) => {
+        console.warn('Location error:', error.code, error.message);
+        // Flagged fallback — the banner below tells the user and offers retry.
+        setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+        setLocationDenied(true);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
+  };
+
   useEffect(() => {
     // Request location permission with high accuracy
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.warn('Location error:', error.code, error.message);
-          // Use default location (New York City)
-          setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    }
-    
+    requestLocation();
+
     // Load real venues from Supabase
     fetchVenues()
       .then((venues) => {
@@ -118,10 +127,17 @@ export default function MapTab() {
     setActiveTab('home');
   }, [setSelectedLocation, setActiveTab]);
 
+  // Add-location is opt-in: stray map taps must NOT open the modal.
+  const [addMode, setAddMode] = useState(false);
+
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (!addModeRef.current) return;
     setClickedLocation({ lat, lng });
     setShowAddLocation(true);
+    setAddMode(false);
   }, []);
+  const addModeRef = useRef(addMode);
+  addModeRef.current = addMode;
 
   const mapCenter = useMemo(
     () => currentLocation || { lat: 40.7128, lng: -74.0060 },
@@ -162,6 +178,47 @@ export default function MapTab() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg, position: 'relative' }}>
+      {/* Location-denied notice: never silently show the wrong city */}
+      {locationDenied && (
+        <div style={{
+          position: 'absolute',
+          bottom: '96px',
+          left: '16px',
+          right: '16px',
+          zIndex: 1100,
+          backgroundColor: 'rgba(35, 30, 32, 0.92)',
+          color: 'white',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
+        }}>
+          <span style={{ fontSize: '18px' }}>📍</span>
+          <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.4 }}>
+            Location is off — showing a default area, not where you are.
+          </span>
+          <button
+            onClick={requestLocation}
+            style={{
+              backgroundColor: '#17BFD9',
+              color: 'white',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Turn on
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div style={{
         position: 'absolute',
@@ -290,6 +347,50 @@ export default function MapTab() {
       >
         <Filter style={{ width: '24px', height: '24px', color: '#17BFD9' }} />
       </button>
+
+      {/* Add Location Button (explicit opt-in; tap the map after arming) */}
+      <button
+        onClick={() => setAddMode(!addMode)}
+        aria-label={addMode ? 'Cancel add location' : 'Add a location'}
+        style={{
+          position: 'absolute',
+          bottom: '140px',
+          right: '16px',
+          backgroundColor: addMode ? '#17BFD9' : 'white',
+          borderRadius: '50%',
+          padding: '12px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 1000,
+          width: '48px',
+          height: '48px',
+          fontSize: '24px',
+          lineHeight: 1,
+          color: addMode ? 'white' : '#17BFD9',
+          fontWeight: 600,
+          transform: addMode ? 'rotate(45deg)' : 'none',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        +
+      </button>
+      {addMode && (
+        <div style={{
+          position: 'absolute',
+          bottom: '196px',
+          right: '16px',
+          backgroundColor: 'rgba(35, 30, 32, 0.92)',
+          color: 'white',
+          borderRadius: '10px',
+          padding: '8px 14px',
+          fontSize: '13px',
+          zIndex: 1000,
+          fontFamily: 'Montserrat, system-ui, sans-serif'
+        }}>
+          Tap the map to place your location
+        </div>
+      )}
 
       {/* Current Location Button */}
       <button

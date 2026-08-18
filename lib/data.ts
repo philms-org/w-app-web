@@ -647,9 +647,16 @@ export async function fetchGroupMembers(conversationId: string): Promise<Profile
 export async function fetchAllProfiles(): Promise<Profile[]> {
   const uid = await getCurrentUserId();
   if (!uid) return [];
-  const { data, error } = await supabase.from('profiles').select().neq('id', uid).limit(200);
+  // SECURITY: never select * here — this list is readable by any authenticated
+  // user, so it must not carry emails/phones or other PII. Name search only.
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, affiliation')
+    .neq('id', uid)
+    .order('display_name', { ascending: true })
+    .limit(200);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as Profile[];
 }
 
 // ---- Organizer Report ----

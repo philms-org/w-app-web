@@ -15,7 +15,7 @@ import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
 
@@ -49,12 +49,16 @@ export default function MainPage() {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
+          setLocationDenied(false);
           setShowLocationPrompt(false);
         },
         (error) => {
           console.error('Location error:', error);
-          // Use default location (New York City) if permission denied
+          // Permission denied/unavailable: fall back to the default map
+          // center but FLAG it so the map can tell the user instead of
+          // silently showing the wrong city.
           setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+          setLocationDenied(true);
           setShowLocationPrompt(false);
         },
         {
@@ -64,8 +68,9 @@ export default function MainPage() {
         }
       );
     } else {
-      // Geolocation not supported, use default location
+      // Geolocation not supported: same flagged fallback
       setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+      setLocationDenied(true);
       setShowLocationPrompt(false);
     }
   };
@@ -73,8 +78,8 @@ export default function MainPage() {
   const handleDenyLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
-    // Use default location (New York City)
     setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+    setLocationDenied(true);
     setShowLocationPrompt(false);
   };
 

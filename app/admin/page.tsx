@@ -241,7 +241,7 @@ export default function AdminPage() {
               <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif', marginBottom: '6px' }}>
                 Grant master admin to:
               </p>
-              <PersonPicker people={allProfiles} onPick={handleGrantAdmin} placeholder="Search by name or email…" />
+              <PersonPicker people={allProfiles} onPick={handleGrantAdmin} placeholder="Search by name…" />
             </div>
 
             {/* Create venue */}

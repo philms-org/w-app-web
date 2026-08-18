@@ -80,11 +80,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleFacebookLogin = () => {
-    // Placeholder for Facebook login
-    alert('Facebook login will be implemented with proper OAuth setup');
-  };
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA' }}>
       {/* Header */}
@@ -301,37 +296,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '24px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#D5D5D5' }}></div>
-          <span style={{ color: '#919191', fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#D5D5D5' }}></div>
-        </div>
-
-        {/* Facebook Login */}
-        <button
-          onClick={handleFacebookLogin}
-          style={{
-            width: '100%',
-            backgroundColor: '#4267B2',
-            color: 'white',
-            fontWeight: '600',
-            padding: '12px 24px',
-            borderRadius: '9999px',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-        >
-          <span style={{ fontSize: '20px' }}>f</span>
-          Continue with Facebook
-        </button>
 
         {/* Sign Up Link */}
         <p style={{

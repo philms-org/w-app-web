@@ -53,6 +53,9 @@ interface AppState {
   
   // Location State
   currentLocation: { lat: number; lng: number } | null;
+  // True when the user denied geolocation (or it's unsupported) and we're
+  // showing a fallback map center instead of their real position.
+  locationDenied: boolean;
   selectedLocation: Location | null;
   nearbyLocations: Location[];
   inLocation: boolean;
@@ -78,6 +81,7 @@ interface AppState {
   logout: () => void;
   setHasHydrated: (value: boolean) => void;
   setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
+  setLocationDenied: (denied: boolean) => void;
   setSelectedLocation: (location: Location | null) => void;
   setNearbyLocations: (locations: Location[]) => void;
   setInLocation: (inLocation: boolean) => void;
@@ -96,6 +100,7 @@ export const useStore = create<AppState>()(
       token: null,
       isAuthenticated: false,
       currentLocation: null,
+      locationDenied: false,
       selectedLocation: null,
       nearbyLocations: [],
       inLocation: false,
@@ -125,6 +130,7 @@ export const useStore = create<AppState>()(
       }),
       
       setCurrentLocation: (location) => set({ currentLocation: location }),
+      setLocationDenied: (denied) => set({ locationDenied: denied }),
       
       setSelectedLocation: (location) => set({ selectedLocation: location }),
       

@@ -32,12 +32,13 @@ export default function WelcomePage() {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      router.push('/auth/login');
+      // New users land on registration; existing users use the Sign In link there.
+      router.push('/auth/register');
     }
   };
 
   const handleSkip = () => {
-    router.push('/auth/login');
+    router.push('/auth/register');
   };
 
   return (

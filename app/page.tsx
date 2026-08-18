@@ -18,7 +18,7 @@ export default function LaunchPage() {
       } else {
         router.push('/welcome');
       }
-    }, 2000);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [isAuthenticated, router]);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -66,6 +66,16 @@ export default function WMap({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  const [bannerDismissed, setBannerDismissed] = useState(true); // default hidden until we read localStorage
+
+  useEffect(() => {
+    setBannerDismissed(localStorage.getItem('w_app_download_banner_dismissed') === 'true');
+  }, []);
+
+  const dismissBanner = () => {
+    localStorage.setItem('w_app_download_banner_dismissed', 'true');
+    setBannerDismissed(true);
+  };
 
   // Create the map once on mount; never recreated on prop changes.
   useEffect(() => {
@@ -196,7 +206,8 @@ export default function WMap({
         }}
       />
 
-      {/* App Download Banner */}
+      {/* App Download Banner (dismissible) */}
+      {!bannerDismissed && (
       <div style={{
         position: 'absolute',
         top: '120px',
@@ -209,6 +220,29 @@ export default function WMap({
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         backdropFilter: 'blur(8px)'
       }}>
+        <button
+          onClick={dismissBanner}
+          aria-label="Dismiss download banner"
+          style={{
+            position: 'absolute',
+            top: '6px',
+            right: '6px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: 'none',
+            backgroundColor: 'rgba(255,255,255,0.25)',
+            color: 'white',
+            fontSize: '16px',
+            lineHeight: 1,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          ×
+        </button>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -247,6 +281,7 @@ export default function WMap({
           </button>
         </div>
       </div>
+      )}
 
       {/* Add Leaflet CSS */}
       <style jsx global>{`

@@ -22,12 +22,8 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["social", "lifestyle"],
-  "screenshots": [
-    {
-      "src": "/screenshot1.png",
-      "sizes": "1080x1920",
-      "type": "image/png"
-    }
+  "categories": [
+    "social",
+    "lifestyle"
   ]
 }

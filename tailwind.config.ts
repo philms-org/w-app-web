@@ -44,18 +44,6 @@ export default {
     },
   },
   plugins: [],
-  safelist: [
-    'bg-w-blue',
-    'bg-w-pink', 
-    'bg-w-gray',
-    'bg-w-light-gray',
-    'bg-w-back-gray',
-    'bg-w-light-blue',
-    'text-w-blue',
-    'text-w-pink',
-    'text-w-gray',
-    'text-w-black',
-    'border-w-blue',
-    'hover:bg-w-blue',
-  ],
+  // NOTE: `safelist` was removed — not supported by Tailwind v4 config
+  // (it was a type error and silently ignored).
 } satisfies Config;

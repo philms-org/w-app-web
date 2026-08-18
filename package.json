@@ -10,23 +10,18 @@
     "lint": "next lint --fix"
   },
   "dependencies": {
-    "@react-google-maps/api": "^2.20.7",
     "@supabase/supabase-js": "^2.110.7",
     "@types/js-cookie": "^3.0.6",
     "@types/leaflet": "^1.9.20",
-    "axios": "^1.11.0",
     "framer-motion": "^12.23.12",
     "js-cookie": "^3.0.5",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.540.0",
     "next": "15.5.22",
-    "next-pwa": "^5.6.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
     "react-leaflet": "^5.0.0",
-    "socket.io-client": "^4.8.1",
-    "workbox-window": "^7.3.0",
     "zustand": "^5.0.7"
   },
   "devDependencies": {

@@ -546,7 +546,7 @@ function VenueCarouselPageInner() {
               </div>
             )}
 
-            <PersonPicker people={allProfiles} onPick={handleAddManager} placeholder="Add a co-owner by name or email…" />
+            <PersonPicker people={allProfiles} onPick={handleAddManager} placeholder="Add a co-owner by name…" />
           </div>
         )}
       </div>
