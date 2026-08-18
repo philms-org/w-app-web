@@ -95,7 +95,7 @@ export async function fetchMyVenues(): Promise<Venue[]> {
 export async function fetchLocationManagers(locationId: string): Promise<LocationManager[]> {
   const { data, error } = await supabase
     .from('location_managers')
-    .select('*, profiles(*)')
+    .select('*, profiles!location_managers_user_id_fkey(*)')
     .eq('location_id', locationId);
   if (error) throw error;
   return data ?? [];
@@ -266,6 +266,15 @@ export async function fetchPresence(locationId: string): Promise<Presence[]> {
 export async function checkIn(locationId: string): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) return;
+  const { data: existing, error: existingError } = await supabase
+    .from('location_checkins')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('location_id', locationId)
+    .is('checked_out_at', null)
+    .limit(1);
+  if (existingError) throw existingError;
+  if (existing && existing.length > 0) return;
   const { error } = await supabase
     .from('location_checkins')
     .insert({ user_id: uid, location_id: locationId, mode: 'live' });
@@ -390,7 +399,7 @@ export async function setAttendeeHistoryOptOut(locationId: string, hidden: boole
 export async function fetchVerificationTags(locationId: string): Promise<VerificationTag[]> {
   const { data, error } = await supabase
     .from('verification_tags')
-    .select('*, profiles(*)')
+    .select('*')
     .eq('location_id', locationId);
   if (error) throw error;
   return data ?? [];

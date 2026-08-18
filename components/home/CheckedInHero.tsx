@@ -11,6 +11,7 @@ import {
   assignVerificationTag,
   removeVerificationTag,
   startConversation,
+  fetchBanners,
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
@@ -21,7 +22,7 @@ import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
-import type { Profile, VerificationTag } from '@/lib/types';
+import type { Profile, VerificationTag, Banner } from '@/lib/types';
 
 // Straight-line (haversine) distance in meters between two lat/lng points.
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -43,6 +44,7 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 export default function CheckedInHero() {
   const { selectedLocation, setSelectedLocation, currentLocation } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
   const [tags, setTags] = useState<VerificationTag[]>([]);
@@ -135,7 +137,11 @@ export default function CheckedInHero() {
       .catch((err) => console.error('Failed to load attendee history:', err));
 
     loadTags(selectedLocation.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    fetchBanners(selectedLocation.id)
+      .then(setBanners)
+      .catch((err) => console.error('Failed to load banners:', err));
+     
   }, [selectedLocation, withinGeofence]);
 
   const handleBack = () => {
@@ -149,7 +155,12 @@ export default function CheckedInHero() {
 
   const selectedAttendee = presenceProfiles.find((p) => p.id === selectedAttendeeId) ?? null;
   const selectedAttendeeTags = selectedAttendee ? tagsByUserId.get(selectedAttendee.id) ?? [] : [];
-  const bannerImages = selectedLocation.banner_image ? [selectedLocation.banner_image] : [];
+  const bannerImages = banners.length > 0
+    ? banners.map((b) => b.image_url)
+    : selectedLocation.banner_image
+      ? [selectedLocation.banner_image]
+      : [];
+  const bannerLinks = banners.length > 0 ? banners.map((b) => b.link ?? null) : undefined;
 
   const handleAssignTag = () => {
     if (!selectedAttendee || !tagText.trim()) return;
@@ -207,7 +218,7 @@ export default function CheckedInHero() {
 
   return (
     <div>
-      <HeroCarousel images={bannerImages} title={selectedLocation.name} onBack={handleBack} />
+      <HeroCarousel images={bannerImages} links={bannerLinks} title={selectedLocation.name} onBack={handleBack} />
 
       <div style={{ padding: '16px 20px 0' }}>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
