@@ -413,6 +413,15 @@ export default function AdminPage() {
                       <Link href={`/main/venue/report?locationId=${venue.id}`} style={linkButtonStyle}>
                         View Report
                       </Link>
+                      <Link href={`/main/venue/members?locationId=${venue.id}`} style={linkButtonStyle}>
+                        Manage Members
+                      </Link>
+                      <Link href={`/main/venue/chat?locationId=${venue.id}`} style={linkButtonStyle}>
+                        Venue Chat
+                      </Link>
+                      <Link href={`/main/venue/rewards?locationId=${venue.id}`} style={linkButtonStyle}>
+                        Manage Rewards
+                      </Link>
                     </div>
                   </div>
                 ))}

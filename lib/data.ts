@@ -12,6 +12,7 @@ import type {
   VerificationTag,
   Banner,
   LocationManager,
+  VenueMember,
   AttendanceStats,
   TagBreakdownEntry,
   ConnectionsFormedStats,
@@ -392,6 +393,63 @@ export async function setAttendeeHistoryOptOut(locationId: string, hidden: boole
       .eq('location_id', locationId);
     if (error) throw error;
   }
+}
+
+// ---- Venue Members roster ----
+// One row per unique person who has ever checked in "live" at this venue,
+// with a running check-in count (feeds Phase 4's attendance-tier rewards),
+// first/last visit, and their verification tags. Read-only, organizer-gated
+// at the UI layer only (like fetchBanners/fetchAttendeeHistory) — the
+// underlying data has no extra RLS beyond what those already expose.
+export async function fetchVenueMembers(locationId: string): Promise<VenueMember[]> {
+  const { data: rows, error } = await supabase
+    .from('location_checkins')
+    .select('user_id, checked_in_at, profiles(*)')
+    .eq('location_id', locationId)
+    .eq('mode', 'live')
+    .order('checked_in_at', { ascending: true });
+  if (error) throw error;
+
+  const { data: optOuts, error: optOutError } = await supabase
+    .from('attendee_history_opt_outs')
+    .select('user_id')
+    .eq('location_id', locationId);
+  if (optOutError) throw optOutError;
+  const optedOutIds = new Set((optOuts ?? []).map((r: { user_id: string }) => r.user_id));
+
+  const { data: tagRows, error: tagError } = await supabase
+    .from('verification_tags')
+    .select('*')
+    .eq('location_id', locationId);
+  if (tagError) throw tagError;
+  const tagsByUser = new Map<string, VerificationTag[]>();
+  for (const t of (tagRows ?? []) as VerificationTag[]) {
+    const list = tagsByUser.get(t.user_id) ?? [];
+    list.push(t);
+    tagsByUser.set(t.user_id, list);
+  }
+
+  const byUser = new Map<string, VenueMember>();
+  for (const row of (rows ?? []) as unknown as { user_id: string; checked_in_at: string; profiles: Profile }[]) {
+    const profile = row.profiles;
+    if (!profile || optedOutIds.has(row.user_id)) continue;
+    const existing = byUser.get(row.user_id);
+    if (existing) {
+      existing.checkinCount += 1;
+      existing.lastCheckinAt = row.checked_in_at;
+    } else {
+      byUser.set(row.user_id, {
+        profile,
+        checkinCount: 1,
+        firstCheckinAt: row.checked_in_at,
+        lastCheckinAt: row.checked_in_at,
+        tags: tagsByUser.get(row.user_id) ?? [],
+      });
+    }
+  }
+  // Rows arrive oldest-first, so the last time we see a user_id is their
+  // most recent visit — sort the roster most-visits-first for the UI.
+  return Array.from(byUser.values()).sort((a, b) => b.checkinCount - a.checkinCount);
 }
 
 // ---- Verification Tags ----

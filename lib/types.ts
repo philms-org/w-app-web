@@ -129,6 +129,19 @@ export interface LocationManager {
   profiles?: Profile;
 }
 
+// ---- Venue Members roster ----
+// One row per person who has ever checked in "live" at a venue (deduped
+// from location_checkins, same opt-out rule as fetchAttendeeHistory).
+// checkinCount doubles as the attendance-tier input for Phase 4 rewards
+// (rewards.min_checkins).
+export interface VenueMember {
+  profile: Profile;
+  checkinCount: number;
+  firstCheckinAt: string | null;
+  lastCheckinAt: string | null;
+  tags: VerificationTag[];
+}
+
 export interface Banner {
   id: string;
   location_id: string;
