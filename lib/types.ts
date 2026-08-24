@@ -91,6 +91,10 @@ export interface Reward {
   is_active: boolean;
   display_order: number;
   feature_name?: string | null;
+  // Phase 4 (attendance-tier badges): nullable — a reward with min_checkins
+  // set unlocks once the member's location_checkins count at this venue
+  // reaches it. Null means "no tier requirement" (visible to everyone).
+  min_checkins?: number | null;
 }
 
 export interface Conversation {

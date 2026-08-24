@@ -355,6 +355,7 @@ export async function upsertContactMethod(method: Partial<ContactMethod> & { use
 
 // ---- Rewards ----
 
+// Member-facing: active rewards only, in display order.
 export async function fetchRewards(locationId: string): Promise<Reward[]> {
   const { data, error } = await supabase
     .from('rewards')
@@ -364,6 +365,64 @@ export async function fetchRewards(locationId: string): Promise<Reward[]> {
     .order('display_order');
   if (error) throw error;
   return data ?? [];
+}
+
+// Organizer-facing (Phase 3 CRUD): every reward for the venue, active or
+// not, in display order. Writes are gated by the rewards_write RLS policy
+// (0009, is_venue_manager) — mirrors fetchBanners(locationId, activeOnly).
+export async function fetchAllRewards(locationId: string): Promise<Reward[]> {
+  const { data, error } = await supabase
+    .from('rewards')
+    .select()
+    .eq('location_id', locationId)
+    .order('display_order');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createReward(
+  locationId: string,
+  fields: { name: string; deal_text?: string | null; instructions?: string | null; icon_type?: string | null }
+): Promise<Reward> {
+  const uid = await getCurrentUserId();
+  const { data: existing, error: existingError } = await supabase
+    .from('rewards')
+    .select('display_order')
+    .eq('location_id', locationId)
+    .order('display_order', { ascending: false })
+    .limit(1);
+  if (existingError) throw existingError;
+  const nextOrder = existing?.[0]?.display_order != null ? existing[0].display_order + 1 : 0;
+
+  const { data, error } = await supabase
+    .from('rewards')
+    .insert({
+      location_id: locationId,
+      name: fields.name,
+      deal_text: fields.deal_text ?? null,
+      instructions: fields.instructions ?? null,
+      icon_type: fields.icon_type ?? null,
+      display_order: nextOrder,
+      is_active: true,
+      created_by: uid ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateReward(
+  id: string,
+  fields: Partial<Pick<Reward, 'name' | 'deal_text' | 'instructions' | 'icon_type' | 'display_order' | 'is_active' | 'min_checkins'>>
+): Promise<void> {
+  const { error } = await supabase.from('rewards').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteReward(id: string): Promise<void> {
+  const { error } = await supabase.from('rewards').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function hasFeatureAccess(featureName: string): Promise<boolean> {
