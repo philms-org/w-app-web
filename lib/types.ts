@@ -46,6 +46,9 @@ export interface Venue {
   whatsapp?: string | null;
   default_message?: string | null;
   owner_id?: string | null;
+  // Founder decision layered on the owner-benefits plan: per-venue,
+  // organizer-configurable venue-chat join model (default 'request').
+  chat_join_mode?: 'auto' | 'request';
 }
 
 export interface FeedItem {
@@ -94,6 +97,7 @@ export interface Conversation {
   id: string;
   is_group: boolean;
   name?: string | null;
+  location_id?: string | null;
   last_message?: string | null;
   last_message_at?: string | null;
   my_status: string;
@@ -106,6 +110,29 @@ export interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  profiles?: Profile;
+}
+
+// ---- Venue Chat (Phase 2) ----
+// The persistent per-venue group chat riding on top of Conversation +
+// conversation_participants.role (from w-app-ios migration 018, already
+// live in the shared backend, never consumed by any UI before this).
+
+export interface JoinRequest {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'denied';
+  attempt_count: number;
+  created_at: string;
+  profiles?: Profile;
+}
+
+export interface ChatParticipant {
+  conversation_id: string;
+  user_id: string;
+  role: 'admin' | 'member';
+  status: string;
   profiles?: Profile;
 }
 

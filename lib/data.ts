@@ -13,6 +13,8 @@ import type {
   Banner,
   LocationManager,
   VenueMember,
+  JoinRequest,
+  ChatParticipant,
   AttendanceStats,
   TagBreakdownEntry,
   ConnectionsFormedStats,
@@ -275,11 +277,50 @@ export async function checkIn(locationId: string): Promise<void> {
     .is('checked_out_at', null)
     .limit(1);
   if (existingError) throw existingError;
-  if (existing && existing.length > 0) return;
-  const { error } = await supabase
-    .from('location_checkins')
-    .insert({ user_id: uid, location_id: locationId, mode: 'live' });
-  if (error) throw error;
+  if (!existing || existing.length === 0) {
+    const { error } = await supabase
+      .from('location_checkins')
+      .insert({ user_id: uid, location_id: locationId, mode: 'live' });
+    if (error) throw error;
+  }
+
+  // Founder decision: chat_join_mode is organizer-configurable per venue
+  // ('auto' | 'request', default 'request'). In 'auto' mode, checking in
+  // immediately seeds the member into the venue's chat — best-effort, since
+  // a hiccup here (or the venue chat not existing yet) should never block
+  // the check-in itself.
+  try {
+    await autoJoinVenueChatIfEnabled(locationId, uid);
+  } catch (err) {
+    console.error('Auto-join venue chat failed:', err);
+  }
+}
+
+async function autoJoinVenueChatIfEnabled(locationId: string, uid: string): Promise<void> {
+  const { data: location, error: locationError } = await supabase
+    .from('locations')
+    .select('chat_join_mode')
+    .eq('id', locationId)
+    .single();
+  if (locationError) throw locationError;
+  if (location?.chat_join_mode !== 'auto') return;
+
+  const { data: conversation, error: convError } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('location_id', locationId)
+    .eq('is_group', true)
+    .maybeSingle();
+  if (convError) throw convError;
+  if (!conversation) return; // No venue chat created yet — nothing to auto-join.
+
+  const { error: joinError } = await supabase
+    .from('conversation_participants')
+    .upsert(
+      { conversation_id: conversation.id, user_id: uid, role: 'member', status: 'accepted' },
+      { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
+    );
+  if (joinError) throw joinError;
 }
 
 export async function checkOut(locationId: string): Promise<void> {
@@ -700,6 +741,233 @@ export async function fetchGroupMembers(conversationId: string): Promise<Profile
     .eq('conversation_id', conversationId);
   if (error) throw error;
   return (data ?? []).map((r: any) => r.profiles).filter(Boolean);
+}
+
+// ---- Venue Chat (Phase 2) ----
+// Persistent per-venue group chat: one conversation per location
+// (conversations.location_id + is_group = true), reusing fetchMessages/
+// sendMessage/ChatView unchanged for the actual message thread. Complements
+// — does not replace — CreateGroupModal's ad-hoc snapshot groups.
+
+export async function fetchVenueConversation(locationId: string): Promise<Conversation | null> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('id, is_group, name, location_id')
+    .eq('location_id', locationId)
+    .eq('is_group', true)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id,
+    is_group: data.is_group,
+    name: data.name,
+    location_id: data.location_id,
+    last_message: null,
+    last_message_at: null,
+    my_status: 'accepted',
+    other_profile: null,
+  };
+}
+
+// Organizer-only (enforced by the conversations_insert_own RLS policy from
+// 0008 — requires is_venue_manager(location_id, auth.uid()) whenever
+// location_id is set). Seeds every current venue manager (owner_id +
+// location_managers) as chat admin at creation time, so co-owners get
+// venue-chat admin the same moment the chat is created — see
+// is_venue_chat_manager() in 0008 for how *later-added* co-owners get the
+// same admin powers dynamically, without needing a row here.
+export async function createVenueConversation(venue: Venue): Promise<Conversation> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+
+  const { data: created, error: createError } = await supabase
+    .from('conversations')
+    .insert({ is_group: true, name: `${venue.name} Chat`, created_by: uid, location_id: venue.id })
+    .select()
+    .single();
+  if (createError) throw createError;
+
+  const managers = await fetchLocationManagers(venue.id);
+  const adminIds = new Set<string>([uid]);
+  if (venue.owner_id) adminIds.add(venue.owner_id);
+  for (const m of managers) adminIds.add(m.user_id);
+
+  const { error: participantsError } = await supabase
+    .from('conversation_participants')
+    .upsert(
+      Array.from(adminIds).map((userId) => ({
+        conversation_id: created.id,
+        user_id: userId,
+        role: 'admin',
+        status: 'accepted',
+      })),
+      { onConflict: 'conversation_id,user_id' }
+    );
+  if (participantsError) throw participantsError;
+
+  return {
+    id: created.id,
+    is_group: created.is_group,
+    name: created.name,
+    location_id: created.location_id,
+    last_message: null,
+    last_message_at: null,
+    my_status: 'accepted',
+    other_profile: null,
+  };
+}
+
+export async function fetchOrCreateVenueConversation(venue: Venue): Promise<Conversation> {
+  const existing = await fetchVenueConversation(venue.id);
+  if (existing) return existing;
+  try {
+    return await createVenueConversation(venue);
+  } catch (err) {
+    // Another organizer/tab may have created it a moment earlier — the
+    // uniq_venue_group_conversation partial unique index (0008) would raise
+    // a conflict here; fall back to reading whatever now exists.
+    const raceWinner = await fetchVenueConversation(venue.id);
+    if (raceWinner) return raceWinner;
+    throw err;
+  }
+}
+
+// A co-owner (or the primary owner) may not have an explicit admin
+// conversation_participants row yet — is_venue_chat_manager (0008) already
+// grants them admin RLS powers dynamically, but the actual chat UI (role
+// badges, "who's an admin") reads from real rows, so this backfills one the
+// first time they open the venue chat. Only ever INSERTs a brand-new row,
+// or DELETEs+re-INSERTs their own stale 'member' row — never an UPDATE, so
+// 018's last-admin/role-change guard trigger (which requires an *existing*
+// admin to perform the change) never gets in the way of this self-service
+// upgrade.
+export async function ensureVenueChatAdmin(conversationId: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  const { data: existing, error } = await supabase
+    .from('conversation_participants')
+    .select('role')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', uid)
+    .maybeSingle();
+  if (error) throw error;
+
+  if (!existing) {
+    const { error: insertError } = await supabase
+      .from('conversation_participants')
+      .insert({ conversation_id: conversationId, user_id: uid, role: 'admin', status: 'accepted' });
+    if (insertError) throw insertError;
+    return;
+  }
+  if (existing.role !== 'admin') {
+    const { error: deleteError } = await supabase
+      .from('conversation_participants')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .eq('user_id', uid);
+    if (deleteError) throw deleteError;
+    const { error: insertError } = await supabase
+      .from('conversation_participants')
+      .insert({ conversation_id: conversationId, user_id: uid, role: 'admin', status: 'accepted' });
+    if (insertError) throw insertError;
+  }
+}
+
+export async function fetchMyParticipation(
+  conversationId: string
+): Promise<{ status: string; role: 'admin' | 'member' } | null> {
+  const uid = await getCurrentUserId();
+  if (!uid) return null;
+  const { data, error } = await supabase
+    .from('conversation_participants')
+    .select('status, role')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', uid)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function fetchChatParticipants(conversationId: string): Promise<ChatParticipant[]> {
+  const { data, error } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id, user_id, role, status, profiles(*)')
+    .eq('conversation_id', conversationId);
+  if (error) throw error;
+  return ((data ?? []) as unknown as ChatParticipant[]).sort((a, b) => {
+    if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
+    return (a.profiles?.display_name ?? '').localeCompare(b.profiles?.display_name ?? '');
+  });
+}
+
+export async function removeChatParticipant(conversationId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function setChatJoinMode(locationId: string, mode: 'auto' | 'request'): Promise<void> {
+  const { error } = await supabase.from('locations').update({ chat_join_mode: mode }).eq('id', locationId);
+  if (error) throw error;
+}
+
+// 'request' mode: 3-attempt cap per (conversation, user), enforced by
+// join_requests_attempt_cap_trigger (018) — a 4th attempt raises a Postgres
+// exception that surfaces here as a thrown error.
+export async function requestToJoinVenueChat(conversationId: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { error } = await supabase.from('join_requests').insert({ conversation_id: conversationId, user_id: uid });
+  if (error) throw error;
+}
+
+export async function fetchMyJoinRequests(conversationId: string): Promise<JoinRequest[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('join_requests')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchPendingJoinRequests(conversationId: string): Promise<JoinRequest[]> {
+  const { data, error } = await supabase
+    .from('join_requests')
+    .select('*, profiles(*)')
+    .eq('conversation_id', conversationId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as JoinRequest[];
+}
+
+export async function approveJoinRequest(request: JoinRequest): Promise<void> {
+  const { error: updateError } = await supabase
+    .from('join_requests')
+    .update({ status: 'approved' })
+    .eq('id', request.id);
+  if (updateError) throw updateError;
+
+  const { error: insertError } = await supabase
+    .from('conversation_participants')
+    .upsert(
+      { conversation_id: request.conversation_id, user_id: request.user_id, role: 'member', status: 'accepted' },
+      { onConflict: 'conversation_id,user_id' }
+    );
+  if (insertError) throw insertError;
+}
+
+export async function denyJoinRequest(requestId: string): Promise<void> {
+  const { error } = await supabase.from('join_requests').update({ status: 'denied' }).eq('id', requestId);
+  if (error) throw error;
 }
 
 export async function fetchAllProfiles(): Promise<Profile[]> {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import {
   checkIn,
@@ -253,6 +254,61 @@ export default function CheckedInHero() {
             </p>
           </div>
         )}
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <Link
+            href={`/main/venue/chat?locationId=${selectedLocation.id}`}
+            style={{
+              backgroundColor: theme.surface,
+              color: theme.text,
+              border: `1px solid ${theme.divider}`,
+              borderRadius: '9999px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              textDecoration: 'none',
+            }}
+          >
+            💬 Venue Chat
+          </Link>
+          {canManage && (
+            <>
+              <Link
+                href={`/main/venue/members?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Members
+              </Link>
+              <Link
+                href={`/main/venue/rewards?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Rewards
+              </Link>
+            </>
+          )}
+        </div>
 
         <div style={{
           backgroundColor: theme.surface,
