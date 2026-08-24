@@ -65,7 +65,7 @@ function VenueRewardsPageInner() {
   const [newInstructions, setNewInstructions] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const [editedFields, setEditedFields] = useState<Record<string, { name: string; deal_text: string; instructions: string }>>({});
+  const [editedFields, setEditedFields] = useState<Record<string, { name: string; deal_text: string; instructions: string; min_checkins: string }>>({});
 
   const { canManage } = useIsOrganizer(venue?.id);
 
@@ -115,7 +115,12 @@ function VenueRewardsPageInner() {
           Object.fromEntries(
             rows.map((r) => [
               r.id,
-              { name: r.name, deal_text: r.deal_text ?? '', instructions: r.instructions ?? '' },
+              {
+                name: r.name,
+                deal_text: r.deal_text ?? '',
+                instructions: r.instructions ?? '',
+                min_checkins: r.min_checkins != null ? String(r.min_checkins) : '',
+              },
             ])
           )
         );
@@ -180,15 +185,18 @@ function VenueRewardsPageInner() {
   const handleFieldBlur = (reward: Reward) => {
     const edited = editedFields[reward.id];
     if (!edited) return;
+    const parsedMinCheckins = edited.min_checkins.trim() === '' ? null : parseInt(edited.min_checkins, 10);
     const nextFields: Partial<Reward> = {
       name: edited.name.trim() || reward.name,
       deal_text: edited.deal_text.trim() || null,
       instructions: edited.instructions.trim() || null,
+      min_checkins: Number.isNaN(parsedMinCheckins as number) ? null : parsedMinCheckins,
     };
     const unchanged =
       nextFields.name === reward.name &&
       (nextFields.deal_text ?? null) === (reward.deal_text ?? null) &&
-      (nextFields.instructions ?? null) === (reward.instructions ?? null);
+      (nextFields.instructions ?? null) === (reward.instructions ?? null) &&
+      (nextFields.min_checkins ?? null) === (reward.min_checkins ?? null);
     if (unchanged) return;
 
     setBusyId(reward.id);
@@ -279,6 +287,10 @@ function VenueRewardsPageInner() {
           </p>
         )}
 
+        <p style={{ color: theme.muted, fontSize: '12px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          Set a &quot;visits to unlock&quot; count to make a reward an attendance-tier badge (e.g. 10 visits = Regular). Leave it blank to show a reward to everyone.
+        </p>
+
         {rewardsLoading ? (
           <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading rewards...</p>
         ) : sorted.length === 0 ? (
@@ -289,7 +301,7 @@ function VenueRewardsPageInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
             {sorted.map((reward, i) => {
               const isBusy = busyId === reward.id;
-              const edited = editedFields[reward.id] ?? { name: reward.name, deal_text: '', instructions: '' };
+              const edited = editedFields[reward.id] ?? { name: reward.name, deal_text: '', instructions: '', min_checkins: '' };
               return (
                 <div key={reward.id} style={{ backgroundColor: theme.surface, borderRadius: '16px', border: `1px solid ${theme.divider}`, padding: '14px', opacity: isBusy ? 0.6 : 1 }}>
                   <input
@@ -319,6 +331,22 @@ function VenueRewardsPageInner() {
                     rows={2}
                     style={{ ...inputStyle, resize: 'vertical', marginBottom: '8px' }}
                   />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <label style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif', whiteSpace: 'nowrap' }}>
+                      Visits to unlock:
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={edited.min_checkins}
+                      onChange={(e) => setEditedFields((prev) => ({ ...prev, [reward.id]: { ...edited, min_checkins: e.target.value } }))}
+                      onBlur={() => handleFieldBlur(reward)}
+                      disabled={isBusy}
+                      placeholder="Any"
+                      style={{ ...inputStyle, width: '80px' }}
+                    />
+                  </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => handleToggleActive(reward)}

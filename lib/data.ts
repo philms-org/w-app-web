@@ -380,6 +380,34 @@ export async function fetchAllRewards(locationId: string): Promise<Reward[]> {
   return data ?? [];
 }
 
+// ---- Attendance-tier badges (Phase 4) ----
+// A reward with min_checkins set is unlocked once the member's
+// location_checkins count at this venue reaches it — reuses the same
+// mode='live' counting fetchVenueMembers already relies on, no new table.
+
+export async function fetchMyCheckinCount(locationId: string): Promise<number> {
+  const uid = await getCurrentUserId();
+  if (!uid) return 0;
+  const { count, error } = await supabase
+    .from('location_checkins')
+    .select('*', { count: 'exact', head: true })
+    .eq('location_id', locationId)
+    .eq('user_id', uid)
+    .eq('mode', 'live');
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// Highest-threshold reward a member with `checkinCount` visits has earned
+// at this venue, given the venue's active tiered rewards (min_checkins set).
+// Used by the Members roster to show each member's current tier badge.
+export function highestEarnedTier(rewards: Reward[], checkinCount: number): Reward | null {
+  const tiers = rewards
+    .filter((r): r is Reward & { min_checkins: number } => r.is_active && r.min_checkins != null)
+    .sort((a, b) => b.min_checkins - a.min_checkins);
+  return tiers.find((r) => checkinCount >= r.min_checkins) ?? null;
+}
+
 export async function createReward(
   locationId: string,
   fields: { name: string; deal_text?: string | null; instructions?: string | null; icon_type?: string | null }

@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, Users } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
-import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers } from '@/lib/data';
+import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier } from '@/lib/data';
 import { theme } from '@/lib/theme';
-import type { Venue, VenueMember } from '@/lib/types';
+import type { Venue, VenueMember, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 
 export default function VenueMembersPage() {
@@ -42,6 +42,7 @@ function VenueMembersPageInner() {
   const [venueLoading, setVenueLoading] = useState(true);
   const [members, setMembers] = useState<VenueMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
+  const [tierRewards, setTierRewards] = useState<Reward[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
@@ -88,8 +89,11 @@ function VenueMembersPageInner() {
     if (!venue) return;
     setMembersLoading(true);
     setError(null);
-    fetchVenueMembers(venue.id)
-      .then(setMembers)
+    Promise.all([fetchVenueMembers(venue.id), fetchRewards(venue.id)])
+      .then(([memberRows, rewardRows]) => {
+        setMembers(memberRows);
+        setTierRewards(rewardRows);
+      })
       .catch((err) => {
         console.error('Failed to load venue members:', err);
         setError("Couldn't load members — try again");
@@ -239,8 +243,24 @@ function VenueMembersPageInner() {
                   <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                     First visit {formatDate(m.firstCheckinAt)} · Last visit {formatDate(m.lastCheckinAt)}
                   </p>
-                  {m.tags.length > 0 && (
+                  {(m.tags.length > 0 || highestEarnedTier(tierRewards, m.checkinCount)) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                      {(() => {
+                        const tier = highestEarnedTier(tierRewards, m.checkinCount);
+                        return tier ? (
+                          <span style={{
+                            backgroundColor: `${theme.accent}22`,
+                            color: theme.accent,
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            borderRadius: '9999px',
+                            padding: '2px 10px',
+                            fontFamily: 'Montserrat, system-ui, sans-serif',
+                          }}>
+                            🏆 {tier.name}
+                          </span>
+                        ) : null;
+                      })()}
                       {m.tags.map((t) => (
                         <span key={t.id} style={{
                           backgroundColor: theme.surface2,
