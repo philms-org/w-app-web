@@ -15,6 +15,7 @@ import {
   fetchBanners,
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
+import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
@@ -62,6 +63,8 @@ export default function CheckedInHero() {
   const [broadcastSent, setBroadcastSent] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
+
+  useZoneTracking(checkedIn ? selectedLocation?.id ?? null : null);
 
   // First-run instructions for organizers only, shown once per browser/device.
   useEffect(() => {
