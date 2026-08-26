@@ -217,3 +217,9 @@ export interface EngagementStats {
   groupsCreated: number;
   groupMessagesSent: number;
 }
+
+export interface ZoneAnalytics {
+  occupancy: { zone_name: string; count: number }[];
+  avgDwellMinutes: { zone_name: string; minutes: number }[];
+  transitions: { from_zone: string; to_zone: string; count: number }[];
+}

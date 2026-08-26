@@ -309,6 +309,22 @@ export default function CheckedInHero() {
               >
                 Rewards
               </Link>
+              <Link
+                href={`/main/venue/zones?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Zones
+              </Link>
             </>
           )}
         </div>

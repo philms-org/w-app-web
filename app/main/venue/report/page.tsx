@@ -13,6 +13,7 @@ import {
   fetchTagBreakdown,
   fetchConnectionsFormed,
   fetchEngagementStats,
+  fetchZoneAnalytics,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
@@ -22,6 +23,7 @@ import type {
   TagBreakdownEntry,
   ConnectionsFormedStats,
   EngagementStats,
+  ZoneAnalytics,
 } from '@/lib/types';
 
 export default function VenueReportPage() {
@@ -107,6 +109,7 @@ function VenueReportPageInner() {
   const [tags, setTags] = useState<TagBreakdownEntry[]>([]);
   const [connections, setConnections] = useState<ConnectionsFormedStats | null>(null);
   const [engagement, setEngagement] = useState<EngagementStats | null>(null);
+  const [zoneAnalytics, setZoneAnalytics] = useState<ZoneAnalytics | null>(null);
   const [reportLoading, setReportLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,12 +161,14 @@ function VenueReportPageInner() {
       fetchTagBreakdown(venue.id),
       fetchConnectionsFormed(venue.id),
       fetchEngagementStats(venue.id),
+      fetchZoneAnalytics(venue.id),
     ])
-      .then(([attendanceStats, tagBreakdown, connectionsFormed, engagementStats]) => {
+      .then(([attendanceStats, tagBreakdown, connectionsFormed, engagementStats, zoneAnalyticsStats]) => {
         setAttendance(attendanceStats);
         setTags(tagBreakdown);
         setConnections(connectionsFormed);
         setEngagement(engagementStats);
+        setZoneAnalytics(zoneAnalyticsStats);
       })
       .catch((err) => {
         console.error('Failed to load venue report:', err);
@@ -352,6 +357,89 @@ function VenueReportPageInner() {
                 Group messaging isn&apos;t yet scoped per-venue — groups created here can&apos;t currently be
                 attributed to this venue in the data.
               </p>
+            </SectionCard>
+
+            <SectionCard title="Zone Movement">
+              {!zoneAnalytics ||
+              (zoneAnalytics.occupancy.length === 0 &&
+                zoneAnalytics.avgDwellMinutes.length === 0 &&
+                zoneAnalytics.transitions.length === 0) ? (
+                <p style={{ color: theme.muted, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                  No zone data yet — set up zones to start tracking movement.
+                </p>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    {zoneAnalytics.occupancy.map((o) => (
+                      <StatTile key={o.zone_name} label={o.zone_name} value={o.count} />
+                    ))}
+                  </div>
+
+                  {zoneAnalytics.avgDwellMinutes.length > 0 && (
+                    <>
+                      <p
+                        style={{
+                          fontSize: '11px',
+                          color: theme.muted,
+                          marginBottom: '8px',
+                          fontFamily: 'Montserrat, system-ui, sans-serif',
+                        }}
+                      >
+                        Average dwell time
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                        {zoneAnalytics.avgDwellMinutes.map((d) => (
+                          <div
+                            key={d.zone_name}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: '14px',
+                              color: theme.text,
+                              fontFamily: 'Montserrat, system-ui, sans-serif',
+                            }}
+                          >
+                            <span>{d.zone_name}</span>
+                            <span style={{ color: theme.muted }}>{d.minutes.toFixed(1)} min avg</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {zoneAnalytics.transitions.length > 0 && (
+                    <>
+                      <p
+                        style={{
+                          fontSize: '11px',
+                          color: theme.muted,
+                          marginBottom: '8px',
+                          fontFamily: 'Montserrat, system-ui, sans-serif',
+                        }}
+                      >
+                        Movement between zones
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {zoneAnalytics.transitions.map((t) => (
+                          <div
+                            key={`${t.from_zone}->${t.to_zone}`}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: '14px',
+                              color: theme.text,
+                              fontFamily: 'Montserrat, system-ui, sans-serif',
+                            }}
+                          >
+                            <span>{t.from_zone} &rarr; {t.to_zone}</span>
+                            <span style={{ color: theme.muted }}>{t.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </SectionCard>
           </>
         )}

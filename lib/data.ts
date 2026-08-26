@@ -20,6 +20,7 @@ import type {
   ConnectionsFormedStats,
   EngagementStats,
   VenueZone,
+  ZoneAnalytics,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1189,6 +1190,12 @@ export async function fetchEngagementStats(locationId: string): Promise<Engageme
   if (error) throw error;
 
   return { feedPosts: feedPosts ?? 0, groupsCreated: 0, groupMessagesSent: 0 };
+}
+
+export async function fetchZoneAnalytics(locationId: string): Promise<ZoneAnalytics> {
+  const { data, error } = await supabase.rpc('fetch_zone_analytics', { p_location_id: locationId });
+  if (error) throw error;
+  return (data ?? { occupancy: [], avgDwellMinutes: [], transitions: [] }) as ZoneAnalytics;
 }
 
 // ---- Governance (master admin only, enforced server-side by the RPCs) ----

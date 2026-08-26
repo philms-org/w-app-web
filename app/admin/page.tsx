@@ -422,6 +422,9 @@ export default function AdminPage() {
                       <Link href={`/main/venue/rewards?locationId=${venue.id}`} style={linkButtonStyle}>
                         Manage Rewards
                       </Link>
+                      <Link href={`/main/venue/zones?locationId=${venue.id}`} style={linkButtonStyle}>
+                        Manage Zones
+                      </Link>
                     </div>
                   </div>
                 ))}
