@@ -240,6 +240,25 @@ export default function CheckedInHero() {
           </div>
         </div>
 
+        {checkedIn && (
+          <Link
+            href="/privacy"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: theme.muted,
+              fontSize: '12px',
+              textDecoration: 'none',
+              marginBottom: '16px',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+            }}
+          >
+            <MapPin style={{ width: '12px', height: '12px' }} />
+            Sharing location with this venue while checked in — Learn more
+          </Link>
+        )}
+
         {!withinGeofence && (
           <div style={{
             display: 'flex',

@@ -179,7 +179,7 @@ export default function MainPage() {
               marginBottom: '32px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              The W App works best when we know your location. This helps us show you nearby people and places to connect.
+              The W App works best when we know your location. This helps us show you nearby people and places to connect. While you&apos;re checked in to a venue, we also share your approximate position with that venue for anonymized attendance analytics — never before check-in or after checkout.
             </p>
 
             <div style={{
@@ -242,7 +242,10 @@ export default function MainPage() {
               marginTop: '16px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              You can change this in settings anytime
+              You can change this in settings anytime ·{' '}
+              <a href="/privacy" style={{ color: '#17BFD9', textDecoration: 'underline' }}>
+                Learn more
+              </a>
             </p>
           </div>
         </div>
