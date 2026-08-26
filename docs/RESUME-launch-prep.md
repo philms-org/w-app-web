@@ -90,6 +90,23 @@ work, still sitting as 2 extra commits there.
   - Hide paused stub features (Connect QR / Peek / Friends Activity)
   - SEO/meta pack: OG image, app/sitemap.ts, app/robots.ts, crawlable landing page
 
+## CHECKPOINT (paused 2026-08-26, restarting computer)
+- The full organizer-analytics feature was demo-walked-through live in the
+  browser and confirmed working end-to-end: disclosure modal + `/privacy`
+  page, master-admin panel's "Manage Zones" link, the report page's 5 new
+  sections rendering real historical data (188.3 min avg dwell confirmed
+  again live), and the zones page's graceful "couldn't get your location"
+  handling. Demo QA account created + fully cleaned up afterward.
+- Two other Claude Code sessions (peer sessions on this same repo) are
+  independently active and have added 2 more commits on `main` unrelated to
+  anything in this doc: `e335a49` (a "Round 1 home banner + feed teaser"
+  design spec) and `146e4f8` (its 8-task implementation plan). Not reviewed
+  or built by this thread — flagging so a future session doesn't confuse
+  "Round 1" with anything described above.
+- `main` is STILL unpushed to `origin` as of this checkpoint (see RISK note
+  near the top) — nothing from today, including the fully-verified prod
+  migrations 0001-0015, exists on GitHub yet.
+
 ## OPEN ASKS FOR FOUNDER
   - QA project should be on paid/always-on plan (keeps auto-pausing = unreliable staging).
   - Confirm Supabase Pro backups/PITR active on PROD before further prod
