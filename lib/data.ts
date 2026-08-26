@@ -19,6 +19,7 @@ import type {
   TagBreakdownEntry,
   ConnectionsFormedStats,
   EngagementStats,
+  VenueZone,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -450,6 +451,41 @@ export async function updateReward(
 
 export async function deleteReward(id: string): Promise<void> {
   const { error } = await supabase.from('rewards').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---- Venue zones (organizer analytics) ----
+
+export async function fetchVenueZones(locationId: string): Promise<VenueZone[]> {
+  const { data, error } = await supabase
+    .from('venue_zones')
+    .select('*')
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as VenueZone[];
+}
+
+export async function createVenueZone(
+  locationId: string,
+  fields: { name: string; center_lat: number; center_lng: number }
+): Promise<void> {
+  const { error } = await supabase
+    .from('venue_zones')
+    .insert({ location_id: locationId, ...fields });
+  if (error) throw error;
+}
+
+export async function updateVenueZone(
+  id: string,
+  fields: Partial<Pick<VenueZone, 'name' | 'center_lat' | 'center_lng'>>
+): Promise<void> {
+  const { error } = await supabase.from('venue_zones').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteVenueZone(id: string): Promise<void> {
+  const { error } = await supabase.from('venue_zones').delete().eq('id', id);
   if (error) throw error;
 }
 

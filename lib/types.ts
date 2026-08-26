@@ -182,6 +182,18 @@ export interface Banner {
   is_active: boolean;
 }
 
+// ---- Venue zones (organizer analytics) ----
+
+export interface VenueZone {
+  id: string;
+  location_id: string;
+  name: string;
+  center_lat: number;
+  center_lng: number;
+  created_by?: string | null;
+  created_at: string;
+}
+
 // ---- Organizer report ----
 
 export interface AttendanceStats {
