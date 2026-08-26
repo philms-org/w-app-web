@@ -12,6 +12,7 @@ import {
   fetchAttendanceStats,
   fetchTagBreakdown,
   fetchConnectionsFormed,
+  fetchContactMethodBreakdown,
   fetchEngagementStats,
   fetchZoneAnalytics,
   fetchCrossVenueMovement,
@@ -23,6 +24,7 @@ import type {
   AttendanceStats,
   TagBreakdownEntry,
   ConnectionsFormedStats,
+  ContactMethodBreakdownEntry,
   EngagementStats,
   ZoneAnalytics,
   CrossVenueMovementEntry,
@@ -110,6 +112,7 @@ function VenueReportPageInner() {
   const [attendance, setAttendance] = useState<AttendanceStats | null>(null);
   const [tags, setTags] = useState<TagBreakdownEntry[]>([]);
   const [connections, setConnections] = useState<ConnectionsFormedStats | null>(null);
+  const [contactMethods, setContactMethods] = useState<ContactMethodBreakdownEntry[]>([]);
   const [engagement, setEngagement] = useState<EngagementStats | null>(null);
   const [zoneAnalytics, setZoneAnalytics] = useState<ZoneAnalytics | null>(null);
   const [crossVenueMovement, setCrossVenueMovement] = useState<CrossVenueMovementEntry[]>([]);
@@ -163,14 +166,16 @@ function VenueReportPageInner() {
       fetchAttendanceStats(venue.id),
       fetchTagBreakdown(venue.id),
       fetchConnectionsFormed(venue.id),
+      fetchContactMethodBreakdown(venue.id),
       fetchEngagementStats(venue.id),
       fetchZoneAnalytics(venue.id),
       fetchCrossVenueMovement(venue.id),
     ])
-      .then(([attendanceStats, tagBreakdown, connectionsFormed, engagementStats, zoneAnalyticsStats, crossVenueMovementStats]) => {
+      .then(([attendanceStats, tagBreakdown, connectionsFormed, contactMethodBreakdown, engagementStats, zoneAnalyticsStats, crossVenueMovementStats]) => {
         setAttendance(attendanceStats);
         setTags(tagBreakdown);
         setConnections(connectionsFormed);
+        setContactMethods(contactMethodBreakdown);
         setEngagement(engagementStats);
         setZoneAnalytics(zoneAnalyticsStats);
         setCrossVenueMovement(crossVenueMovementStats);
@@ -342,10 +347,41 @@ function VenueReportPageInner() {
             </SectionCard>
 
             <SectionCard title="Connections Formed">
-              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                <StatTile label="QR connections made" value={connections?.scans ?? 0} />
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                <StatTile label="QR Scans" value={connections?.scans ?? 0} />
                 <StatTile label="Peek invites accepted" value={connections?.peeksAccepted ?? 0} />
               </div>
+              {contactMethods.length > 0 && (
+                <>
+                  <p
+                    style={{
+                      fontSize: '11px',
+                      color: theme.muted,
+                      marginBottom: '8px',
+                      fontFamily: 'Montserrat, system-ui, sans-serif',
+                    }}
+                  >
+                    Contact method chosen after scan
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {contactMethods.map((c) => (
+                      <div
+                        key={c.contact_method_type}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '14px',
+                          color: theme.text,
+                          fontFamily: 'Montserrat, system-ui, sans-serif',
+                        }}
+                      >
+                        <span>{c.contact_method_type}</span>
+                        <span style={{ color: theme.muted }}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </SectionCard>
 
             <SectionCard title="Engagement">

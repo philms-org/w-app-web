@@ -18,6 +18,7 @@ import type {
   AttendanceStats,
   TagBreakdownEntry,
   ConnectionsFormedStats,
+  ContactMethodBreakdownEntry,
   EngagementStats,
   VenueZone,
   ZoneAnalytics,
@@ -1184,6 +1185,28 @@ export async function fetchConnectionsFormed(locationId: string): Promise<Connec
   if (peeksError) throw peeksError;
 
   return { scans: scans ?? 0, peeksAccepted: peeksAccepted ?? 0 };
+}
+
+// Breaks down connections by the contact method the scanner tapped after
+// scanning someone's code (whatsapp/instagram/linkedin/phone/etc.). Only
+// captured by the iOS app's UserLinksVC — rows scanned but never tapped
+// through (or scanned via a client that predates this) have a null
+// contact_method_type and are excluded here.
+export async function fetchContactMethodBreakdown(locationId: string): Promise<ContactMethodBreakdownEntry[]> {
+  const { data, error } = await supabase
+    .from('connections')
+    .select('contact_method_type')
+    .eq('location_id', locationId)
+    .not('contact_method_type', 'is', null);
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as { contact_method_type: string }[]) {
+    counts.set(row.contact_method_type, (counts.get(row.contact_method_type) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([contact_method_type, count]) => ({ contact_method_type, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // groupsCreated/groupMessagesSent are exact counts scoped via

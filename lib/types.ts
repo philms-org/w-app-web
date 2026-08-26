@@ -213,6 +213,11 @@ export interface ConnectionsFormedStats {
   peeksAccepted: number;
 }
 
+export interface ContactMethodBreakdownEntry {
+  contact_method_type: string;
+  count: number;
+}
+
 export interface EngagementStats {
   feedPosts: number;
   groupsCreated: number;
