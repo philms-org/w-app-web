@@ -1121,7 +1121,7 @@ const HOUR_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', { hour: 'numeric' 
 export async function fetchAttendanceStats(locationId: string): Promise<AttendanceStats> {
   const { data, error } = await supabase
     .from('location_checkins')
-    .select('user_id, checked_in_at')
+    .select('user_id, checked_in_at, checked_out_at')
     .eq('location_id', locationId);
   if (error) throw error;
 
@@ -1130,16 +1130,23 @@ export async function fetchAttendanceStats(locationId: string): Promise<Attendan
   const uniqueAttendees = new Set(rows.map((r) => r.user_id)).size;
 
   const hourCounts = new Array(24).fill(0);
+  const dwellMinutes: number[] = [];
   for (const row of rows) {
     if (!row.checked_in_at) continue;
     hourCounts[new Date(row.checked_in_at).getHours()] += 1;
+    if (row.checked_out_at) {
+      const minutes = (new Date(row.checked_out_at).getTime() - new Date(row.checked_in_at).getTime()) / 60000;
+      if (minutes > 0) dwellMinutes.push(minutes);
+    }
   }
   const checkinsByHour = hourCounts.map((count, hour) => ({
     hour: HOUR_LABEL_FORMATTER.format(new Date(2000, 0, 1, hour)),
     count,
   }));
+  const avgDwellMinutes =
+    dwellMinutes.length > 0 ? Math.round((dwellMinutes.reduce((a, b) => a + b, 0) / dwellMinutes.length) * 10) / 10 : 0;
 
-  return { totalCheckins, uniqueAttendees, checkinsByHour };
+  return { totalCheckins, uniqueAttendees, checkinsByHour, avgDwellMinutes };
 }
 
 export async function fetchTagBreakdown(locationId: string): Promise<TagBreakdownEntry[]> {

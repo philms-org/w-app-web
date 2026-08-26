@@ -265,6 +265,7 @@ function VenueReportPageInner() {
               <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <StatTile label="Total check-ins" value={attendance?.totalCheckins ?? 0} />
                 <StatTile label="Unique attendees" value={attendance?.uniqueAttendees ?? 0} />
+                <StatTile label="Avg. time spent" value={`${attendance?.avgDwellMinutes ?? 0} min`} />
               </div>
 
               <p

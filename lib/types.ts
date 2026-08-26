@@ -200,6 +200,7 @@ export interface AttendanceStats {
   totalCheckins: number;
   uniqueAttendees: number;
   checkinsByHour: { hour: string; count: number }[];
+  avgDwellMinutes: number;
 }
 
 export interface TagBreakdownEntry {
