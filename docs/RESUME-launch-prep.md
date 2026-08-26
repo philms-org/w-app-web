@@ -1,11 +1,17 @@
-# W App — Launch Prep: RESUME HERE (updated 2026-08-25)
+# W App — Launch Prep: RESUME HERE (updated 2026-08-26)
 
 ## ONE-LINE STATUS
 Prod migrations 0001-0015 are ALL APPLIED + VERIFIED on prod (2026-08-25) —
 owner-benefits AND the new organizer-analytics feature (zones, cross-venue
 movement, dwell time, message counts, QR/contact-method tracking) are both
-fully live on prod now. Only 2 non-code launch gates remain (below) before
-the analytics feature should be considered ready for real users.
+fully live on prod now. Both non-code launch gates now have code/migrations
+committed and verified on QA (2026-08-26) — prod application still pending.
+
+**RISK: `main` is unpushed to `origin` as of 2026-08-26** (git push failed —
+this environment has no interactive TTY for the GitHub credential prompt).
+All commits below, including the entire organizer-analytics feature and the
+launch-gate work, exist only in this local checkout until someone runs
+`git push origin main` from a terminal with cached GitHub credentials.
 
 ## PIPELINE (no password, no local psql needed)
 - Auth: Supabase CLI **token auth** (already logged in). NO db password needed.
@@ -45,17 +51,21 @@ repo, on branch `feat/wap-foundation`) to capture which contact method a
 scanner chose — NOT yet merged/integrated with that branch's other pending
 work, still sitting as 2 extra commits there.
 
-### 2 non-code launch gates before this reaches real users
-1. **The 48h raw-location-data purge only runs when an organizer happens to
-   load the report** — it's a side effect of the report's own query, not a
-   scheduled job. Needs a `pg_cron` job (or equivalent) running the same
-   purge hourly, independent of report loads, to make the 48h retention
-   promise actually firm. Infra setup, not a code change.
-2. **No user-facing disclosure that check-in triggers continuous location
-   tracking, and no privacy policy page exists in the web app at all.** This
-   is a real gap for GDPR/CCPA and App Store review once this ships broadly
-   — needs the founder's decision on copy/policy, not something to
-   auto-generate.
+### 2 non-code launch gates — both addressed on QA, prod pending (2026-08-26)
+1. **48h purge job.** `supabase/migrations/0016_zone_position_purge_cron.sql`
+   adds an hourly `pg_cron` job (`purge-stale-zone-positions`) calling a new
+   `purge_stale_zone_positions()` function — same delete `fetch_zone_analytics()`
+   already did inline, now independent of report loads. Applied + verified
+   on QA (job active, `0 * * * *`). **Not yet applied to prod** — needs
+   explicit go-ahead before running against `yatixschvikugckkpfum`.
+2. **Location-tracking disclosure.** Added: a line in the location-permission
+   modal (`app/main/page.tsx`) explaining check-in triggers venue-scoped
+   tracking; a persistent "Sharing location with this venue" indicator while
+   checked in (`components/home/CheckedInHero.tsx`); a new `/privacy` page
+   (`app/privacy/page.tsx`) covering what's collected/why/retention/controls.
+   **This is draft copy pending founder review** — not final legal language,
+   and not yet deployed to prod (code committed to `main`, but `main` itself
+   is still unpushed to `origin` as of this session — see below).
 
 ### Also worth knowing
 - The QR-scan-to-connection flow (scanning someone's code to create a
