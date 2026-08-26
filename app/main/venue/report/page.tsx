@@ -14,6 +14,7 @@ import {
   fetchConnectionsFormed,
   fetchEngagementStats,
   fetchZoneAnalytics,
+  fetchCrossVenueMovement,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
@@ -24,6 +25,7 @@ import type {
   ConnectionsFormedStats,
   EngagementStats,
   ZoneAnalytics,
+  CrossVenueMovementEntry,
 } from '@/lib/types';
 
 export default function VenueReportPage() {
@@ -110,6 +112,7 @@ function VenueReportPageInner() {
   const [connections, setConnections] = useState<ConnectionsFormedStats | null>(null);
   const [engagement, setEngagement] = useState<EngagementStats | null>(null);
   const [zoneAnalytics, setZoneAnalytics] = useState<ZoneAnalytics | null>(null);
+  const [crossVenueMovement, setCrossVenueMovement] = useState<CrossVenueMovementEntry[]>([]);
   const [reportLoading, setReportLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,13 +165,15 @@ function VenueReportPageInner() {
       fetchConnectionsFormed(venue.id),
       fetchEngagementStats(venue.id),
       fetchZoneAnalytics(venue.id),
+      fetchCrossVenueMovement(venue.id),
     ])
-      .then(([attendanceStats, tagBreakdown, connectionsFormed, engagementStats, zoneAnalyticsStats]) => {
+      .then(([attendanceStats, tagBreakdown, connectionsFormed, engagementStats, zoneAnalyticsStats, crossVenueMovementStats]) => {
         setAttendance(attendanceStats);
         setTags(tagBreakdown);
         setConnections(connectionsFormed);
         setEngagement(engagementStats);
         setZoneAnalytics(zoneAnalyticsStats);
+        setCrossVenueMovement(crossVenueMovementStats);
       })
       .catch((err) => {
         console.error('Failed to load venue report:', err);
@@ -439,6 +444,34 @@ function VenueReportPageInner() {
                     </>
                   )}
                 </>
+              )}
+            </SectionCard>
+
+            <SectionCard title="Cross-Venue Movement">
+              {crossVenueMovement.length === 0 ? (
+                <p style={{ color: theme.muted, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                  No cross-venue data yet.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {crossVenueMovement.map((m) => (
+                    <div
+                      key={m.location_id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '14px',
+                        color: theme.text,
+                        fontFamily: 'Montserrat, system-ui, sans-serif',
+                      }}
+                    >
+                      <span>{m.venue_name}</span>
+                      <span style={{ color: theme.muted }}>
+                        {m.percentage}% ({m.attendee_count} attendees)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </SectionCard>
           </>

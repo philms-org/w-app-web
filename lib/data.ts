@@ -21,6 +21,7 @@ import type {
   EngagementStats,
   VenueZone,
   ZoneAnalytics,
+  CrossVenueMovementEntry,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1196,6 +1197,12 @@ export async function fetchZoneAnalytics(locationId: string): Promise<ZoneAnalyt
   const { data, error } = await supabase.rpc('fetch_zone_analytics', { p_location_id: locationId });
   if (error) throw error;
   return (data ?? { occupancy: [], avgDwellMinutes: [], transitions: [] }) as ZoneAnalytics;
+}
+
+export async function fetchCrossVenueMovement(locationId: string): Promise<CrossVenueMovementEntry[]> {
+  const { data, error } = await supabase.rpc('fetch_cross_venue_movement', { p_location_id: locationId });
+  if (error) throw error;
+  return (data ?? []) as CrossVenueMovementEntry[];
 }
 
 // ---- Governance (master admin only, enforced server-side by the RPCs) ----

@@ -223,3 +223,10 @@ export interface ZoneAnalytics {
   avgDwellMinutes: { zone_name: string; minutes: number }[];
   transitions: { from_zone: string; to_zone: string; count: number }[];
 }
+
+export interface CrossVenueMovementEntry {
+  location_id: string;
+  venue_name: string;
+  attendee_count: number;
+  percentage: number;
+}
