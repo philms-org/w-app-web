@@ -1,20 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// Pure time-based throttle — the previous OR-based distance override let
+// GPS jitter (routinely >5m indoors) bypass the 10s floor on nearly every
+// callback, so distance is no longer considered at all.
 const MIN_INTERVAL_MS = 10_000;
-const MIN_DISTANCE_METERS = 5;
-
-// Haversine distance in meters — good enough at the scale this needs (tens
-// of meters), no external geo library required.
-function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 // While locationId is non-null, watches position and reports throttled
 // fixes to record_zone_position(). Silently does nothing if geolocation is
@@ -29,37 +19,52 @@ export function useZoneTracking(locationId: string | null): void {
       return;
     }
 
-    const id = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const now = Date.now();
-        const last = lastSentRef.current;
-        const elapsed = last ? now - last.at : Infinity;
-        const moved = last ? distanceMeters(last.lat, last.lng, latitude, longitude) : Infinity;
+    let cancelled = false;
 
-        if (elapsed < MIN_INTERVAL_MS && moved < MIN_DISTANCE_METERS) return;
+    // Don't start watching at all for a venue with no zones defined —
+    // there's nothing for record_zone_position to match against, so the
+    // watch would just burn battery/permissions for no product benefit.
+    supabase
+      .from('venue_zones')
+      .select('id', { count: 'exact', head: true })
+      .eq('location_id', locationId)
+      .then(({ count }) => {
+        if (cancelled || !count) return;
 
-        lastSentRef.current = { lat: latitude, lng: longitude, at: now };
-        supabase
-          .rpc('record_zone_position', {
-            p_location_id: locationId,
-            p_lat: latitude,
-            p_lng: longitude,
-          })
-          .then(({ error }) => {
-            if (error) console.error('record_zone_position failed:', error);
-          });
-      },
-      (err) => {
-        // Permission denied / position unavailable / timeout — no UI
-        // interruption, just stop trying for this session.
-        console.warn('Zone tracking geolocation error:', err.message);
-      },
-      { enableHighAccuracy: false, maximumAge: 5000 }
-    );
-    watchIdRef.current = id;
+        const id = navigator.geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            const now = Date.now();
+            const last = lastSentRef.current;
+            const elapsed = last ? now - last.at : Infinity;
+
+            // Hard time floor first — GPS jitter (routinely >5m indoors)
+            // must never bypass the 10s throttle regardless of distance.
+            if (elapsed < MIN_INTERVAL_MS) return;
+
+            lastSentRef.current = { lat: latitude, lng: longitude, at: now };
+            supabase
+              .rpc('record_zone_position', {
+                p_location_id: locationId,
+                p_lat: latitude,
+                p_lng: longitude,
+              })
+              .then(({ error }) => {
+                if (error) console.error('record_zone_position failed:', error);
+              });
+          },
+          (err) => {
+            // Permission denied / position unavailable / timeout — no UI
+            // interruption, just stop trying for this session.
+            console.warn('Zone tracking geolocation error:', err.message);
+          },
+          { enableHighAccuracy: false, maximumAge: 5000 }
+        );
+        watchIdRef.current = id;
+      });
 
     return () => {
+      cancelled = true;
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       lastSentRef.current = null;
     };

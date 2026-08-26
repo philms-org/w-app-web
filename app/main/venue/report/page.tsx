@@ -462,7 +462,7 @@ function VenueReportPageInner() {
                           fontFamily: 'Montserrat, system-ui, sans-serif',
                         }}
                       >
-                        Movement between zones
+                        Zone changes (raw GPS events, not distinct visits)
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {zoneAnalytics.transitions.map((t) => (
@@ -477,7 +477,9 @@ function VenueReportPageInner() {
                             }}
                           >
                             <span>{t.from_zone} &rarr; {t.to_zone}</span>
-                            <span style={{ color: theme.muted }}>{t.count}</span>
+                            <span style={{ color: theme.muted }}>
+                              {t.count} changes ({t.unique_people} people)
+                            </span>
                           </div>
                         ))}
                       </div>

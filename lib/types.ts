@@ -228,7 +228,7 @@ export interface EngagementStats {
 export interface ZoneAnalytics {
   occupancy: { zone_name: string; count: number }[];
   avgDwellMinutes: { zone_name: string; minutes: number }[];
-  transitions: { from_zone: string; to_zone: string; count: number }[];
+  transitions: { from_zone: string; to_zone: string; count: number; unique_people: number }[];
 }
 
 export interface CrossVenueMovementEntry {
