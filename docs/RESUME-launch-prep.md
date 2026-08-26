@@ -1,13 +1,11 @@
 # W App — Launch Prep: RESUME HERE (updated 2026-08-25)
 
 ## ONE-LINE STATUS
-Prod migrations 0001-0010 are ALL APPLIED + VERIFIED on prod (owner-benefits
-feature fully live). The new organizer-analytics feature (zones, cross-venue
-movement, dwell time, message counts, QR/contact-method tracking — 5
-migrations, 0011-0015) is built, reviewed (task-level + whole-branch + one
-fix wave, all clean), merged to local `main` — but its migrations are
-**QA-only so far**, and there are 2 non-code launch gates (below) before it
-should reach real users.
+Prod migrations 0001-0015 are ALL APPLIED + VERIFIED on prod (2026-08-25) —
+owner-benefits AND the new organizer-analytics feature (zones, cross-venue
+movement, dwell time, message counts, QR/contact-method tracking) are both
+fully live on prod now. Only 2 non-code launch gates remain (below) before
+the analytics feature should be considered ready for real users.
 
 ## PIPELINE (no password, no local psql needed)
 - Auth: Supabase CLI **token auth** (already logged in). NO db password needed.
@@ -28,17 +26,11 @@ locations insert policy, checkout policy, DM RLS fix, profiles RLS
 lockdown + self-promotion fix, checkin cleanup/indexes, venue group chat +
 chat_join_mode, rewards write policy, reward tiers).
 
-NOT yet on prod — QA-verified only, from today's organizer-analytics build:
-  - 0011_venue_zones.sql
-  - 0012_zone_position_fixes.sql
-  - 0013_analytics_functions.sql
-  - 0014_contact_method_type.sql
-  - 0015_final_review_fixes.sql (post-review fixes: FK cascade, auth-gated
-    RPC, k=3 anonymity thresholds, indexes, RPC-based contact-method update)
-All five are additive-only and safe to apply using the same walkthrough
-pattern as before (link to prod, apply each file in order 0011→0015,
-verify each with a targeted query — ask Claude for the exact commands when
-ready, same as last time).
+0011-0015 (venue zones, zone position fixes + RPC, analytics functions,
+contact method type column, final-review fixes) applied to prod and
+verified 2026-08-25: FK cascade confirmed (`ON DELETE CASCADE`), 3 indexes
+on `zone_position_fixes`, `record_contact_method_choice` RPC present, old
+overly-broad `connections` update policy confirmed removed.
 
 ## Organizer analytics feature (built + merged 2026-08-25)
 See `docs/superpowers/specs/2026-08-25-organizer-analytics-design.md` (spec)
