@@ -126,3 +126,63 @@ end;
 $$;
 
 grant execute on function fetch_cross_venue_movement(uuid) to authenticated;
+
+-- DM message count is an approximation: DMs between two users who have
+-- both checked in to this venue at some point (DMs carry no location_id —
+-- they aren't venue-scoped by nature). Group message count is exact
+-- (conversations.location_id is only ever set on the venue's own chat).
+create or replace function fetch_message_stats(p_location_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  group_count int;
+  group_messages int;
+  dm_messages int;
+begin
+  if not is_venue_manager(p_location_id, auth.uid()) then
+    raise exception 'not authorized';
+  end if;
+
+  select count(*) into group_count
+  from conversations
+  where location_id = p_location_id and is_group = true;
+
+  select count(*) into group_messages
+  from messages m
+  join conversations c on c.id = m.conversation_id
+  where c.location_id = p_location_id and c.is_group = true;
+
+  with venue_attendees as (
+    select distinct user_id from location_checkins where location_id = p_location_id
+  ),
+  dm_convos as (
+    select c.id
+    from conversations c
+    where c.is_group = false
+      and exists (
+        select 1 from conversation_participants cp
+        join venue_attendees va on va.user_id = cp.user_id
+        where cp.conversation_id = c.id
+      )
+      and not exists (
+        select 1 from conversation_participants cp
+        where cp.conversation_id = c.id
+          and cp.user_id not in (select user_id from venue_attendees)
+      )
+  )
+  select count(*) into dm_messages
+  from messages m
+  where m.conversation_id in (select id from dm_convos);
+
+  return jsonb_build_object(
+    'groupsCreated', group_count,
+    'groupMessagesSent', group_messages,
+    'dmMessagesApprox', dm_messages
+  );
+end;
+$$;
+
+grant execute on function fetch_message_stats(uuid) to authenticated;

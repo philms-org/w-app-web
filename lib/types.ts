@@ -217,6 +217,7 @@ export interface EngagementStats {
   feedPosts: number;
   groupsCreated: number;
   groupMessagesSent: number;
+  dmMessagesApprox: number;
 }
 
 export interface ZoneAnalytics {

@@ -351,6 +351,9 @@ function VenueReportPageInner() {
             <SectionCard title="Engagement">
               <div style={{ display: 'flex', gap: '20px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <StatTile label="Feed posts" value={engagement?.feedPosts ?? 0} />
+                <StatTile label="Groups created" value={engagement?.groupsCreated ?? 0} />
+                <StatTile label="Group messages sent" value={engagement?.groupMessagesSent ?? 0} />
+                <StatTile label="DMs (approx.)" value={engagement?.dmMessagesApprox ?? 0} />
               </div>
               <p
                 style={{
@@ -360,8 +363,8 @@ function VenueReportPageInner() {
                   fontFamily: 'Montserrat, system-ui, sans-serif',
                 }}
               >
-                Group messaging isn&apos;t yet scoped per-venue — groups created here can&apos;t currently be
-                attributed to this venue in the data.
+                DMs (approx.) counts messages between attendees who&apos;ve both checked in here — may include
+                chats that started elsewhere.
               </p>
             </SectionCard>
 

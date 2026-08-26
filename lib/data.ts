@@ -1186,10 +1186,12 @@ export async function fetchConnectionsFormed(locationId: string): Promise<Connec
   return { scans: scans ?? 0, peeksAccepted: peeksAccepted ?? 0 };
 }
 
-// groupsCreated/groupMessagesSent are hardcoded to 0: conversations and
-// conversation_participants carry no location_id, so there's currently no
-// way to attribute a group (or its messages) to the venue it was created
-// from. Returning 0 here is a known gap, not a real count — see report.
+// groupsCreated/groupMessagesSent are exact counts scoped via
+// conversations.location_id (only ever set on a venue's own group chat).
+// dmMessagesApprox is an approximation: DMs carry no location_id, so it
+// counts messages in DM conversations between two users who have both
+// checked in to this venue at some point — not an exact "started here"
+// count. See fetch_message_stats in supabase/migrations/0013_analytics_functions.sql.
 export async function fetchEngagementStats(locationId: string): Promise<EngagementStats> {
   const { count: feedPosts, error } = await supabase
     .from('feed_posts')
@@ -1197,7 +1199,17 @@ export async function fetchEngagementStats(locationId: string): Promise<Engageme
     .eq('location_id', locationId);
   if (error) throw error;
 
-  return { feedPosts: feedPosts ?? 0, groupsCreated: 0, groupMessagesSent: 0 };
+  const { data: messageStats, error: statsError } = await supabase.rpc('fetch_message_stats', {
+    p_location_id: locationId,
+  });
+  if (statsError) throw statsError;
+
+  return {
+    feedPosts: feedPosts ?? 0,
+    groupsCreated: messageStats?.groupsCreated ?? 0,
+    groupMessagesSent: messageStats?.groupMessagesSent ?? 0,
+    dmMessagesApprox: messageStats?.dmMessagesApprox ?? 0,
+  };
 }
 
 export async function fetchZoneAnalytics(locationId: string): Promise<ZoneAnalytics> {
