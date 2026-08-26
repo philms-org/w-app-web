@@ -6,18 +6,7 @@ import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinOff, Eye } from 'lucide-react';
-
-// Straight-line (haversine) distance in meters between two lat/lng points.
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import { haversineMeters } from '@/lib/geo';
 
 function handlePeek(venue: Venue) {
   // Phase 3: wire to a real peekLocation() API call. For now this is a
