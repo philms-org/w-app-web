@@ -1,17 +1,39 @@
 # W App — Launch Prep: RESUME HERE (updated 2026-08-26)
 
 ## ONE-LINE STATUS
-Prod migrations 0001-0015 are ALL APPLIED + VERIFIED on prod (2026-08-25) —
-owner-benefits AND the new organizer-analytics feature (zones, cross-venue
-movement, dwell time, message counts, QR/contact-method tracking) are both
-fully live on prod now. Both non-code launch gates now have code/migrations
-committed and verified on QA (2026-08-26) — prod application still pending.
+Prod migrations 0001-0016 are ALL APPLIED + VERIFIED on prod (2026-08-26) —
+owner-benefits, the organizer-analytics feature, and the pg_cron purge job
+(`purge-stale-zone-positions`, hourly, confirmed live) are all fully on
+prod now. The other non-code launch gate (privacy disclosure copy) has a
+real, substantive problem — see below — before it should be finalized.
 
-**RISK: `main` is unpushed to `origin` as of 2026-08-26** (git push failed —
-this environment has no interactive TTY for the GitHub credential prompt).
-All commits below, including the entire organizer-analytics feature and the
-launch-gate work, exist only in this local checkout until someone runs
-`git push origin main` from a terminal with cached GitHub credentials.
+**RISK: `main` is STILL unpushed to `origin` as of 2026-08-26** (confirmed
+again: no cached GitHub credentials in this environment — `osxkeychain`
+helper configured but empty, no `gh` CLI installed; clean fast-forward, no
+divergence, just needs the founder to push from an authenticated terminal).
+All work below exists only in this local checkout until then.
+
+**FOUNDER DECISION NEEDED: privacy disclosure copy has 2 factual
+inaccuracies vs. the real implementation** (found via independent review,
+2026-08-26):
+1. "Individual attendees are never identified... figures below 3 hidden" —
+   only true for `occupancy` and cross-venue counts. `avgDwellMinutes` and
+   `transitions` in `fetch_zone_analytics` have NO k=3 floor — a zone with
+   1 person still shows its dwell time / transition count.
+2. "Aggregated, anonymized statistics are kept longer [than 48h]" — false.
+   Nothing persists past the raw-fix purge; the report recomputes live from
+   the trailing 48h window every time, so data disappears from the report
+   once it ages out — there's no persisted aggregate table anywhere.
+   The copy's own example ("Main Bar was busiest at 9pm") implies a lasting
+   record that doesn't exist.
+Also: the tracking banner/copy imply tracking happens on every check-in;
+it only fires for venues that have zones defined.
+**Decide one of:** (a) tighten the SQL — add k=3 to dwell/transitions, add
+a real persisted aggregate table if "kept longer" should be true, or
+(b) rewrite the copy to match what the code actually does today. Do not
+publish the copy as-is — these are exactly the kind of claims that create
+real legal exposure if untrue.</new_string>
+
 
 ## PIPELINE (no password, no local psql needed)
 - Auth: Supabase CLI **token auth** (already logged in). NO db password needed.
