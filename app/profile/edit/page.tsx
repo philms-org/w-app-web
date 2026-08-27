@@ -62,6 +62,11 @@ export default function ProfileEditPage() {
       let avatarUrl = user.image;
       if (profileImage) {
         avatarUrl = await uploadAvatar(profileImage, user.id);
+        // uploadAvatar writes to a fixed storage path and returns the same
+        // URL every time, so bust CDN/browser caching of the old image.
+        if (avatarUrl) {
+          avatarUrl = `${avatarUrl}?v=${Date.now()}`;
+        }
       }
 
       await upsertProfile({

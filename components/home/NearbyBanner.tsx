@@ -14,22 +14,38 @@ import VenuePeekModal from '@/components/home/VenuePeekModal';
 const DEFAULT_RADIUS_METERS = 50;
 
 export default function NearbyBanner() {
-  const { currentLocation, setSelectedLocation } = useStore();
+  const { currentLocation, locationDenied, setSelectedLocation } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [peekVenue, setPeekVenue] = useState<Venue | null>(null);
 
-  useEffect(() => {
+  // A denied/timed-out/unsupported geolocation request still writes a
+  // hardcoded fallback coordinate to the store (see lib/geolocation.ts), so
+  // `currentLocation` alone can't tell us whether we have a real fix.
+  const hasRealLocation = !!currentLocation && !locationDenied;
+
+  const loadVenues = () => {
+    setLoading(true);
+    setLoadError(false);
     fetchVenues()
       .then(setVenues)
-      .catch((err) => console.error('Failed to load nearby venues:', err))
+      .catch((err) => {
+        console.error('Failed to load nearby venues:', err);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadVenues();
   }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
+    loadVenues();
     requestLocation().finally(() => setRefreshing(false));
   };
 
@@ -37,7 +53,7 @@ export default function NearbyBanner() {
 
   const { inRange, nearby } = useMemo(() => {
     const withCoords = venues.filter((v) => v.lat != null && v.lng != null);
-    if (!currentLocation) return { inRange: [] as Venue[], nearby: withCoords };
+    if (!hasRealLocation || !currentLocation) return { inRange: [] as Venue[], nearby: withCoords };
 
     const withDistance = withCoords
       .map((v) => ({
@@ -54,7 +70,7 @@ export default function NearbyBanner() {
       else nearbyList.push(venue);
     }
     return { inRange: inRangeList, nearby: nearbyList };
-  }, [venues, currentLocation]);
+  }, [venues, currentLocation, hasRealLocation]);
 
   const handleCheckIn = (venue: Venue) => {
     // Same Venue -> store Location conversion MapTab.tsx uses for its own
@@ -145,11 +161,11 @@ export default function NearbyBanner() {
       padding: '0 20px', marginBottom: '12px',
     }}>
       <p style={{
-        color: currentLocation ? theme.text : theme.muted,
+        color: hasRealLocation ? theme.text : theme.muted,
         fontSize: '13px', fontWeight: 700,
         fontFamily: 'Montserrat, system-ui, sans-serif',
       }}>
-        {currentLocation ? 'Location detected' : 'Location not detected'}
+        {hasRealLocation ? 'Location detected' : 'Location not detected'}
       </p>
       <button
         onClick={handleRefresh}
@@ -181,7 +197,7 @@ export default function NearbyBanner() {
     </div>
   );
 
-  if (!currentLocation) {
+  if (!hasRealLocation) {
     return (
       <div style={{ padding: '20px 0 4px' }}>
         {pullIndicator}
@@ -189,7 +205,7 @@ export default function NearbyBanner() {
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <MapPinOff style={{ width: '32px', height: '32px', color: theme.muted, margin: '0 auto 12px' }} />
           <p style={{ color: theme.muted, fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            Turn on location to see nearby venues.
+            {locationDenied ? "Couldn't get your location. Try again or enter it manually." : 'Turn on location to see nearby venues.'}
           </p>
           <button
             onClick={handleRefresh}
@@ -258,7 +274,7 @@ export default function NearbyBanner() {
 
       {!loading && inRange.length === 0 && nearby.length === 0 && (
         <p style={{ color: theme.muted, fontSize: '14px', padding: '0 20px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-          No locations nearby yet
+          {loadError ? "Couldn't load venues. Tap refresh to try again." : 'No locations nearby yet'}
         </p>
       )}
 
