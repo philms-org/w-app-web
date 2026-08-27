@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { requestLocation } from '@/lib/geolocation';
 import TabBar from '@/components/TabBar';
 import AppHeader from '@/components/AppHeader';
 import HomeTab from '@/components/tabs/HomeTab';
@@ -41,38 +42,8 @@ export default function MainPage() {
   const handleAllowLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setLocationDenied(false);
-          setShowLocationPrompt(false);
-        },
-        (error) => {
-          console.error('Location error:', error);
-          // Permission denied/unavailable: fall back to the default map
-          // center but FLAG it so the map can tell the user instead of
-          // silently showing the wrong city.
-          setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
-          setLocationDenied(true);
-          setShowLocationPrompt(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    } else {
-      // Geolocation not supported: same flagged fallback
-      setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
-      setLocationDenied(true);
-      setShowLocationPrompt(false);
-    }
+    setShowLocationPrompt(false);
+    requestLocation();
   };
 
   const handleDenyLocation = () => {

@@ -2,50 +2,57 @@
 
 import { theme } from '@/lib/theme';
 import { Users, Lock } from 'lucide-react';
+import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
 
-// Phase 1 renders only the locked state — the friends'-activity feed itself
-// (and the 3-connections gate) needs tables/APIs that don't exist yet.
-// Phase 3: gate on real getConnectionCount() and render fetchFriendsActivity()
-// once a user has 3+ connections.
+// Round 1 restyle: real copy + a blurred illustrative backdrop instead of a
+// flat gradient card. Still locked-state only — the 3-connections gate and
+// real fetchFriendsActivity() wiring is Round 2+ (needs the real connections
+// schema this repo's paused 2026-08-04 plan flagged as unresolved).
 export default function FriendsActivityFeed() {
   return (
     <div style={{
-      background: `linear-gradient(135deg, ${theme.premium1} 0%, ${theme.premium2} 100%)`,
+      position: 'relative',
       borderRadius: '16px',
-      padding: '24px 20px',
+      overflow: 'hidden',
       margin: '0 20px 20px',
-      textAlign: 'center'
+      backgroundColor: theme.surface,
+      border: `1px solid ${theme.divider}`,
+      minHeight: '180px',
     }}>
+      <FeedBlurBackdrop />
+
       <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '9999px',
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: '0 auto 14px'
+        position: 'relative',
+        background: `linear-gradient(180deg, transparent 0%, ${theme.bg} 85%)`,
+        padding: '24px 20px',
+        textAlign: 'center',
       }}>
-        <Lock style={{ width: '22px', height: '22px', color: 'white' }} />
-      </div>
-      <h3 style={{ color: 'white', fontSize: '16px', fontWeight: 700, marginBottom: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-        Unlock friends&apos; activity
-      </h3>
-      <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', lineHeight: 1.4, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-        Connect with 3 people to see where they&apos;ve been
-      </p>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        marginTop: '14px',
-        color: 'rgba(255,255,255,0.9)',
-        fontSize: '12px',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>
-        <Users style={{ width: '14px', height: '14px' }} />
-        0 / 3 connections
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '9999px',
+          backgroundColor: theme.premium1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 14px',
+        }}>
+          <Lock style={{ width: '22px', height: '22px', color: 'white' }} />
+        </div>
+        <h3 style={{
+          color: theme.text, fontSize: '16px', fontWeight: 700, marginBottom: '6px',
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+        }}>
+          Add friends to see where they&apos;ve been
+        </h3>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          marginTop: '10px', color: theme.muted, fontSize: '12px',
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+        }}>
+          <Users style={{ width: '14px', height: '14px' }} />
+          0 / 3 connections
+        </div>
       </div>
     </div>
   );
