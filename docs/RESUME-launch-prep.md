@@ -136,3 +136,51 @@ work, still sitting as 2 extra commits there.
   - The two launch gates above (pg_cron purge job, tracking disclosure/privacy policy).
   - Decide what to do with the 2 pending commits on iOS `feat/wap-foundation`
     (contact-method capture) relative to that branch's other in-progress work.
+
+## ROUND 1 HOME BANNER + FEED TEASER — CODE COMPLETE, NOT YET MERGED (2026-08-26)
+- The plan flagged above (`e335a49`/`146e4f8`, "Round 1 home banner + feed
+  teaser") is now fully implemented via superpowers:subagent-driven-development
+  in the worktree `.worktrees/home-banner-feed-round1` (branch
+  `home-banner-feed-round1`), 9 commits ahead of the `main` commit it
+  started from: extracted `lib/geo.ts`/`lib/geolocation.ts`, added
+  `usePullToRefresh` + `FeedBlurBackdrop`, rebuilt `NearbyBanner` (in-range
+  check-in / nearby-peek split + manual refresh), added `VenuePeekModal`
+  (preview-only Round 1 scope) and a real `/profile/edit` page.
+- All 8 tasks passed individual spec+quality review. The final whole-branch
+  review then caught 1 Critical + 4 Important cross-task issues — all
+  traced back to code the plan itself specified verbatim, not implementer
+  deviations — approved by the founder for immediate fix rather than
+  deferral: (1) `NearbyBanner` wasn't reading `locationDenied`, so a denied
+  geolocation prompt was silently treated as a real fix and could drive a
+  real check-in write at the hardcoded NYC fallback coordinate; (2)
+  `usePullToRefresh` fired its refresh callback twice under React
+  StrictMode (side effect inside a `setState` updater); (3) the same hook
+  had no horizontal/vertical axis check, so swiping the venue card rows
+  sideways could false-trigger a refresh; (4) a failed venue fetch had no
+  retry path; (5) re-uploading a profile avatar returned the same cached
+  URL, so the new photo might not visibly update. Fixed in `78c3c13`,
+  re-reviewed clean (all 5 addressed, no new breakage).
+- `npx tsc --noEmit` is clean as of the last commit on that branch.
+- **Not done:** a real authenticated browser click-through (login → check
+  a venue in-range → Peek a nearby one → pull-to-refresh → edit profile,
+  save, confirm it persists) — every implementer subagent hit the login
+  gate with no test credentials available to it. Needs a human (or a
+  session with QA credentials) to do this pass before merging. See
+  [[qa-pass-2026-08-06-status]] for the existing QA test account
+  (`testy@gmail.com` / "rf", master admin, `w-app-qa` project) — password
+  not stored anywhere in this repo or memory by design.
+- Deferred (not fixed, not blocking): a stale/wrong comment in
+  `lib/geolocation.ts` claiming it's the only geolocation call site
+  (`MapTab.tsx` and `app/main/venue/zones/page.tsx` also call it directly,
+  and `MapTab.tsx` has its own separate local `requestLocation` with a
+  different `maximumAge`); `DEFAULT_RADIUS_METERS` duplicated between
+  `NearbyBanner.tsx` and `MapTab.tsx` instead of living in `lib/geo.ts`;
+  `VenuePeekModal`'s close-X sits directly above `HeroCarousel`'s own back
+  arrow (visually redundant, not broken); `FriendsActivityFeed`'s blurred
+  backdrop may read as very low-contrast against its own scrim (worth an
+  eyeball); `/profile/edit`'s `router.back()` vs. the rest of the app's
+  `router.push('/main')` convention, and writing `phone: ''` instead of
+  `null` when cleared. None of these are correctness bugs.
+- Once the manual pass is done, this branch is ready for
+  superpowers:finishing-a-development-branch (merge into `main` or open a
+  PR — not yet decided).
