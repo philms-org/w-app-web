@@ -32,8 +32,7 @@ it only fires for venues that have zones defined.
 a real persisted aggregate table if "kept longer" should be true, or
 (b) rewrite the copy to match what the code actually does today. Do not
 publish the copy as-is — these are exactly the kind of claims that create
-real legal exposure if untrue.</new_string>
-
+real legal exposure if untrue.
 
 ## PIPELINE (no password, no local psql needed)
 - Auth: Supabase CLI **token auth** (already logged in). NO db password needed.
@@ -48,7 +47,7 @@ real legal exposure if untrue.</new_string>
   SQL blocks are fragile to paste into a terminal; prefer the single-line
   `echo "...;" | supabase db query --linked` form for verification queries.
 
-## PROD STATE (verified 2026-08-25, direct query — trust this over any doc)
+## PROD STATE (verified 2026-08-26, direct query — trust this over any doc)
 ALL applied + verified on prod: 0001 through 0010 (RBAC/master-admin,
 locations insert policy, checkout policy, DM RLS fix, profiles RLS
 lockdown + self-promotion fix, checkin cleanup/indexes, venue group chat +
@@ -59,6 +58,9 @@ contact method type column, final-review fixes) applied to prod and
 verified 2026-08-25: FK cascade confirmed (`ON DELETE CASCADE`), 3 indexes
 on `zone_position_fixes`, `record_contact_method_choice` RPC present, old
 overly-broad `connections` update policy confirmed removed.
+
+0016 (hourly pg_cron purge job) applied to prod and verified 2026-08-26:
+`purge-stale-zone-positions` job confirmed present, schedule `0 * * * *`.
 
 ## Organizer analytics feature (built + merged 2026-08-25)
 See `docs/superpowers/specs/2026-08-25-organizer-analytics-design.md` (spec)
@@ -73,14 +75,14 @@ repo, on branch `feat/wap-foundation`) to capture which contact method a
 scanner chose — NOT yet merged/integrated with that branch's other pending
 work, still sitting as 2 extra commits there.
 
-### 2 non-code launch gates — both addressed on QA, prod pending (2026-08-26)
-1. **48h purge job.** `supabase/migrations/0016_zone_position_purge_cron.sql`
+### 2 non-code launch gates
+1. **48h purge job — DONE, live on prod.** `supabase/migrations/0016_zone_position_purge_cron.sql`
    adds an hourly `pg_cron` job (`purge-stale-zone-positions`) calling a new
    `purge_stale_zone_positions()` function — same delete `fetch_zone_analytics()`
    already did inline, now independent of report loads. Applied + verified
-   on QA (job active, `0 * * * *`). **Not yet applied to prod** — needs
-   explicit go-ahead before running against `yatixschvikugckkpfum`.
-2. **Location-tracking disclosure.** Added: a line in the location-permission
+   on QA and PROD (job active, `0 * * * *`, confirmed 2026-08-26).
+2. **Location-tracking disclosure — draft has real accuracy problems, see
+   "FOUNDER DECISION NEEDED" at the top of this doc.** Added: a line in the location-permission
    modal (`app/main/page.tsx`) explaining check-in triggers venue-scoped
    tracking; a persistent "Sharing location with this venue" indicator while
    checked in (`components/home/CheckedInHero.tsx`); a new `/privacy` page
@@ -104,7 +106,7 @@ work, still sitting as 2 extra commits there.
   report combined with the organizer's live attendee list.
 
 ## HYGIENE
-  - All code + all migration files (0001-0015) committed on `main`.
+  - All code + all migration files (0001-0016) committed on `main`.
   - `.env.local` points at the QA cloud project directly.
 
 ## STILL QUEUED (code, no DB needed — unrelated, can parallelize):
@@ -127,13 +129,13 @@ work, still sitting as 2 extra commits there.
   "Round 1" with anything described above.
 - `main` is STILL unpushed to `origin` as of this checkpoint (see RISK note
   near the top) — nothing from today, including the fully-verified prod
-  migrations 0001-0015, exists on GitHub yet.
+  migrations 0001-0016, exists on GitHub yet.
 
 ## OPEN ASKS FOR FOUNDER
   - QA project should be on paid/always-on plan (keeps auto-pausing = unreliable staging).
   - Confirm Supabase Pro backups/PITR active on PROD before further prod
     applies (rollback safety) — still not confirmed.
-  - The two launch gates above (pg_cron purge job, tracking disclosure/privacy policy).
+  - The privacy disclosure copy accuracy problem (see "FOUNDER DECISION NEEDED" at top) — the purge job is done.
   - Decide what to do with the 2 pending commits on iOS `feat/wap-foundation`
     (contact-method capture) relative to that branch's other in-progress work.
 
