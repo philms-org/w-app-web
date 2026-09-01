@@ -110,9 +110,29 @@ work, still sitting as 2 extra commits there.
   - `.env.local` points at the QA cloud project directly.
 
 ## STILL QUEUED (code, no DB needed — unrelated, can parallelize):
-  - Sentry + @vercel/analytics (launch-day error visibility)
+  - ~~Sentry + @vercel/analytics (launch-day error visibility)~~ — DONE 2026-08-31,
+    see "OBSERVABILITY / ANALYTICS" section below. Sentry needs a DSN before it
+    reports anything.
   - Hide paused stub features (Connect QR / Peek / Friends Activity)
   - SEO/meta pack: OG image, app/sitemap.ts, app/robots.ts, crawlable landing page
+
+## OBSERVABILITY / ANALYTICS (wired 2026-08-31, NOT yet reporting)
+- `@vercel/analytics@2` — `<Analytics />` mounted in `app/layout.tsx`. Verified
+  in dev (pageview + route-change events firing in debug mode). Data only flows
+  once **Web Analytics is enabled in the Vercel project dashboard** (Analytics
+  tab, one click). No env vars needed.
+- `@sentry/nextjs@10` — full SDK scaffold, currently a **no-op** because no DSN:
+  `sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation-client.ts`,
+  `instrumentation.ts` (register + onRequestError), `app/global-error.tsx`
+  boundary, and `withSentryConfig` wrapping `next.config.ts`. CSP updated:
+  `script-src` += `va.vercel-scripts.com`, `connect-src` += `*.sentry.io`.
+  **To activate:** provision a Sentry project (Vercel Marketplace → Sentry, or a
+  direct Sentry account) and set env vars in the Vercel project:
+    - `NEXT_PUBLIC_SENTRY_DSN` — turns on capture in all runtimes (required).
+    - `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` — build-only, enable
+      source-map upload for readable stack traces (optional but recommended).
+  `npm run build` is clean with none of these set. Sampling is currently 100%
+  (`tracesSampleRate: 1`) — dial down in the Sentry project once traffic is known.
 
 ## CHECKPOINT (paused 2026-08-26, restarting computer)
 - The full organizer-analytics feature was demo-walked-through live in the

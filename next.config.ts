@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Content-Security-Policy notes:
 // - Supabase URL comes from env (local dev vs prod project); we allow any
@@ -8,11 +9,13 @@ import type { NextConfig } from "next";
 //   components and Leaflet's injected styles.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js dev + hydration; tighten with nonces post-launch
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com", // Next.js dev + hydration + Vercel Analytics; tighten with nonces post-launch
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://unpkg.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321",
+  // Vercel Analytics beacons to same-origin /_vercel/insights ('self' covers it).
+  // Sentry uploads events/traces to its *.ingest.*.sentry.io hosts.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321 https://*.sentry.io",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -48,4 +51,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// withSentryConfig wraps the build to upload source maps and register Vercel
+// cron monitors. Source-map upload is skipped unless SENTRY_AUTH_TOKEN (plus
+// SENTRY_ORG / SENTRY_PROJECT) are set — safe to ship before the Sentry
+// project is provisioned.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Quiet the "no auth token" notice locally; keep logs in CI.
+  silent: !process.env.CI,
+  // Upload a wider set of client bundles for readable stack traces.
+  widenClientFileUpload: true,
+  // Tree-shake Sentry's internal debug logging from the bundle.
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});
+
