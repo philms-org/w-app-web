@@ -313,3 +313,21 @@ relying on QA to test any image-upload flow.
 - Once the manual pass is done, this branch is ready for
   superpowers:finishing-a-development-branch (merge into `main` or open a
   PR — not yet decided).
+
+## REALTIME CHAT + PRESENCE — SHIPPED TO PROD (2026-09-02)
+- Plan `docs/superpowers/plans/2026-09-02-realtime-chat-presence.md` (7 tasks) is complete
+  and merged: `lib/hooks/useTableSubscription.ts` (shared `postgres_changes` subscription
+  hook, debounced refetch + 30s visible-only backstop poll) wired into `ChatView.tsx`
+  (replaces the old 4s poll), `MessagesTab.tsx` (live conversation-list updates), and
+  `CheckedInHero.tsx` (live venue presence — `loadPresence` extracted, subscribed with `'*'`
+  since check-out is an UPDATE not an INSERT).
+- Migration `supabase/migrations/0017_enable_realtime.sql` adds `messages` and
+  `location_checkins` to the `supabase_realtime` publication — applied and verified on
+  **both QA and PROD** as of 2026-09-02.
+- Verified via a live two-device demo on QA (two genuinely different accounts, `the@gmail.com`
+  and `testy@gmail.com`): chat replies appear in an already-open thread with no reload,
+  the conversation list live-updates its preview/timestamp without reopening, and both
+  check-in (INSERT) and check-out (UPDATE) on `location_checkins` trigger exactly one live
+  presence refetch on the other session (confirmed via network-request inspection).
+- This removes "No realtime" from `docs/build-state-inventory-2026-09-02.md`'s launch gaps —
+  chat and presence are now live, not refresh-only.
