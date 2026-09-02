@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
@@ -84,6 +85,47 @@ export default function CheckedInHero() {
     return map;
   }, [tags]);
 
+  // Current presence + historical attendees for the Connections strip.
+  // Same logic that used to live inline in the effect below — extracted so
+  // the realtime subscription can re-run exactly the same load.
+  const loadPresence = useCallback(() => {
+    if (!selectedLocation) return;
+    const locationId = selectedLocation.id;
+
+    fetchPresence(locationId)
+      .then((rows) => {
+        const profiles = rows.map((row) => row.profiles).filter((p): p is Profile => !!p);
+        setPresenceProfiles(profiles);
+      })
+      .catch((err) => console.error('Failed to load presence:', err));
+
+    fetchAttendeeHistory(locationId)
+      .then((history) => {
+        setPresenceProfiles((current) => {
+          const seen = new Set(current.map((p) => p.id));
+          const merged = [...current];
+          for (const profile of history) {
+            if (!seen.has(profile.id)) {
+              seen.add(profile.id);
+              merged.push(profile);
+            }
+          }
+          return merged;
+        });
+      })
+      .catch((err) => console.error('Failed to load attendee history:', err));
+  }, [selectedLocation]);
+
+  // Live presence: any check-in / check-out row for this venue re-runs the
+  // same load. Listen for '*' because a check-out is an UPDATE
+  // (checked_out_at set), not an INSERT.
+  useTableSubscription({
+    table: 'location_checkins',
+    filter: selectedLocation ? `location_id=eq.${selectedLocation.id}` : undefined,
+    onEvent: loadPresence,
+    enabled: !!selectedLocation,
+  });
+
   const loadTags = (locationId: string) => {
     fetchVerificationTags(locationId)
       .then(setTags)
@@ -117,38 +159,15 @@ export default function CheckedInHero() {
         });
     }
 
-    fetchPresence(selectedLocation.id)
-      .then((rows) => {
-        const profiles = rows.map((row) => row.profiles).filter((p): p is Profile => !!p);
-        setPresenceProfiles(profiles);
-      })
-      .catch((err) => console.error('Failed to load presence:', err));
-
-    // Historical attendees are folded into the same Connections strip
-    // ("people who were/are there") alongside anyone currently present.
-    fetchAttendeeHistory(selectedLocation.id)
-      .then((history) => {
-        setPresenceProfiles((current) => {
-          const seen = new Set(current.map((p) => p.id));
-          const merged = [...current];
-          for (const profile of history) {
-            if (!seen.has(profile.id)) {
-              seen.add(profile.id);
-              merged.push(profile);
-            }
-          }
-          return merged;
-        });
-      })
-      .catch((err) => console.error('Failed to load attendee history:', err));
+    loadPresence();
 
     loadTags(selectedLocation.id);
 
     fetchBanners(selectedLocation.id)
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
-     
-  }, [selectedLocation, withinGeofence]);
+
+  }, [selectedLocation, withinGeofence, loadPresence]);
 
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
