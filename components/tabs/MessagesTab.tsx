@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { fetchConversations } from '@/lib/data';
 import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import ChatView, { type ChatConversation } from '@/components/ChatView';
 
 export default function MessagesTab() {
@@ -43,6 +44,18 @@ export default function MessagesTab() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // No server-side filter: postgres_changes can't express
+  // `conversation_id IN (my conversations)`. Listen for every message
+  // INSERT and refetch — RLS still scopes fetchConversations() to the
+  // current user, so an unrelated message just costs one cheap refetch.
+  // Scaling note: at high volume every client wakes per message; revisit
+  // with a per-user broadcast channel if that becomes a problem.
+  useTableSubscription({
+    table: 'messages',
+    event: 'INSERT',
+    onEvent: loadConversations,
+  });
 
   const filteredMessages = conversations.filter(message => {
     const matchesSearch = message.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
