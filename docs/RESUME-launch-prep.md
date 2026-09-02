@@ -226,10 +226,15 @@ could NOT be exercised (see gaps).
    `location_checkins` per check-in (was two), exactly one open row, no 409;
    check-out still closes the row. `tsc --noEmit` clean. Uncommitted as of
    this note.
-3. **Cosmetic — confirmed the deferred note:** `FeedBlurBackdrop` (both in
-   `FriendsActivityFeed` and `VenuePeekModal`) renders at near-zero contrast
-   against the dark surface + scrim — you basically can't see it. Not broken,
-   but it's not doing its job either.
+3. **[FIXED 2026-09-01] Cosmetic:** `FeedBlurBackdrop` rendered at near-zero
+   contrast against the dark surface + scrim — invisible in both
+   `FriendsActivityFeed` and `VenuePeekModal`. The skeleton bars used
+   `theme.surface2` (~= the surfaces it sits on) and then `opacity: 0.55` +
+   `blur(6px)` washed it out entirely. Fixed in
+   `components/shared/FeedBlurBackdrop.tsx`: bars/avatars now translucent
+   white (`rgba(255,255,255,0.16–0.20)`), `opacity` 0.55 → 0.9, `blur` 6 → 5.
+   Verified in-browser: blurred feed rows now read in both consumers, caption
+   text still legible. `tsc` + `next lint` clean. Uncommitted as of this note.
 4. NearbyBanner shows a live "Check In" CTA for a venue the user is *already*
    checked into (no active-check-in awareness) — minor; ties into finding #2.
 

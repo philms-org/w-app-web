@@ -1,8 +1,13 @@
 'use client';
 
-import { theme } from '@/lib/theme';
-
 const ROW_WIDTHS = ['70%', '45%', '85%', '55%'];
+
+// Skeleton fill colors: `theme.surface2` sat almost on top of the surfaces
+// these render over (`theme.surface` / `theme.bg`) and, once `opacity` and
+// `blur()` were applied, the whole mock washed out to nothing. Translucent
+// white reads against any dark surface — the blur keeps it abstract.
+const AVATAR_FILL = 'rgba(255, 255, 255, 0.16)';
+const BAR_FILL = 'rgba(255, 255, 255, 0.20)';
 
 // Static illustrative mock of a social feed, pre-blurred — no real posts, no
 // data fetch, just a visual hint of "what it could look like" once unlocked.
@@ -15,8 +20,8 @@ export default function FeedBlurBackdrop() {
       style={{
         position: 'absolute',
         inset: 0,
-        filter: 'blur(6px)',
-        opacity: 0.55,
+        filter: 'blur(5px)',
+        opacity: 0.9,
         padding: '20px',
         display: 'flex',
         flexDirection: 'column',
@@ -31,12 +36,12 @@ export default function FeedBlurBackdrop() {
             width: '32px',
             height: '32px',
             borderRadius: '9999px',
-            backgroundColor: theme.surface2,
+            backgroundColor: AVATAR_FILL,
             flexShrink: 0,
           }} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ width, height: '10px', borderRadius: '4px', backgroundColor: theme.surface2 }} />
-            <div style={{ width: '40%', height: '8px', borderRadius: '4px', backgroundColor: theme.surface2 }} />
+            <div style={{ width, height: '10px', borderRadius: '4px', backgroundColor: BAR_FILL }} />
+            <div style={{ width: '40%', height: '8px', borderRadius: '4px', backgroundColor: BAR_FILL }} />
           </div>
         </div>
       ))}
