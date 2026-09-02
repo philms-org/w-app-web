@@ -213,12 +213,19 @@ could NOT be exercised (see gaps).
    redirects to `/auth/login` if hydrated with no user. Verified in-browser:
    prefills correctly on both hard reload and in-app nav; `tsc --noEmit` clean.
    Uncommitted as of this note.
-2. **Redundant `checkIn()` → swallowed 409 (pre-existing, not Round 1).**
-   Checking in logged `Check-in failed: duplicate key … uniq_active_checkin_per_user_location`
-   once — `CheckedInHero` calls `checkIn()` a second time on mount (looks like
-   a StrictMode/effect double-invoke). First insert succeeds, second 409s and
-   is caught. Surfaces as the Next dev "1 Issue" pill. Worth a look since it's
-   the same bug class as fix #2 but in `CheckedInHero` (out of Round 1 scope).
+2. **[FIXED 2026-09-01] Redundant `checkIn()` → 409 (pre-existing, not
+   Round 1).** `CheckedInHero`'s mount effect called `checkIn()` more than
+   once per venue entry (re-runs on `withinGeofence` change; dev StrictMode
+   double-invokes it). `checkIn()`'s own select-then-insert is a TOCTOU race,
+   so the concurrent second call hit `uniq_active_checkin_per_user_location`
+   and logged `Check-in failed: duplicate key …` (the Next dev "1 Issue"
+   pill). Fixed on both layers: (a) `lib/data.ts` `checkIn()` now treats a
+   `23505` unique-violation on insert as success — idempotent for any caller;
+   (b) `CheckedInHero` guards the call with a `checkInAttemptedFor` ref keyed
+   by location id, cleared on check-out. Verified in-browser: one POST to
+   `location_checkins` per check-in (was two), exactly one open row, no 409;
+   check-out still closes the row. `tsc --noEmit` clean. Uncommitted as of
+   this note.
 3. **Cosmetic — confirmed the deferred note:** `FeedBlurBackdrop` (both in
    `FriendsActivityFeed` and `VenuePeekModal`) renders at near-zero contrast
    against the dark surface + scrim — you basically can't see it. Not broken,

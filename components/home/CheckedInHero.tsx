@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import {
@@ -90,18 +90,31 @@ export default function CheckedInHero() {
       .catch((err) => console.error('Failed to load verification tags:', err));
   };
 
+  // This effect re-runs whenever `withinGeofence` flips, and in dev React
+  // StrictMode double-invokes it on mount — without this guard that fires the
+  // non-idempotent checkIn() write two or more times per venue entry. Track
+  // which location we've already attempted so it happens once; cleared on
+  // check-out (handleBack) and when the location changes below.
+  const checkInAttemptedFor = useRef<string | null>(null);
+
   useEffect(() => {
     if (!selectedLocation) return;
 
-    setCheckedIn(false);
+    if (checkInAttemptedFor.current !== selectedLocation.id) {
+      setCheckedIn(false);
+    }
     setSelectedAttendeeId(null);
     setTagText('');
     setTagError(null);
 
-    if (withinGeofence) {
+    if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
+      checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
         .then(() => setCheckedIn(true))
-        .catch((err) => console.error('Check-in failed:', err));
+        .catch((err) => {
+          checkInAttemptedFor.current = null;
+          console.error('Check-in failed:', err);
+        });
     }
 
     fetchPresence(selectedLocation.id)
@@ -141,6 +154,7 @@ export default function CheckedInHero() {
     if (selectedLocation && checkedIn) {
       checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
     }
+    checkInAttemptedFor.current = null;
     setSelectedLocation(null);
   };
 

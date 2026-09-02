@@ -285,7 +285,12 @@ export async function checkIn(locationId: string): Promise<void> {
     const { error } = await supabase
       .from('location_checkins')
       .insert({ user_id: uid, location_id: locationId, mode: 'live' });
-    if (error) throw error;
+    // 23505 = unique_violation on uniq_active_checkin_per_user_location. The
+    // select-then-insert above is a TOCTOU race: a concurrent checkIn() (a
+    // StrictMode double-invoke, rapid venue re-entry) can pass the same
+    // "no active row" check and insert first. Either way the desired
+    // post-state — one open check-in — is reached, so treat it as success.
+    if (error && error.code !== '23505') throw error;
   }
 
   // Founder decision: chat_join_mode is organizer-configurable per venue
