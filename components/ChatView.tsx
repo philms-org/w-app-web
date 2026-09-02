@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Send, AlertCircle } from 'lucide-react';
 import { fetchMessages, sendMessage, fetchConversationStatus, respondToConversationRequest } from '@/lib/data';
 import { getCurrentUserId } from '@/lib/auth';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import type { Message } from '@/lib/types';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
-const POLL_MS = 4000;
 
 export interface ChatConversation {
   id: string;
@@ -71,14 +71,17 @@ export default function ChatView({ conversation, onClose }: ChatViewProps) {
     return () => { cancelled = true; };
   }, [conversation.id, loadMessages]);
 
-  // Poll for new messages while the chat is open (no realtime backend yet).
-  useEffect(() => {
-    if (loading || loadError) return;
-    const t = setInterval(() => {
-      if (document.visibilityState === 'visible') loadMessages(false);
-    }, POLL_MS);
-    return () => clearInterval(t);
-  }, [loading, loadError, loadMessages]);
+  // Live updates for this thread. `messages` rows are insert-only in this
+  // app, so listen for INSERT and refetch (fetchMessages does the profile
+  // join + ordering the raw payload lacks). Disabled until the first load
+  // succeeds so we don't refetch over a still-loading / errored view.
+  useTableSubscription({
+    table: 'messages',
+    filter: `conversation_id=eq.${conversation.id}`,
+    event: 'INSERT',
+    onEvent: () => loadMessages(false),
+    enabled: !loading && !loadError,
+  });
 
   // Track whether the user is near the bottom so polling doesn't yank scroll.
   const handleScroll = () => {
