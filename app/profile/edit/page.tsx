@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { upsertProfile, uploadAvatar } from '@/lib/data';
@@ -30,16 +30,38 @@ const labelStyle: React.CSSProperties = {
 
 export default function ProfileEditPage() {
   const router = useRouter();
-  const { user, setUser } = useStore();
+  const { user, setUser, hasHydrated } = useStore();
 
-  const [name, setName] = useState(user?.name ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
-  const [gender, setGender] = useState(user?.gender ?? '');
-  const [birth, setBirth] = useState(user?.birth ?? '');
-  const [imagePreview, setImagePreview] = useState(user?.image ?? '');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
+  const [birth, setBirth] = useState('');
+  const [imagePreview, setImagePreview] = useState('');
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // The persisted store rehydrates from localStorage *after* first render, so
+  // `user` is null on mount for a hard load / refresh / deep link. Seed the
+  // form once, when `user` first becomes available — never with `useState`
+  // initializers, which would latch the empty values and then let Save write
+  // blank display_name/phone over the real profile.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !user) return;
+    seeded.current = true;
+    setName(user.name ?? '');
+    setPhone(user.phone ?? '');
+    setGender(user.gender ?? '');
+    setBirth(user.birth ?? '');
+    setImagePreview(user.image ?? '');
+  }, [user]);
+
+  // Once we know the store is hydrated and there's still no user, they're
+  // actually logged out — same destination handleSave falls back to.
+  useEffect(() => {
+    if (hasHydrated && !user) router.replace('/auth/login');
+  }, [hasHydrated, user, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,6 +109,10 @@ export default function ProfileEditPage() {
       setIsLoading(false);
     }
   };
+
+  // Don't render the form until the store has hydrated and we have a user —
+  // otherwise it flashes blank and Save could clobber the profile.
+  if (!hasHydrated || !user) return null;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: '48px' }}>

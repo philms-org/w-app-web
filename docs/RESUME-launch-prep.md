@@ -159,6 +159,81 @@ work, still sitting as 2 extra commits there.
   - Decide what to do with the 2 pending commits on iOS `feat/wap-foundation`
     (contact-method capture) relative to that branch's other in-progress work.
 
+## ROUND 1 HOME BANNER + FEED TEASER — MERGED; MANUAL QA DONE 2026-09-01
+- **MERGED to `main`** as `f70b77a` (merge of `home-banner-feed-round1`) — the
+  "NOT YET MERGED" header below is stale. All 8 task commits (`2d32f33` ..
+  `78c3c13`) are on `main`. `npx tsc --noEmit` clean on `main`.
+
+### MANUAL QA — authenticated browser click-through (2026-09-01)
+Run against local dev (`next dev`, `.env.local` → `w-app-qa`), logged in as
+`testy@gmail.com` (master admin). Geolocation simulated via a
+`navigator.geolocation.getCurrentPosition` override. QA project has **only 1
+venue** (`QA Test Venue` @ 40.7128,-74.006, r=150m, no banner, no description)
+— so the multi-venue split and the `HeroCarousel` path inside `VenuePeekModal`
+could NOT be exercised (see gaps).
+
+**PASS:**
+- NearbyBanner in-range state: geo on venue → header "Location detected",
+  working refresh icon, "You're here — check in" row with the venue card +
+  "Check In".
+- Check In → `checkOut` via the hero's Back arrow: real `location_checkins`
+  row created and then closed (`checked_out_at` set) in the QA DB. `CheckedInHero`
+  renders with the "Sharing location with this venue…" disclosure indicator.
+- Manual refresh (banner refresh button) → `requestLocation()` re-reads geo;
+  moving the sim fix ~1.9 km away reclassifies the venue from "You're here"
+  to "Nearby — peek in" with a "Peek" button. In-range/nearby split works.
+- Peek → `VenuePeekModal`: venue name + blurred `FeedBlurBackdrop` + "Check in
+  to see what's happening here" caption; no carousel section (venue has no
+  banners — correct fallback). Closes via the X **and** via backdrop click.
+- No-location state: "Location not detected" + "Enable Location" + "or enter
+  it manually" → reveals venue picker → picking the venue flips straight to
+  the detected / "You're here" state.
+- `locationDenied` branch (Critical fix #1) visibly works: after a failed
+  geo read the empty state shows the distinct "Couldn't get your location.
+  Try again or enter it manually." copy (vs. the pre-permission copy).
+- `usePullToRefresh` (fix #2): a synthetic top-of-page pull past threshold
+  fired `getCurrentPosition` **exactly once** — no StrictMode double-fire.
+- `FriendsActivityFeed`: correct copy ("Add friends to see where they've
+  been") + "0 / 3 connections" counter.
+- `/profile/edit` via the in-app path (Profile tab → Edit Profile, client
+  nav): form prefilled with name/phone; changed the name, Save →
+  `router.back()` to `/main`, `profiles.display_name` updated in the QA DB,
+  Zustand store updated, phone preserved. Test account restored to "rf" after.
+
+**FINDINGS:**
+1. **[FIXED 2026-09-01] `/profile/edit` loaded BLANK on a hard load / refresh
+   — data-loss risk.** `app/profile/edit/page.tsx` seeded every form field
+   from `useState(user?.x ?? '')` with no resync. Zustand-`persist` rehydrates
+   *after* first render, so on any load where the store wasn't hydrated yet
+   (refresh on the page, deep link, slow device) Full Name / Phone came up
+   empty, and a subsequent Save wrote `display_name: ''` / `phone: ''` over the
+   real profile. Fix: form state now starts `''` and is seeded once via a
+   `useEffect` when `user` first arrives; the page renders `null` until
+   `hasHydrated && user` (matches the `/main` + `/admin/layout` pattern) and
+   redirects to `/auth/login` if hydrated with no user. Verified in-browser:
+   prefills correctly on both hard reload and in-app nav; `tsc --noEmit` clean.
+   Uncommitted as of this note.
+2. **Redundant `checkIn()` → swallowed 409 (pre-existing, not Round 1).**
+   Checking in logged `Check-in failed: duplicate key … uniq_active_checkin_per_user_location`
+   once — `CheckedInHero` calls `checkIn()` a second time on mount (looks like
+   a StrictMode/effect double-invoke). First insert succeeds, second 409s and
+   is caught. Surfaces as the Next dev "1 Issue" pill. Worth a look since it's
+   the same bug class as fix #2 but in `CheckedInHero` (out of Round 1 scope).
+3. **Cosmetic — confirmed the deferred note:** `FeedBlurBackdrop` (both in
+   `FriendsActivityFeed` and `VenuePeekModal`) renders at near-zero contrast
+   against the dark surface + scrim — you basically can't see it. Not broken,
+   but it's not doing its job either.
+4. NearbyBanner shows a live "Check In" CTA for a venue the user is *already*
+   checked into (no active-check-in awareness) — minor; ties into finding #2.
+
+**QA GAPS (need a 2nd seeded venue):**
+- True multi-venue in-range/nearby split (only ever 1 venue → 1 row at a time).
+- `VenuePeekModal` with real `HeroCarousel` images + the "X sits on top of the
+  carousel back-arrow" deferred note.
+- Seed via the master-admin panel (the `testy` account is master admin); add
+  at least one venue with a `banner_image` and a `description`, ~300–1000 m
+  from `QA Test Venue`.
+
 ## ROUND 1 HOME BANNER + FEED TEASER — CODE COMPLETE, NOT YET MERGED (2026-08-26)
 - The plan flagged above (`e335a49`/`146e4f8`, "Round 1 home banner + feed
   teaser") is now fully implemented via superpowers:subagent-driven-development
