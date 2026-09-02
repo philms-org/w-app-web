@@ -238,13 +238,33 @@ could NOT be exercised (see gaps).
 4. NearbyBanner shows a live "Check In" CTA for a venue the user is *already*
    checked into (no active-check-in awareness) — minor; ties into finding #2.
 
-**QA GAPS (need a 2nd seeded venue):**
-- True multi-venue in-range/nearby split (only ever 1 venue → 1 row at a time).
-- `VenuePeekModal` with real `HeroCarousel` images + the "X sits on top of the
-  carousel back-arrow" deferred note.
-- Seed via the master-admin panel (the `testy` account is master admin); add
-  at least one venue with a `banner_image` and a `description`, ~300–1000 m
-  from `QA Test Venue`.
+**QA GAPS — [CLOSED 2026-09-01]:** seeded `QA Test Venue Two`
+(`54549128-4a8a-4b4b-81c5-b06243a00b63`) on `w-app-qa` via the master-admin
+panel's Create Venue form — 40.7178, -74.006, r=150 m, ~555 m north of
+`QA Test Venue`, with a description, owned by `testy`. Then:
+- **Multi-venue split verified:** with the geo sim at `QA Test Venue`, the
+  home feed shows `QA Test Venue` under "You're here — check in" and
+  `QA Test Venue Two` under "Nearby — peek in" simultaneously.
+- **Peek carousel verified:** added 2 rows to `banners` for venue Two
+  (`display_order` 0/1, `is_active`); `VenuePeekModal` renders `HeroCarousel`
+  with both slides — ‹ › nav, 2 pagination dots, "Next photo" advances the
+  active dot and swaps the background image. Confirms the `fetchBanners` →
+  `images[]` path end to end. (The images are tiny solid-colour placeholder
+  data-URIs — see the storage note below — so under HeroCarousel's dark scrim
+  the slide just reads as a dark tint; the carousel *mechanics* are what was
+  being tested.)
+- **Deferred note confirmed:** `HeroCarousel`'s own back-arrow (top-left) and
+  `VenuePeekModal`'s close-X (top-right) are both present and both dismiss the
+  modal — visually redundant, cosmetic, as flagged.
+
+**QA-infra finding (not app code, not Round 1):** banner *image upload* is
+broken on `w-app-qa` — `uploadBannerImage()` (and a direct REST PUT) to the
+`banners` storage bucket both return `403 / "new row violates row-level
+security policy"`. Looks like the storage-bucket RLS policies were never
+applied to the QA project (they presumably exist on prod). That's why the
+seed above writes `banners` *table* rows (which RLS allows) with data-URI
+images instead of real uploads. Worth checking the QA bucket policies before
+relying on QA to test any image-upload flow.
 
 ## ROUND 1 HOME BANNER + FEED TEASER — CODE COMPLETE, NOT YET MERGED (2026-08-26)
 - The plan flagged above (`e335a49`/`146e4f8`, "Round 1 home banner + feed
