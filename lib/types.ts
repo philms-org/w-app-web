@@ -19,6 +19,7 @@ export interface Profile {
   fave_drink_visible?: boolean | null;
   friday_night_visible?: boolean | null;
   profession_visible?: boolean | null;
+  share_checkins_with_friends?: boolean | null;
   is_verified?: boolean | null;
   height?: number | null;
   nationality?: string | null;

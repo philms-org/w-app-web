@@ -1456,3 +1456,11 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
     };
   });
 }
+
+// Opt in/out of letting connections see your venue check-ins in their feed.
+// Defaults to false in the database; this is the only place the app turns it on.
+export async function setShareCheckinsWithFriends(value: boolean): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  await upsertProfile({ id: uid, share_checkins_with_friends: value });
+}

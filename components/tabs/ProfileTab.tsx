@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
+import { fetchProfile, setShareCheckinsWithFriends } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import {
   Camera, Edit2, Settings, Bell, Shield, HelpCircle,
@@ -14,6 +15,16 @@ export default function ProfileTab() {
   const router = useRouter();
   const { user, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [shareCheckins, setShareCheckins] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchProfile(user.id)
+      .then((p) => { if (!cancelled) setShareCheckins(p?.share_checkins_with_friends ?? false); })
+      .catch(() => { /* leave the switch off if the profile can't be read */ });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const handleLogout = async () => {
     try {
@@ -245,6 +256,43 @@ export default function ProfileTab() {
           >
             Complete Profile
           </button>
+        </div>
+
+        {/* Privacy */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '16px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '16px'
+        }}>
+          <h3 style={{
+            fontWeight: '600',
+            marginBottom: '12px',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}>Privacy</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Share check-ins with connections
+              </div>
+              <div style={{ color: '#919191', fontSize: '12px', marginTop: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Lets people you&apos;ve connected with see which venues you visit.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={shareCheckins}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setShareCheckins(next);
+                // Revert the optimistic flip if the write fails, so the switch
+                // never claims a privacy setting that isn't actually saved.
+                setShareCheckinsWithFriends(next).catch(() => setShareCheckins(!next));
+              }}
+              style={{ width: '20px', height: '20px', accentColor: '#17BFD9', flexShrink: 0, cursor: 'pointer' }}
+            />
+          </div>
         </div>
 
         {/* Menu Items */}
