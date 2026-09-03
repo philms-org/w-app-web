@@ -26,7 +26,10 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=(), payment=()" },
+  // camera=(self) is required by the QR scanner at /main/connect/scan.
+  // geolocation=(self) was already set (needed for the scan-time geotag).
+  // microphone and payment stay fully disabled.
+  { key: "Permissions-Policy", value: "geolocation=(self), camera=(self), microphone=(), payment=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
