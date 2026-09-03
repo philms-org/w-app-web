@@ -1,21 +1,50 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import QRCode from 'qrcode';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
-import { QrCode } from 'lucide-react';
+import { mintConnectToken } from '@/lib/data';
+import { encodeConnectPayload } from '@/lib/connect';
+import { Camera } from 'lucide-react';
 
-// package.json has no QR-code library, so Phase 1 renders a static
-// placeholder visual instead of adding a new dependency. Scanning someone
-// else's code / requesting a connection is Phase 3 (requestConnection API
-// doesn't exist yet) — the button below is a clearly-stubbed no-op.
+// Token TTL is 90s (migration 0019); re-mint every 60s so the code on screen
+// always has >= 30s of validity.
+const REMINT_MS = 60_000;
+
 export default function ConnectSheet() {
   const { user } = useStore();
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
-  const handleShare = () => {
-    // Phase 3: wire this up to a real requestConnection() call once another
-    // user scans this code. For now it's a display-only stub.
-    console.log('Connect stub — would share profile code for', user?.id);
-  };
+  useEffect(() => {
+    cancelledRef.current = false;
+
+    const refresh = async () => {
+      try {
+        const token = await mintConnectToken();
+        if (cancelledRef.current) return;
+        // Rendered dark-on-white and placed on a white plate below: the app's
+        // dark theme would otherwise invert the code and many scanners fail.
+        const url = await QRCode.toDataURL(encodeConnectPayload(token), {
+          width: 360,
+          margin: 1,
+          color: { dark: '#0d0d0f', light: '#ffffff' },
+        });
+        if (!cancelledRef.current) setQrDataUrl(url);
+      } catch {
+        if (!cancelledRef.current) setQrDataUrl(null);
+      }
+    };
+
+    void refresh();
+    const id = setInterval(() => void refresh(), REMINT_MS);
+    return () => {
+      cancelledRef.current = true;
+      clearInterval(id);
+    };
+  }, []);
 
   return (
     <div style={{
@@ -24,7 +53,7 @@ export default function ConnectSheet() {
       border: `1px solid ${theme.divider}`,
       padding: '24px 20px',
       margin: '0 20px 20px',
-      textAlign: 'center'
+      textAlign: 'center',
     }}>
       <h3 style={{ color: theme.text, fontSize: '16px', fontWeight: 700, marginBottom: '4px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
         Connect
@@ -38,32 +67,27 @@ export default function ConnectSheet() {
         height: '180px',
         margin: '0 auto 16px',
         borderRadius: '16px',
-        border: `2px solid ${theme.accent}`,
-        backgroundColor: theme.surface2,
+        backgroundColor: '#ffffff',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '10px'
+        overflow: 'hidden',
       }}>
-        <QrCode style={{ width: '72px', height: '72px', color: theme.accent }} />
-        <span style={{
-          color: theme.muted,
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
-        }}>
-          SCAN TO CONNECT
-        </span>
+        {qrDataUrl ? (
+          <img src={qrDataUrl} alt="Your connect code" style={{ width: '164px', height: '164px', display: 'block' }} />
+        ) : (
+          <span style={{ color: '#0d0d0f', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+            LOADING
+          </span>
+        )}
       </div>
 
       <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
         {user?.name ?? 'Your profile'}
       </p>
 
-      <button
-        onClick={handleShare}
+      <Link
+        href="/main/connect/scan"
         style={{
           backgroundColor: theme.accent,
           color: 'white',
@@ -73,11 +97,16 @@ export default function ConnectSheet() {
           fontSize: '14px',
           fontWeight: 600,
           cursor: 'pointer',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          textDecoration: 'none',
         }}
       >
-        Share my code
-      </button>
+        <Camera style={{ width: '16px', height: '16px' }} />
+        Scan a code
+      </Link>
     </div>
   );
 }
