@@ -17,6 +17,7 @@
 - `'use client'` at the top of every component/hook file using React state or browser APIs.
 - Migration files: `supabase/migrations/00NN_name.sql`, applied with `supabase db query --linked` after `supabase link --project-ref <ref>`. **QA ref `ducadjakxmkfcvrteoqz`, PROD ref `yatixschvikugckkpfum`.** Run from inside `/Users/sr/w-app-web` — running from `~` silently does nothing.
 - Prefer single-line `echo "...;" | supabase db query --linked` for verification queries; multi-line heredocs are fragile.
+- **Check the migration number before Task 1.** This plan claims `0019`, but peer sessions commit to `main` concurrently — `0018_banners_storage_policies.sql` was taken by another session while this plan was being written. Run `ls supabase/migrations/` first; if `0019` is taken, use the next free number and update every reference in Task 1, Task 2 and Task 7 to match.
 - Commit after every task (small working increments).
 - **Do NOT apply the migration to PROD** until Task 7's founder gate is signed off.
 - Build gates are ON (`next.config.ts`): lint and type errors fail the build.
@@ -27,7 +28,7 @@
 ### Task 1: Migration file — connections write path
 
 **Files:**
-- Create: `supabase/migrations/0018_connections_write_path.sql`
+- Create: `supabase/migrations/0019_connections_write_path.sql`
 
 **Interfaces:**
 - Produces: `record_qr_scan(p_scannee_id uuid) returns uuid`, `remove_connection(p_other_user_id uuid) returns void`, and policy `connections_select_participant`. Task 2 applies this file; Tasks 3-6 consume the RPCs.
@@ -35,7 +36,7 @@
 - [ ] **Step 1: Create the migration file**
 
 ```sql
--- 0018_connections_write_path.sql
+-- 0019_connections_write_path.sql
 -- The connections graph has existed since the iOS era but has never been
 -- writable. Before this migration:
 --   connections -> only `connections_select_organizer` (organizer read)
@@ -162,14 +163,14 @@ grant execute on function remove_connection(uuid) to authenticated;
 
 - [ ] **Step 2: Verify the file parses structurally (no apply yet)**
 
-Run: `grep -c 'create or replace function' supabase/migrations/0018_connections_write_path.sql`
+Run: `grep -c 'create or replace function' supabase/migrations/0019_connections_write_path.sql`
 Expected: `2`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/migrations/0018_connections_write_path.sql
-git commit -m "Add migration 0018: connections write path (record_qr_scan, remove_connection)"
+git add supabase/migrations/0019_connections_write_path.sql
+git commit -m "Add migration 0019: connections write path (record_qr_scan, remove_connection)"
 ```
 
 ---
@@ -182,14 +183,14 @@ Proves the entire server-side contract **before any UI exists**. If this task pa
 - Modify: none (database state only)
 
 **Interfaces:**
-- Consumes: `supabase/migrations/0018_connections_write_path.sql` from Task 1.
+- Consumes: `supabase/migrations/0019_connections_write_path.sql` from Task 1.
 - Produces: verified-live `record_qr_scan` / `remove_connection` on QA.
 
 - [ ] **Step 1: Link to QA and apply**
 
 ```bash
 supabase link --project-ref ducadjakxmkfcvrteoqz
-supabase db query --linked < supabase/migrations/0018_connections_write_path.sql
+supabase db query --linked < supabase/migrations/0019_connections_write_path.sql
 ```
 
 - [ ] **Step 2: Verify both functions and the policy exist**
@@ -227,7 +228,7 @@ Expected: `connections` = 0, `friendships` = 2. Write these down — Task 7 comp
 - [ ] **Step 5: Commit**
 
 ```bash
-git commit --allow-empty -m "Apply migration 0018 to QA (record_qr_scan + remove_connection verified)"
+git commit --allow-empty -m "Apply migration 0019 to QA (record_qr_scan + remove_connection verified)"
 ```
 
 ---
@@ -273,7 +274,7 @@ Add at the end of the file:
 // ---- Connections graph ----
 // `connections` is the EVENT log ("A scanned B at venue V"); `friendships` is
 // the relationship STATE. Both tables predate this repo (iOS era) — see
-// supabase/migrations/0018_connections_write_path.sql.
+// supabase/migrations/0019_connections_write_path.sql.
 
 export interface Connection {
   id: string;
@@ -941,7 +942,7 @@ Reversing either one changes the migration, so PROD must wait.
 
 ```bash
 supabase link --project-ref yatixschvikugckkpfum
-supabase db query --linked < supabase/migrations/0018_connections_write_path.sql
+supabase db query --linked < supabase/migrations/0019_connections_write_path.sql
 echo "select proname from pg_proc where proname in ('record_qr_scan','remove_connection');" | supabase db query --linked
 ```
 Expected: two rows.
@@ -949,7 +950,7 @@ Expected: two rows.
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit --allow-empty -m "Apply migration 0018 to PROD (connections write path live)"
+git commit --allow-empty -m "Apply migration 0019 to PROD (connections write path live)"
 ```
 
 ---

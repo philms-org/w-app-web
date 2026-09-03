@@ -95,7 +95,7 @@ This design covers the **foundational connections write path and the QR connect 
 into two linked plans. It deliberately does not try to be one mega-plan.
 
 **Plan A — Connections write path + QR connect (foundational, ships working software):**
-1. Migration `0018`: two SECURITY DEFINER RPCs + the participant-read policy on `connections`.
+1. Migration `0019`: two SECURITY DEFINER RPCs + the participant-read policy on `connections`.
 2. `next.config.ts` camera Permissions-Policy fix.
 3. Types + `lib/data.ts` functions.
 4. QR display (real, replacing the stub) in `ConnectSheet`.

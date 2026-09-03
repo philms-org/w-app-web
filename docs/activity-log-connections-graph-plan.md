@@ -148,7 +148,7 @@ No application code was written or modified. Nothing under `app/`, `components/`
 
 ## Scope notes
 
-**Plan A (foundational, ships working software on its own):** migration 0018 (two SECURITY
+**Plan A (foundational, ships working software on its own):** migration 0019 (two SECURITY
 DEFINER RPCs + participant SELECT policy), the `camera=(self)` fix, types + QR payload helpers +
 data functions, real QR in `ConnectSheet`, camera scan route, post-scan contact-method chooser,
 and organizer-report verification with an explicit founder gate before PROD.
@@ -176,7 +176,7 @@ the tables are empty. They become a verification step, not work.
 
 Spec + both plans are complete and internally consistent. **Blocked on a founder decision**, not on
 more analysis: decisions 1 and 2 above (single-opt-in, and same-venue co-presence) both change
-migration 0018 if reversed, so Plan A Task 7 gates PROD on them explicitly.
+migration 0019 if reversed, so Plan A Task 7 gates PROD on them explicitly.
 
 Once those are confirmed, Plan A is ready for execution via
 `superpowers:subagent-driven-development` in an isolated worktree. Plan A Task 2 proves the whole
