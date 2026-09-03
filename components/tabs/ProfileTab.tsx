@@ -26,6 +26,7 @@ export default function ProfileTab() {
   };
 
   const menuItems = [
+    { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
     { id: 'settings', label: 'Settings', icon: Settings, action: () => router.push('/settings') },
     { id: 'notifications', label: 'Notifications', icon: Bell, action: () => router.push('/settings/notifications') },
