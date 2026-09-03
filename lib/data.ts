@@ -25,6 +25,7 @@ import type {
   CrossVenueMovementEntry,
   Connection,
   MyConnection,
+  FriendActivityEntry,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1386,4 +1387,72 @@ export async function recordContactMethodChoice(connectionId: string, type: stri
     p_type: type,
   });
   if (error) throw error;
+}
+
+// Recent check-ins by people I'm connected to.
+//
+// PRIVACY: location_checkins' SELECT policy is `true` (any authenticated user
+// can read any check-in), so RLS provides NO protection here. The
+// share_checkins_with_friends filter below is the only thing gating this data,
+// and that column defaults to false. Do not remove it, and do not widen it to
+// a join that could return rows for opted-out users.
+export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEntry[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+
+  // record_qr_scan writes both directions, so every friend of mine has a row
+  // with user_id = me. A single-direction read is correct and index-friendly.
+  const { data: friendRows, error: friendError } = await supabase
+    .from('friendships')
+    .select('friend_id')
+    .eq('user_id', uid);
+  if (friendError) throw friendError;
+
+  const friendIds = (friendRows ?? []).map((r: { friend_id: string }) => r.friend_id);
+  if (friendIds.length === 0) return [];
+
+  // Restrict to friends who opted in BEFORE reading any check-in.
+  // `Profile` uses display_name — there is no `name` column on profiles.
+  const { data: sharers, error: sharerError } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', friendIds)
+    .eq('share_checkins_with_friends', true);
+  if (sharerError) throw sharerError;
+
+  const sharerIds = (sharers ?? []).map((p: { id: string }) => p.id);
+  if (sharerIds.length === 0) return [];
+
+  const profileById = new Map(
+    (sharers ?? []).map((p: { id: string; display_name: string | null; avatar_url: string | null }) => [p.id, p])
+  );
+
+  const { data: checkins, error: checkinError } = await supabase
+    .from('location_checkins')
+    .select('user_id, location_id, checked_in_at, checked_out_at, locations(name)')
+    .in('user_id', sharerIds)
+    .order('checked_in_at', { ascending: false })
+    .limit(limit);
+  if (checkinError) throw checkinError;
+
+  type CheckinRow = {
+    user_id: string;
+    location_id: string;
+    checked_in_at: string;
+    checked_out_at: string | null;
+    locations: { name: string } | null;
+  };
+
+  return ((checkins ?? []) as unknown as CheckinRow[]).map((row) => {
+    const profile = profileById.get(row.user_id);
+    return {
+      user_id: row.user_id,
+      name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+      location_id: row.location_id,
+      venue_name: row.locations?.name ?? 'A venue',
+      checked_in_at: row.checked_in_at,
+      is_active: row.checked_out_at === null,
+    };
+  });
 }

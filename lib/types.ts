@@ -266,3 +266,15 @@ export interface MyConnection {
   place_label: string | null;
   scanned_at: string | null;
 }
+
+// One friend's most recent venue check-in, for the home friends feed.
+// Only ever populated for friends who set share_checkins_with_friends = true.
+export interface FriendActivityEntry {
+  user_id: string;
+  name: string | null;
+  avatar_url: string | null;
+  location_id: string;
+  venue_name: string;
+  checked_in_at: string;
+  is_active: boolean;
+}
