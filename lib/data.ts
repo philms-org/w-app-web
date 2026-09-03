@@ -1318,7 +1318,7 @@ export async function fetchMyConnectionCount(): Promise<number> {
 export async function fetchConnection(connectionId: string): Promise<Connection | null> {
   const { data, error } = await supabase
     .from('connections')
-    .select()
+    .select('id, scanner_id, scannee_id, location_id, scanned_at, contact_method_type, place_label')
     .eq('id', connectionId)
     .maybeSingle();
   if (error) throw error;

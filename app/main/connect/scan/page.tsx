@@ -31,6 +31,12 @@ export default function ScanPage() {
   // The camera sees the same code every frame — guard against re-firing the
   // RPC while the first call is still in flight.
   const busyRef = useRef(false);
+  // Last QR string we already acted on: a permanently-failing code (non-W, or
+  // an expired/self token) must not re-fire setError/the RPC every frame.
+  const lastActedRef = useRef<string | null>(null);
+  // Latest connectionId, readable from the visibility handler without adding
+  // state to the effect's dep array.
+  const connectionIdRef = useRef<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [connectionId, setConnectionId] = useState<string | null>(null);
@@ -66,6 +72,11 @@ export default function ScanPage() {
       const code = jsQR(img.data, img.width, img.height);
 
       if (code && !busyRef.current) {
+        if (code.data === lastActedRef.current) {
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        lastActedRef.current = code.data;
         const token = decodeConnectPayload(code.data);
         if (!token) {
           setError("That's not a W code.");
@@ -77,6 +88,7 @@ export default function ScanPage() {
             .then((id) => {
               if (cancelled) return;
               stop();
+              connectionIdRef.current = id;
               setConnectionId(id);
             })
             .catch((e) => {
@@ -91,26 +103,39 @@ export default function ScanPage() {
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          void videoRef.current.play();
-        }
-        rafRef.current = requestAnimationFrame(tick);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Camera access is off. Allow camera in your browser settings, then reload.');
-      });
+    const start = () => {
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: 'environment' } })
+        .then((stream) => {
+          if (cancelled) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            void videoRef.current.play();
+          }
+          rafRef.current = requestAnimationFrame(tick);
+        })
+        .catch(() => {
+          if (!cancelled) setError('Camera access is off. Allow camera in your browser settings, then reload.');
+        });
+    };
 
-    // Without this the camera indicator stays lit when the tab is hidden.
-    const onVisibility = () => { if (document.hidden) stop(); };
+    start();
+
+    // Without this the camera indicator stays lit when the tab is hidden; and
+    // when the tab is shown again the stopped camera must be restarted.
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else if (!connectionIdRef.current && !streamRef.current) {
+        lastActedRef.current = null;
+        busyRef.current = false;
+        start();
+      }
+    };
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {

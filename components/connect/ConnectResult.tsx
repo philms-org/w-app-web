@@ -22,6 +22,10 @@ export default function ConnectResult({ connectionId }: { connectionId: string }
         if (cancelled || !conn || !uid) return;
         setPlace(conn.place_label);
         setScannedAt(conn.scanned_at);
+        // This screen only ever renders for the scanner today (it's mounted
+        // from the scan page). The scannee branch is defensive — note that
+        // record_contact_method_choice (migration 0015) is scanner-only, so
+        // the chooser below would be a silent no-op if a scannee ever saw it.
         const otherId = conn.scanner_id === uid ? conn.scannee_id : conn.scanner_id;
         const [profile, contactMethods] = await Promise.all([
           fetchProfile(otherId),

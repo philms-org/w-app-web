@@ -31,6 +31,11 @@ alter table connections
   add column if not exists scan_lng    double precision,
   add column if not exists place_label text;
 
+-- Idempotency for record_qr_scan is per (scanner, scannee); enforce it and
+-- index the lookup. connections was empty on QA/PROD (feature never wrote a row).
+create unique index if not exists connections_scanner_scannee_uniq
+  on connections (scanner_id, scannee_id);
+
 -- connections.location_id had no ON DELETE action, so deleting a venue with
 -- connection rows errored. This migration makes far more rows carry a
 -- location_id, so switch to SET NULL: keep the connection event and its
@@ -80,7 +85,7 @@ create or replace function mint_connect_token()
 returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_uid   uuid := auth.uid();
@@ -94,8 +99,8 @@ begin
   -- ('+' -> '-', '/' -> '_', '=' padding deleted).
   v_token := translate(encode(gen_random_bytes(18), 'base64'), '+/=', '-_');
 
-  -- Bound the table: clear this caller's own dead tokens on every mint.
-  delete from connect_tokens where user_id = v_uid and expires_at < now();
+  -- One live token per user: clear this caller's previous token on every mint.
+  delete from connect_tokens where user_id = v_uid;
 
   insert into connect_tokens (token, user_id, expires_at)
   values (v_token, v_uid, now() + interval '90 seconds');
@@ -129,7 +134,8 @@ begin
 
   select user_id into v_scannee
   from connect_tokens
-  where token = p_token and expires_at > now();
+  where token = p_token and expires_at > now()
+  for update;
 
   if v_scannee is null then
     raise exception 'invalid_or_expired_token';
@@ -170,15 +176,17 @@ begin
   -- Idempotent per (scanner, scannee): the first scan is the canonical
   -- "where/when you connected" record; a rescan reuses it and does NOT
   -- overwrite the geotag or timestamp.
-  select id into v_connection
-  from connections
-  where scanner_id = v_scanner and scannee_id = v_scannee
-  limit 1;
+  insert into connections (scanner_id, scannee_id, location_id, scan_lat, scan_lng, place_label)
+  values (v_scanner, v_scannee, v_location, p_lat, p_lng, v_place_label)
+  on conflict (scanner_id, scannee_id) do nothing
+  returning id into v_connection;
 
   if v_connection is null then
-    insert into connections (scanner_id, scannee_id, location_id, scan_lat, scan_lng, place_label)
-    values (v_scanner, v_scannee, v_location, p_lat, p_lng, v_place_label)
-    returning id into v_connection;
+    -- rescan of an existing pair: reuse the canonical row, never overwrite
+    -- its geotag or timestamp.
+    select id into v_connection
+    from connections
+    where scanner_id = v_scanner and scannee_id = v_scannee;
   end if;
 
   -- Two rows so startConversation (one-directional) and is_friend_sharing
