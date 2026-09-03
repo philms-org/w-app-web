@@ -1,11 +1,34 @@
-# W App — Launch Prep: RESUME HERE (updated 2026-08-26)
+# W App — Launch Prep: RESUME HERE (updated 2026-09-03)
 
 ## ONE-LINE STATUS
-Prod migrations 0001-0016 are ALL APPLIED + VERIFIED on prod (2026-08-26) —
-owner-benefits, the organizer-analytics feature, and the pg_cron purge job
-(`purge-stale-zone-positions`, hourly, confirmed live) are all fully on
-prod now. The other non-code launch gate (privacy disclosure copy) has a
-real, substantive problem — see below — before it should be finalized.
+Prod migrations 0001-0019 are ALL APPLIED + VERIFIED on prod. As of
+2026-09-03: **0017** (realtime chat/presence), **0018** (banners storage
+policies), and **0019** (connections write path) are live on prod. The
+privacy disclosure copy was rewritten for accuracy (path b, merged
+2026-09-03) — 3 residual accuracy notes (F1/F2/F3) are parked for the
+pre-launch legal review; see `docs/superpowers/plans/2026-09-03-privacy-copy-accuracy.md`.
+
+## CONNECTIONS WRITE PATH — SHIPPED 2026-09-03
+`connections-write-path` merged to `main` (`5d21f4f`..`f30b1c5`, 8 commits).
+QR connect flow: `ConnectSheet` shows a real 90s auto-refreshing token QR;
+`/main/connect/scan` is a camera scanner that creates a connection with a
+best-effort geotag (server-resolves it to a venue via inline haversine);
+`ConnectResult` is the post-scan contact-method chooser; `/main/connections`
+lists connections + unfriend. Migration `0019_connections_write_path.sql`
+(`connect_tokens` table, `mint_connect_token`/`record_qr_scan`/
+`remove_connection` SECURITY DEFINER RPCs, `scan_lat`/`scan_lng`/`place_label`
+columns, `connections_select_participant` policy, `connections.location_id`
+FK → SET NULL, `connections_scanner_scannee_uniq` unique index, hourly
+`purge-expired-connect-tokens` cron) is **applied + verified + e2e-proven on
+QA and applied + verified on PROD (2026-09-03)**. Design decisions (founder,
+2026-09-03): single opt-in, connect-anywhere, 90s single-use rotating token
+for forgery resistance, geotag best-effort + retained permanently (incl.
+through unfriend). Spec: `docs/superpowers/specs/2026-09-03-connections-graph-qr-connect-v2-design.md`.
+**Follow-ups:** (1) `/privacy` needs a connection-geotag disclosure paragraph
+before real-user launch — spec-flagged, not yet written. (2) Plan B (friends
+activity feed, `docs/superpowers/plans/2026-09-02-friends-activity-feed-unlock.md`)
+depends on this and is not yet built. (3) Deferred minors in the SDD ledger —
+notably a rare camera-stream leak on a hide→show race in the scanner.
 
 **RISK: `main` is STILL unpushed to `origin` as of 2026-08-26** (confirmed
 again: no cached GitHub credentials in this environment — `osxkeychain`
