@@ -23,6 +23,8 @@ import type {
   VenueZone,
   ZoneAnalytics,
   CrossVenueMovementEntry,
+  Connection,
+  MyConnection,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1263,6 +1265,125 @@ export async function assignVenueOwner(targetLocationId: string, newOwnerId: str
   const { error } = await supabase.rpc('assign_venue_owner', {
     target_location_id: targetLocationId,
     new_owner_id: newOwnerId,
+  });
+  if (error) throw error;
+}
+
+// ---- Connections graph ----
+
+// Mints a 90s single-use token for the current user; the QR in ConnectSheet
+// encodes this. Re-called every 60s while the sheet is open.
+export async function mintConnectToken(): Promise<string> {
+  const { data, error } = await supabase.rpc('mint_connect_token');
+  if (error) throw error;
+  return data as string;
+}
+
+// Creates a connection from a scanned token. lat/lng are best-effort — omit
+// them if the browser denied or failed geolocation; the connection is still
+// made, just without a geotag. Idempotent per (scanner, scannee). Returns the
+// connection id, which recordContactMethodChoice() then needs.
+export async function recordQrScan(token: string, lat?: number, lng?: number): Promise<string> {
+  const { data, error } = await supabase.rpc('record_qr_scan', {
+    p_token: token,
+    p_lat: lat ?? null,
+    p_lng: lng ?? null,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// Removes both friendship rows for the pair. `connections` event rows are
+// retained on purpose (permanent geotag; already aggregated into past reports).
+export async function removeConnection(otherUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_connection', { p_other_user_id: otherUserId });
+  if (error) throw error;
+}
+
+// Exact because record_qr_scan writes both directions, so every friendship of
+// mine has a row with user_id = me.
+export async function fetchMyConnectionCount(): Promise<number> {
+  const uid = await getCurrentUserId();
+  if (!uid) return 0;
+  const { count, error } = await supabase
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', uid);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// One connection row by id. Readable via connections_select_participant when
+// the caller is the scanner or scannee. Returns null if not found / not theirs.
+export async function fetchConnection(connectionId: string): Promise<Connection | null> {
+  const { data, error } = await supabase
+    .from('connections')
+    .select()
+    .eq('id', connectionId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Connection) ?? null;
+}
+
+// The /main/connections list: every person I'm connected to, plus where/when.
+// Two reads + a client join (no RPC): my friend ids, then my connection rows
+// for place/date, then profiles for names.
+export async function fetchMyConnections(): Promise<MyConnection[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+
+  const { data: friendRows, error: friendErr } = await supabase
+    .from('friendships')
+    .select('friend_id')
+    .eq('user_id', uid);
+  if (friendErr) throw friendErr;
+
+  const friendIds = (friendRows ?? []).map((r: { friend_id: string }) => r.friend_id);
+  if (friendIds.length === 0) return [];
+
+  const { data: connRows, error: connErr } = await supabase
+    .from('connections')
+    .select('scanner_id, scannee_id, place_label, scanned_at')
+    .or(`scanner_id.eq.${uid},scannee_id.eq.${uid}`)
+    .order('scanned_at', { ascending: false });
+  if (connErr) throw connErr;
+
+  // other_user_id -> most recent connection meta (rows are already newest-first).
+  const metaByOther = new Map<string, { place_label: string | null; scanned_at: string }>();
+  for (const c of (connRows ?? []) as { scanner_id: string; scannee_id: string; place_label: string | null; scanned_at: string }[]) {
+    const other = c.scanner_id === uid ? c.scannee_id : c.scanner_id;
+    if (!metaByOther.has(other)) metaByOther.set(other, { place_label: c.place_label, scanned_at: c.scanned_at });
+  }
+
+  const { data: profs, error: profErr } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', friendIds);
+  if (profErr) throw profErr;
+
+  const profById = new Map(
+    (profs ?? []).map((p: { id: string; display_name: string | null; avatar_url: string | null }) => [p.id, p])
+  );
+
+  return friendIds.map((id) => {
+    const meta = metaByOther.get(id);
+    const p = profById.get(id);
+    return {
+      other_user_id: id,
+      display_name: p?.display_name ?? null,
+      avatar_url: p?.avatar_url ?? null,
+      place_label: meta?.place_label ?? null,
+      scanned_at: meta?.scanned_at ?? null,
+    };
+  });
+}
+
+// Wraps the SECURITY DEFINER RPC from migration 0015, which only ever updates
+// contact_method_type and only on the caller's own connection row.
+export async function recordContactMethodChoice(connectionId: string, type: string): Promise<void> {
+  const { error } = await supabase.rpc('record_contact_method_choice', {
+    p_connection_id: connectionId,
+    p_type: type,
   });
   if (error) throw error;
 }

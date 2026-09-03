@@ -237,3 +237,32 @@ export interface CrossVenueMovementEntry {
   attendee_count: number;
   percentage: number;
 }
+
+// ---- Connections graph ----
+// `connections` is the EVENT log ("A scanned B, near here"); `friendships`
+// (UNIQUE (user_id, friend_id), source qr_scan|peek_invite|message) is the
+// relationship STATE. Both tables predate this repo (iOS era) — see
+// supabase/migrations/0019_connections_write_path.sql.
+
+export interface Connection {
+  id: string;
+  scanner_id: string;
+  scannee_id: string;
+  location_id: string | null;
+  scanned_at: string;
+  contact_method_type: string | null;
+  scan_lat: number | null;
+  scan_lng: number | null;
+  place_label: string | null;
+}
+
+// One row for the /main/connections list: the OTHER person plus where/when the
+// connection was made (null place/date if the friendship has no connections row,
+// e.g. source = 'message').
+export interface MyConnection {
+  other_user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  place_label: string | null;
+  scanned_at: string | null;
+}
