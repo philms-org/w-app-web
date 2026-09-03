@@ -150,7 +150,7 @@ export default function MainPage() {
               marginBottom: '32px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              The W App works best when we know your location. This helps us show you nearby people and places to connect. While you&apos;re checked in to a venue, we also share your approximate position with that venue for anonymized attendance analytics — never before check-in or after checkout.
+              The W App works best when we know your location — it&apos;s how we show you nearby people and places. While you&apos;re checked in to a venue that has defined areas, we also match your location to those areas (like &ldquo;Main Bar&rdquo;) so the organizer can see which areas are busy. They see totals for their venue only — never your name or your exact location — and this stops the moment you check out.
             </p>
 
             <div style={{
