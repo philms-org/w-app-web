@@ -41,3 +41,6 @@ yarn-error.log*
 scripts/camoufox/venv/
 .env*
 .worktrees/
+
+# brainstorm companion scratch
+.superpowers/
