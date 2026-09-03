@@ -14,6 +14,7 @@ import {
   startConversation,
   fetchBanners,
 } from '@/lib/data';
+import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
@@ -51,10 +52,32 @@ export default function CheckedInHero() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [venueHasZones, setVenueHasZones] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
   useZoneTracking(checkedIn ? selectedLocation?.id ?? null : null);
+
+  // The "location is used for area analytics" indicator below must only show
+  // at venues that actually have zones — for a zone-less venue nothing is
+  // ever recorded (useZoneTracking bails on the same check), so the notice
+  // would be false. Same venue_zones head-count query useZoneTracking uses.
+  useEffect(() => {
+    const locationId = checkedIn ? selectedLocation?.id ?? null : null;
+    if (!locationId) {
+      setVenueHasZones(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('venue_zones')
+      .select('id', { count: 'exact', head: true })
+      .eq('location_id', locationId)
+      .then(({ count }) => {
+        if (!cancelled) setVenueHasZones(!!count);
+      });
+    return () => { cancelled = true; };
+  }, [checkedIn, selectedLocation?.id]);
 
   // First-run instructions for organizers only, shown once per browser/device.
   useEffect(() => {
@@ -262,7 +285,7 @@ export default function CheckedInHero() {
           </div>
         </div>
 
-        {checkedIn && (
+        {checkedIn && venueHasZones && (
           <Link
             href="/privacy"
             style={{
@@ -277,7 +300,7 @@ export default function CheckedInHero() {
             }}
           >
             <MapPin style={{ width: '12px', height: '12px' }} />
-            Sharing location with this venue while checked in — Learn more
+            Location is used for this venue&apos;s area analytics while you&apos;re checked in — Learn more
           </Link>
         )}
 
