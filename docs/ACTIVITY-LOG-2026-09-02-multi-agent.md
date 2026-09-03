@@ -27,22 +27,33 @@ following the same instructions referenced below.
 
 ## Task 2: Connections graph / QR-scan / friends-feed — brainstorm + spec + plan
 - **Log:** `docs/activity-log-connections-graph-plan.md`
-- **Scope:** Planning only, no code. Produces a design spec
-  (`docs/superpowers/specs/`) and implementation plan
-  (`docs/superpowers/plans/`) for resolving the connections/friends schema —
-  the single blocker behind the Connect/QR stub, the locked-only friends-activity
-  feed, Round 2 Peek, and 2 always-zero organizer-report figures.
-- **Isolation:** own git worktree at
-  `.claude/worktrees/agent-ae242158d77edf0e0` (branch
-  `worktree-agent-ae242158d77edf0e0`)
-- **Status:** IN PROGRESS. First run was mid-exploration (possibly doing DB
-  queries) when it died to the same transient network error. Resumed once
-  already (via SendMessage). **If this session/agent dies again before a
-  completion notification arrives:** check
-  `git -C .claude/worktrees/agent-ae242158d77edf0e0 log --oneline` and
-  `docs/activity-log-connections-graph-plan.md` inside that worktree for
-  exact status — spec/plan docs may exist there uncommitted even if no
-  commit shows yet.
+- **Isolation:** worktree removed, work merged to `main` (`671ef77`)
+- **Status:** DONE. Key finding: this was mis-scoped by the original audit —
+  `connections`, `friendships`, and `peek_invites` tables **already exist**
+  on QA with correct schema/constraints. The real blocker is that
+  `connections`/`friendships` have **no INSERT policy** (write-locked by
+  RLS) — a missing write-path problem, not a missing-schema one. The 2
+  organizer-report figures stuck at 0 need **no code change**, just rows to
+  exist. Deliverables:
+  - `docs/superpowers/specs/2026-09-02-connections-graph-qr-connect-design.md`
+  - `docs/superpowers/plans/2026-09-02-connections-write-path-qr-connect.md`
+    (Plan A, 7 tasks — migration + RPCs + QR display/scan/contact-choice UI)
+  - `docs/superpowers/plans/2026-09-02-friends-activity-feed-unlock.md`
+    (Plan B, 3 tasks — unlock the feed once Plan A's write path exists)
+  - **FOUNDER DECISIONS NEEDED before Plan A's Task 7 (prod gate):**
+    1. Single-opt-in (scan = instant connection, no accept step) vs. a
+       double opt-in/accept flow.
+    2. Both parties must be checked in at the *same venue* to connect (no
+       connecting outside/off-app) — real forgery resistance for zero new
+       schema, but a genuine product restriction; the alternative is signed
+       rotating QR tokens (more schema/complexity).
+    3. `next.config.ts:29` currently sets `Permissions-Policy: camera=()` —
+       camera is hard-disabled site-wide. Any QR scanner is dead until this
+       becomes `camera=(self)`. Already an explicit step in Plan A Task 5,
+       flagging here since it's an easy thing to miss.
+  - Migration renumbered to `0019` (banner-RLS-fix's parallel agent took
+    `0018` first) — Plan A's own Global Constraints tell the implementer to
+    re-check the next free number before starting, since `main` moves fast.
 
 ## Task 3: Privacy-copy rewrite — stage the patch, do not apply
 - **Log:** `docs/activity-log-privacy-copy-staging.md`
