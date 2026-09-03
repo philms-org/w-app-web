@@ -77,16 +77,51 @@ Root cause confirmed on `w-app-qa` (ref `ducadjakxmkfcvrteoqz`):
 
 ## Final state
 
-- Migration committed on branch `worktree-agent-a0ba22e056525d82d` (this
-  worktree). Fix is applied and verified on QA (`ducadjakxmkfcvrteoqz`) —
-  independent of whether/when this branch is merged, the QA database itself
-  already has the correct policies live.
-- Next: commit, then attempt `git checkout main && git merge <branch> --no-edit`
-  per the task's merge convention, verify `npx tsc --noEmit` clean on the
-  merged result, then report. This worktree's branch started from
-  `a951bf0` (same as `origin/main`); the shared local `main` has since
-  advanced ~59 commits from unrelated parallel work (docs, realtime
-  chat+presence, etc.) — this branch only adds one new migration file and
-  this log file, so the merge should be a clean, non-conflicting fast walk
-  forward. Will update this section with the actual commit SHAs and merge
-  result.
+**NOT MERGED — left on branch `worktree-agent-a0ba22e056525d82d`, commit
+`4da027be45a68c034062e9b69c9e0ac1a6925ce3`** ("fix: add missing storage RLS
+policies for banners bucket (QA)").
+
+- The actual bug fix is complete and independent of the merge: the QA
+  database (`ducadjakxmkfcvrteoqz`) already has the correct
+  `banners_storage_select` / `banners_storage_write` policies live (applied
+  directly via `supabase db query --linked`), verified per the section
+  above. Any future upload to the `banners` bucket by a real venue
+  owner/co-owner/master admin will now succeed; a non-manager will still be
+  rejected.
+- **Could not complete the merge step from this session — mechanical
+  environment constraint, not a correctness concern.** This agent runs in
+  the git worktree `/Users/sr/w-app-web/.claude/worktrees/agent-a0ba22e056525d82d`
+  (branch `worktree-agent-a0ba22e056525d82d`, started from `a951bf0`, same
+  as `origin/main`). The repo's `main` branch is checked out in a *sibling*
+  worktree (`/Users/sr/w-app-web`, currently at `5d7229b`, ~59 commits ahead
+  of this branch's base from unrelated parallel work — docs, realtime
+  chat+presence, etc.), and this session is sandboxed to its own worktree
+  only:
+  - `git checkout main` here fails: `fatal: 'main' is already checked out at '/Users/sr/w-app-web'`.
+  - `git fetch . worktree-agent-a0ba22e056525d82d:main` (attempting to
+    fast-forward the `main` ref without checking it out) also fails:
+    `fatal: refusing to fetch into branch 'refs/heads/main' checked out at '/Users/sr/w-app-web'`
+    — git itself refuses to update a branch ref that's checked out in
+    another worktree, and directly redirecting git operations at that
+    other worktree's path (`git -C /Users/sr/w-app-web ...`) is refused by
+    this session's sandbox as isolation-breaking.
+  - Since `main` has diverged (59 unrelated commits since this branch's
+    base) rather than just moved forward, this needs a real
+    `git merge --no-edit` (not a plain fast-forward) run from a session
+    that actually has `/Users/sr/w-app-web` (or another checkout of `main`)
+    as its working directory.
+- **Next step for whoever picks this up (the coordinating/parent session,
+  or a session rooted at `/Users/sr/w-app-web`):**
+  ```
+  cd /Users/sr/w-app-web
+  git checkout main
+  git merge worktree-agent-a0ba22e056525d82d --no-edit
+  npx tsc --noEmit   # should be clean — this branch only touches SQL + docs
+  ```
+  The merge should be conflict-free: this branch only adds two new files
+  (`supabase/migrations/0018_banners_storage_policies.sql` and
+  `docs/activity-log-banner-rls-fix.md`) on top of a commit that's an
+  ancestor of current `main`. No existing files were modified.
+- `npx tsc --noEmit` was not run in this worktree since no TypeScript was
+  touched; it should still be run on the merged `main` per the task's
+  instructions, by whoever performs the merge.
