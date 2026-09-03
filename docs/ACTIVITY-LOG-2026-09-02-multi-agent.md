@@ -16,17 +16,14 @@ following the same instructions referenced below.
 - **Scope:** Storage RLS 403 blocking banner image upload on `w-app-qa`
   (`app/main/venue/carousel`) — bucket policies look un-applied on QA per the
   2026-09-02 build-state-inventory finding. Fix + verify on QA, code-only otherwise.
-- **Isolation:** own git worktree at
-  `.claude/worktrees/agent-a0ba22e056525d82d` (branch
-  `worktree-agent-a0ba22e056525d82d`)
-- **Status:** IN PROGRESS. First run applied a migration ("Applied without
-  errors. Now verify.") then died to a transient network error before
-  verifying/merging. Resumed once already (via SendMessage) to finish
-  verification + merge-to-main-if-clean. **If this session/agent dies again
-  (e.g. computer restart) before a completion notification arrives:** check
-  `git -C .claude/worktrees/agent-a0ba22e056525d82d log --oneline` for
-  commits and `docs/activity-log-banner-rls-fix.md` inside that worktree
-  for exact status — do not assume it's done or undone, verify from disk.
+- **Isolation:** worktree removed, work merged to `main`
+- **Status:** DONE. Root cause: `banners` storage bucket had zero RLS
+  policies on `storage.objects` (deny-all). Fixed by
+  `supabase/migrations/0018_banners_storage_policies.sql` (public read +
+  write scoped to `is_venue_manager()`, mirroring the existing `banners`
+  table policy). Applied + verified on QA (prod untouched, as scoped).
+  Merged to `main` (`4012434`). No live browser upload test — no test
+  credentials available, same limitation as everything else this session.
 
 ## Task 2: Connections graph / QR-scan / friends-feed — brainstorm + spec + plan
 - **Log:** `docs/activity-log-connections-graph-plan.md`
