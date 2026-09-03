@@ -1,15 +1,17 @@
 # Friends Activity Feed Unlock Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **Refreshed 2026-09-03** against the shipped Plan A. Changes from the original: Task 3 is now the opt-in toggle only — connection removal was dropped because Plan A shipped `/main/connections` with a working unfriend button (`removeConnection` already has a surface). Task 3's toggle markup is corrected to `ProfileTab`'s **light** theme (white cards, not `theme.*` dark tokens). Spec/dependency links updated to the v2 design.
 
-**Goal:** Turn `FriendsActivityFeed` from a hardcoded locked-state card into a real feed gated on a live 3-connection count, respecting each user's `share_checkins_with_friends` setting, and give users a way to opt in and to remove a connection.
+**Goal:** Turn `FriendsActivityFeed` from a hardcoded locked-state card into a real feed gated on a live 3-connection count, respecting each user's `share_checkins_with_friends` setting, and give users a toggle to opt in.
 
-**Architecture:** Reads only — no new tables and no new RPCs beyond what Plan A shipped. The connection count comes from `fetchMyConnectionCount()` (Plan A). Friend activity is a two-step client query: read my friend ids from `friendships`, then read their recent `location_checkins` joined to `locations` and `profiles`. The privacy gate is applied **explicitly in the query** by filtering to friends whose `profiles.share_checkins_with_friends` is true — `location_checkins`'s SELECT policy is `true`, so RLS grants no protection here and the filter is the only thing standing between a friend's check-ins and the feed.
+**Architecture:** Reads only — no new tables and no new RPCs beyond what Plan A shipped. The connection count comes from `fetchMyConnectionCount()` (Plan A, live in `lib/data.ts`). Friend activity is a two-step client query: read my friend ids from `friendships`, then read their recent `location_checkins` joined to `locations` and `profiles`. The privacy gate is applied **explicitly in the query** by filtering to friends whose `profiles.share_checkins_with_friends` is true — `location_checkins`'s SELECT policy is `true`, so RLS grants no protection here and the filter is the only thing standing between a friend's check-ins and the feed.
 
 **Tech Stack:** Next.js 15 App Router, React 19, TypeScript, `@supabase/supabase-js` ^2.110.7. Inline `style={{}}` per this repo's convention.
 
-**Spec:** `docs/superpowers/specs/2026-09-02-connections-graph-qr-connect-design.md`
-**Depends on:** `docs/superpowers/plans/2026-09-02-connections-write-path-qr-connect.md` — Plan A must be complete and its migration applied, or there is no way to reach 3 connections.
+**Spec:** `docs/superpowers/specs/2026-09-03-connections-graph-qr-connect-v2-design.md` (see "Sub-project 2 (friends feed)").
+**Depends on:** Plan A (`docs/superpowers/plans/2026-09-03-connections-write-path-v2.md`) — **merged to `main` at `c215588`, migration 0019 live on QA and PROD as of 2026-09-03.** `fetchMyConnectionCount()` and `removeConnection()` are already in `lib/data.ts`; `friendships` two-row writes are in place. This plan can start now.
 
 ## Global Constraints
 
@@ -309,37 +311,44 @@ git commit -m "FriendsActivityFeed: real connection-count gate and live friends 
 
 ---
 
-### Task 3: Check-in sharing opt-in and connection removal
+### Task 3: Check-in sharing opt-in toggle
 
-Without an opt-in surface the feed is empty by construction, since `share_checkins_with_friends` defaults to false. Removal ships here because Plan A's single-opt-in model makes it a correctness requirement.
+Without an opt-in surface the feed is empty by construction, since `share_checkins_with_friends` defaults to false. (Connection removal is **out of scope** — Plan A's `/main/connections` screen already has an unfriend button wired to `removeConnection()`.)
 
 **Files:**
+- Modify: `lib/types.ts` (add one field to `Profile`)
 - Modify: `lib/data.ts` (append one function)
-- Modify: `components/tabs/ProfileTab.tsx` (add a privacy toggle row)
+- Modify: `components/tabs/ProfileTab.tsx` (add a privacy card)
 
 **Interfaces:**
-- Consumes: `upsertProfile()` and `fetchProfile()` (both already in `lib/data.ts`), `removeConnection()` (Plan A, Task 3), `useStore` (already imported by `ProfileTab.tsx`).
+- Consumes: `upsertProfile()` and `fetchProfile()` (both already in `lib/data.ts`); `useStore` (already imported by `ProfileTab.tsx`).
 - Produces:
   ```ts
   function setShareCheckinsWithFriends(value: boolean): Promise<void>
   ```
 
 **Important — do not seed the toggle from `useStore().user`.** The store's `User`
-(`lib/store.ts:4`) is a separate camelCase session shape with no
+(`lib/store.ts`) is a separate camelCase session shape with no
 `share_checkins_with_friends` field; reading it there is a type error. Seed from
 `fetchProfile()` instead, as Step 2 does.
 
+**Important — `ProfileTab.tsx` is a LIGHT-themed screen.** Its cards use
+`backgroundColor: 'white'`, `borderRadius: '16px'`, `boxShadow: '0 1px 3px
+rgba(0, 0, 0, 0.1)'`, `#F3F3F3` dividers, `#919191` for muted/icon text, and
+`Montserrat` — NOT the `theme.*` dark tokens. The markup below matches that.
+Only the outer page wrapper uses `theme.bg`.
+
 - [ ] **Step 1: Add the field to `Profile` and the setter to `lib/data.ts`**
 
-`Profile` in `lib/types.ts` does **not** currently declare this column (verified against the
-live schema — it exists in Postgres, defaulting to `false`, but is absent from the interface).
-Add it alongside the other `*_visible` flags:
+`Profile` in `lib/types.ts` does **not** currently declare this column (verified 2026-09-03:
+absent from the interface; present in Postgres defaulting to `false`). Add it alongside the
+other `*_visible` flags in the `Profile` interface:
 
 ```ts
   share_checkins_with_friends?: boolean | null;
 ```
 
-Then append to `lib/data.ts`:
+Then append to `lib/data.ts` (after the connections-graph functions at the end of the file):
 
 ```ts
 // Opt in/out of letting connections see your venue check-ins in their feed.
@@ -351,94 +360,109 @@ export async function setShareCheckinsWithFriends(value: boolean): Promise<void>
 }
 ```
 
-- [ ] **Step 2: Add a toggle row to `components/tabs/ProfileTab.tsx`**
+- [ ] **Step 2: Add a "Privacy" card to `components/tabs/ProfileTab.tsx`**
 
-Inside the existing settings/list area, following whatever row markup that file already uses, add:
-
-```tsx
-<div style={{
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  padding: '14px 0', borderBottom: `1px solid ${theme.divider}`,
-  fontFamily: 'Montserrat, system-ui, sans-serif',
-}}>
-  <div style={{ minWidth: 0, paddingRight: '16px' }}>
-    <div style={{ color: theme.text, fontSize: '14px', fontWeight: 600 }}>
-      Share check-ins with connections
-    </div>
-    <div style={{ color: theme.muted, fontSize: '12px', marginTop: '2px' }}>
-      Lets people you&apos;ve connected with see which venues you visit.
-    </div>
-  </div>
-  <input
-    type="checkbox"
-    checked={shareCheckins}
-    onChange={(e) => {
-      const next = e.target.checked;
-      setShareCheckins(next);
-      // Revert the optimistic flip if the write fails, so the switch never
-      // claims a privacy setting that isn't actually saved.
-      setShareCheckinsWithFriends(next).catch(() => setShareCheckins(!next));
-    }}
-    style={{ width: '20px', height: '20px', accentColor: theme.accent, flexShrink: 0, cursor: 'pointer' }}
-  />
-</div>
-```
-
-Backed by state loaded from the user's profile row, added near the component's other hooks
-(`ProfileTab.tsx` already imports `useState` and `useStore`; add `useEffect`):
+Place it as its own white card **between the "Profile Details" card and the "Menu Items"
+card** (i.e. right before the `{/* Menu Items */}` comment). It matches the "Profile Details"
+card wrapper exactly:
 
 ```tsx
-const [shareCheckins, setShareCheckins] = useState(false);
-
-useEffect(() => {
-  if (!user?.id) return;
-  let cancelled = false;
-  fetchProfile(user.id)
-    .then((p) => { if (!cancelled) setShareCheckins(p?.share_checkins_with_friends ?? false); })
-    .catch(() => { /* leave the switch off if the profile can't be read */ });
-  return () => { cancelled = true; };
-}, [user?.id]);
+        {/* Privacy */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '16px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '16px'
+        }}>
+          <h3 style={{
+            fontWeight: '600',
+            marginBottom: '12px',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}>Privacy</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Share check-ins with connections
+              </div>
+              <div style={{ color: '#919191', fontSize: '12px', marginTop: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Lets people you&apos;ve connected with see which venues you visit.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={shareCheckins}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setShareCheckins(next);
+                // Revert the optimistic flip if the write fails, so the switch
+                // never claims a privacy setting that isn't actually saved.
+                setShareCheckinsWithFriends(next).catch(() => setShareCheckins(!next));
+              }}
+              style={{ width: '20px', height: '20px', accentColor: '#17BFD9', flexShrink: 0, cursor: 'pointer' }}
+            />
+          </div>
+        </div>
 ```
 
-Import `fetchProfile` and `setShareCheckinsWithFriends` from `@/lib/data`, and `useEffect`
-from `react`.
+Backed by state near the component's other hooks (`ProfileTab.tsx` imports `useState`
+already; add `useEffect`):
 
-- [ ] **Step 3: Typecheck**
+```tsx
+  const [shareCheckins, setShareCheckins] = useState(false);
 
-Run: `npx tsc --noEmit`
-Expected: clean.
-
-- [ ] **Step 4: Manual browser check — the full loop**
-
-1. Connect three pairs of QA accounts to your test user via Plan A's scan flow (all parties checked in at the same venue).
-2. As each friend, enable "Share check-ins with connections".
-3. As the test user, reload the home tab.
-
-Expected: the locked card is replaced by the "Friends' activity" list showing those friends and their venues, with a green dot for anyone still checked in.
-
-Then confirm the gate closes again:
-
-```bash
-echo "select remove_connection('<friend-user-id>'::uuid);" | supabase db query --linked
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchProfile(user.id)
+      .then((p) => { if (!cancelled) setShareCheckins(p?.share_checkins_with_friends ?? false); })
+      .catch(() => { /* leave the switch off if the profile can't be read */ });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 ```
-This errors with `not_signed_in` (no `auth.uid()` in a SQL session) — expected. Instead verify removal through the app by calling `removeConnection()` from the browser console on an authenticated page, then reload.
-Expected: the count drops below 3 and the locked card returns.
 
-Finally, confirm opt-out works: have one friend turn the toggle off and reload.
-Expected: that friend disappears from the feed.
+Add to the imports: `useEffect` from `react`; `fetchProfile` and `setShareCheckinsWithFriends`
+from `@/lib/data` (the file currently imports only `signOut` from `@/lib/auth` and `useStore`
+from `@/lib/store` — add a `import { fetchProfile, setShareCheckinsWithFriends } from '@/lib/data';`).
+
+- [ ] **Step 3: Typecheck + lint**
+
+Run: `npx tsc --noEmit` — clean.
+Run: `npm run lint` — no NEW warnings in `ProfileTab.tsx`, `lib/data.ts`, `lib/types.ts`
+(the repo has a standing `no-img-element` warning in `ProfileTab.tsx` at the avatar `<img>`
+and 3 `no-explicit-any` in `lib/data.ts` — those are pre-existing, not yours).
+
+- [ ] **Step 4: Manual browser check**
+
+1. Sign in as your test user, open Profile tab.
+   Expected: a "Privacy" card with the toggle, reflecting the current DB value (off by default).
+2. Flip it on. Verify the write:
+   ```bash
+   echo "select id, share_checkins_with_friends from profiles where id = '<test-user-id>';" | supabase db query --linked
+   ```
+   Expected: `share_checkins_with_friends = true`.
+3. Flip it off, re-query. Expected: back to `false`.
+4. End-to-end (needs ≥3 connected QA accounts to the test user via Plan A's scan flow, each
+   with `share_checkins_with_friends = true` and a recent `location_checkins` row): reload the
+   test user's home tab. Expected: the locked card is replaced by "Friends' activity" listing
+   those friends and their venues, green dot for anyone still checked in. Turn one friend's
+   toggle off, reload → that friend drops out of the feed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add lib/data.ts lib/types.ts components/tabs/ProfileTab.tsx
-git commit -m "Add check-in sharing opt-in toggle, verify connection removal"
+git commit -m "Add check-in sharing opt-in toggle to ProfileTab
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
 
 ## Self-review notes
 
-- **Spec coverage:** Plan B's three scope items — `fetchFriendsActivity()` respecting `share_checkins_with_friends` (Task 1), the real 3-connection gate (Task 2), and the privacy opt-in (Task 3) — each map to a task. Connection removal rides along in Task 3 because Plan A shipped `remove_connection` without a surface.
-- **Type consistency:** `FriendActivityEntry` is defined in Task 1 and consumed with the same field names in Task 2. `fetchMyConnectionCount()` and `removeConnection()` match the signatures Plan A Task 3 produces. `REQUIRED_CONNECTIONS` is defined once in the component.
+- **Spec coverage:** Plan B's three scope items — `fetchFriendsActivity()` respecting `share_checkins_with_friends` (Task 1), the real 3-connection gate (Task 2), and the privacy opt-in toggle (Task 3) — each map to a task.
+- **Type consistency:** `FriendActivityEntry` is defined in Task 1 and consumed with the same field names in Task 2. `fetchMyConnectionCount()` matches the signature Plan A shipped (`lib/data.ts`, returns `Promise<number>`, exact head count on `friendships` where `user_id = me`). `REQUIRED_CONNECTIONS` is defined once in the component. `setShareCheckinsWithFriends` is defined in Task 3 and used only there.
 - **Privacy check:** the only path to a friend's check-in filters on `share_checkins_with_friends = true` before any `location_checkins` read. The existing `is_friend_sharing()` DB function is left untouched — it serves RLS elsewhere and duplicating its logic client-side is deliberate, since `location_checkins` has no policy that would invoke it.
-- **Deliberate omission:** no unfriend button in the UI. Removal is verified via `removeConnection()` and the surface belongs with a connections-list screen that neither plan builds. Worth a follow-up.
+- **Theme note:** `FriendsActivityFeed` (Task 2) is a dark-theme card (`theme.*`); `ProfileTab` (Task 3) is a light-theme screen (white cards). The two tasks deliberately use different token sets — this is correct, not an inconsistency.
+- **Out of scope:** connection removal — Plan A shipped `/main/connections` with a working unfriend button.
