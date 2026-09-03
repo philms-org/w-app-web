@@ -63,6 +63,7 @@ export default function CheckedInHero() {
   // ever recorded (useZoneTracking bails on the same check), so the notice
   // would be false. Same venue_zones head-count query useZoneTracking uses.
   useEffect(() => {
+    setVenueHasZones(false);
     const locationId = checkedIn ? selectedLocation?.id ?? null : null;
     if (!locationId) {
       setVenueHasZones(false);

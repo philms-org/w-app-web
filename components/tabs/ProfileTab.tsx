@@ -29,7 +29,7 @@ export default function ProfileTab() {
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
     { id: 'settings', label: 'Settings', icon: Settings, action: () => router.push('/settings') },
     { id: 'notifications', label: 'Notifications', icon: Bell, action: () => router.push('/settings/notifications') },
-    { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/settings/privacy') },
+    { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/privacy') },
     { id: 'help', label: 'Help & Support', icon: HelpCircle, action: () => router.push('/help') },
   ];
 

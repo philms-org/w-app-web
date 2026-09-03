@@ -213,7 +213,7 @@ export default function MainPage() {
               marginTop: '16px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              You can change this in settings anytime ·{' '}
+              Manage location access in your browser or device settings ·{' '}
               <a href="/privacy" style={{ color: '#17BFD9', textDecoration: 'underline' }}>
                 Learn more
               </a>
