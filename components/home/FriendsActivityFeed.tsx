@@ -9,6 +9,9 @@ import type { FriendActivityEntry } from '@/lib/types';
 
 const REQUIRED_CONNECTIONS = 3;
 
+const fmtShortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
 export default function FriendsActivityFeed() {
   const [count, setCount] = useState<number | null>(null);
   const [entries, setEntries] = useState<FriendActivityEntry[]>([]);
@@ -20,11 +23,15 @@ export default function FriendsActivityFeed() {
         if (cancelled) return;
         setCount(n);
         // Only spend a query on activity once the gate is actually open.
-        if (n >= REQUIRED_CONNECTIONS) return fetchFriendsActivity();
-        return [];
+        if (n < REQUIRED_CONNECTIONS) return;
+        fetchFriendsActivity()
+          .then((rows) => { if (!cancelled) setEntries(rows); })
+          .catch((err) => console.error('Failed to load friends activity:', err));
       })
-      .then((rows) => { if (!cancelled && rows) setEntries(rows); })
-      .catch(() => { if (!cancelled) setCount(0); });
+      .catch((err) => {
+        console.error('Failed to load connection count:', err);
+        if (!cancelled) setCount(0);
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -56,14 +63,16 @@ export default function FriendsActivityFeed() {
           }}>
             Add friends to see where they&apos;ve been
           </h3>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            marginTop: '10px', color: theme.muted, fontSize: '12px',
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-          }}>
-            <Users style={{ width: '14px', height: '14px' }} />
-            {count ?? 0} / {REQUIRED_CONNECTIONS} connections
-          </div>
+          {count !== null && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              marginTop: '10px', color: theme.muted, fontSize: '12px',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+            }}>
+              <Users style={{ width: '14px', height: '14px' }} />
+              {count} / {REQUIRED_CONNECTIONS} connections
+            </div>
+          )}
         </div>
       </div>
     );
@@ -102,7 +111,7 @@ export default function FriendsActivityFeed() {
                 {e.name ?? 'Someone'}
               </div>
               <div style={{ color: theme.muted, fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {e.is_active ? 'At' : 'Was at'} {e.venue_name}
+                {e.is_active ? 'At' : 'Was at'} {e.venue_name} · {fmtShortDate(e.checked_in_at)}
               </div>
             </div>
             {e.is_active && (

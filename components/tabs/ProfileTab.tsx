@@ -16,13 +16,14 @@ export default function ProfileTab() {
   const { user, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [shareCheckins, setShareCheckins] = useState(false);
+  const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     fetchProfile(user.id)
       .then((p) => { if (!cancelled) setShareCheckins(p?.share_checkins_with_friends ?? false); })
-      .catch(() => { /* leave the switch off if the profile can't be read */ });
+      .catch((err) => console.error('Failed to load sharing preference:', err));
     return () => { cancelled = true; };
   }, [user?.id]);
 
@@ -282,13 +283,21 @@ export default function ProfileTab() {
             </div>
             <input
               type="checkbox"
+              aria-label="Share check-ins with connections"
               checked={shareCheckins}
+              disabled={shareCheckinsSaving}
               onChange={(e) => {
                 const next = e.target.checked;
                 setShareCheckins(next);
+                setShareCheckinsSaving(true);
                 // Revert the optimistic flip if the write fails, so the switch
                 // never claims a privacy setting that isn't actually saved.
-                setShareCheckinsWithFriends(next).catch(() => setShareCheckins(!next));
+                setShareCheckinsWithFriends(next)
+                  .catch((err) => {
+                    console.error('Failed to save check-in sharing preference:', err);
+                    setShareCheckins(!next);
+                  })
+                  .finally(() => setShareCheckinsSaving(false));
               }}
               style={{ width: '20px', height: '20px', accentColor: '#17BFD9', flexShrink: 0, cursor: 'pointer' }}
             />

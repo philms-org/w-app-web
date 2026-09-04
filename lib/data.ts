@@ -1427,12 +1427,17 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
     (sharers ?? []).map((p: { id: string; display_name: string | null; avatar_url: string | null }) => [p.id, p])
   );
 
+  // Recency window: without one, an opted-in friend's check-in from months
+  // ago is indistinguishable from last night's in the UI. 7 days matches
+  // what "recent activity" plausibly means for a feed like this.
+  const sinceIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: checkins, error: checkinError } = await supabase
     .from('location_checkins')
     .select('user_id, location_id, checked_in_at, checked_out_at, locations(name)')
     .in('user_id', sharerIds)
-    .order('checked_in_at', { ascending: false })
-    .limit(limit);
+    .gte('checked_in_at', sinceIso)
+    .order('checked_in_at', { ascending: false });
   if (checkinError) throw checkinError;
 
   type CheckinRow = {
@@ -1443,9 +1448,17 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
     locations: { name: string } | null;
   };
 
-  return ((checkins ?? []) as unknown as CheckinRow[]).map((row) => {
+  // Dedupe to each friend's single most recent check-in (rows arrive
+  // newest-first, so the first occurrence per user_id wins) — otherwise one
+  // frequently-checking-in friend can fill the whole feed and this stops
+  // being "one entry per friend" as the interface's own comment promises.
+  const seen = new Set<string>();
+  const entries: FriendActivityEntry[] = [];
+  for (const row of (checkins ?? []) as unknown as CheckinRow[]) {
+    if (seen.has(row.user_id)) continue;
+    seen.add(row.user_id);
     const profile = profileById.get(row.user_id);
-    return {
+    entries.push({
       user_id: row.user_id,
       name: profile?.display_name ?? null,
       avatar_url: profile?.avatar_url ?? null,
@@ -1453,8 +1466,10 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
       venue_name: row.locations?.name ?? 'A venue',
       checked_in_at: row.checked_in_at,
       is_active: row.checked_out_at === null,
-    };
-  });
+    });
+    if (entries.length >= limit) break;
+  }
+  return entries;
 }
 
 // Opt in/out of letting connections see your venue check-ins in their feed.
