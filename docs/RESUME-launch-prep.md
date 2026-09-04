@@ -8,6 +8,27 @@ privacy disclosure copy was rewritten for accuracy (path b, merged
 2026-09-03) — 3 residual accuracy notes (F1/F2/F3) are parked for the
 pre-launch legal review; see `docs/superpowers/plans/2026-09-03-privacy-copy-accuracy.md`.
 
+## FRIENDS ACTIVITY FEED — SHIPPED 2026-09-04
+`friends-activity-feed` merged to `main` (`5f33e7c`..`3029bb3`, 5 commits, no
+new migration — reads only). `FriendsActivityFeed` on the home tab is no
+longer a hardcoded locked stub: it shows the real connection count and, once
+`>= 3`, a live feed of connected friends' recent venue check-ins. Gated by
+each friend's `profiles.share_checkins_with_friends` (default **false**,
+confirmed present on both QA and PROD) filtered **before** any
+`location_checkins` read — `fetchFriendsActivity()` in `lib/data.ts`. A
+"Privacy" card + toggle was added to `ProfileTab` (light-themed, matching
+that screen) to let users opt in. Feed entries are windowed to the last 7
+days and deduped to one (most recent) row per friend.
+**Known pre-existing posture, not a regression from this branch:**
+`location_checkins`' SELECT policy is unconditional `true` on prod — the
+`share_checkins_with_friends` filter is a UX convention layered on top, not
+a DB-enforced boundary. `is_friend_sharing()` already exists as a SECURITY
+DEFINER function; tightening the policy to use it is a worthwhile follow-up
+migration but touches `HistoryTab`/`MapTab`/the organizer report too, so it
+needs its own review. `/privacy` should eventually mention this feature
+(currently scoped to venue zone analytics only) — batch with the
+connections-geotag disclosure already flagged below.
+
 ## CONNECTIONS WRITE PATH — SHIPPED 2026-09-03
 `connections-write-path` merged to `main` (`5d21f4f`..`f30b1c5`, 8 commits).
 QR connect flow: `ConnectSheet` shows a real 90s auto-refreshing token QR;
