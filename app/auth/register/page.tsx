@@ -116,6 +116,9 @@ export default function RegisterPage() {
         gender: formData.gender,
         birth: formData.birthDate,
         image: avatarUrl,
+        datingId: '0',
+        socialisingId: '0',
+        networkingId: '0',
         setupComplete: false,
       });
 
