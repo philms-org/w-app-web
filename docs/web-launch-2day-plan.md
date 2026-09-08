@@ -18,6 +18,26 @@ inline-styled).
 
 ---
 
+## Progress (2026-09-08)
+
+**Day 1 stage 3 — DONE** (commits `c461e5c`..`111`):
+- `FeedRow` + `Button`/`Card`/`Chip`/`Input` primitives (`components/ui/primitives.tsx`).
+- Auth group — full rewrites onto primitives + tokens.
+- Home group — buttons to control radius + on-accent text; `FriendsActivityFeed`
+  uses `FeedRow`. Plus a cross-cutting fix: `color: theme.bg` used as a text
+  colour in 11 files became invisible after the light flip → `theme.text`.
+- Venue group — accent buttons to control radius + `#0D0D0F` text; invisible
+  status-chip text fixed; `members` search input radius.
+- Profile/misc — `profile/setup` rewritten from hardcoded dark to light tokens
+  (−395 lines of dead step 4/5 code); `ProfileTab` old cyan → `theme.accent`;
+  `profile/edit` / `admin` / `welcome` button polish.
+- **Deferred:** `CheckedInHero` deep pass (token-correct already; its nav chips
+  are legitimately pill-radius per design-system §6 — not a blocker).
+
+Next: parity specs (Day 1 item 2), then Day 2.
+
+---
+
 ## Day 1 — design-alignment finish + parity specs
 
 ### 1. Stage 3 completion — component layer across all screens
