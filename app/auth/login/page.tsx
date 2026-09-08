@@ -6,13 +6,14 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { signIn } from '@/lib/auth';
 import { fetchProfile } from '@/lib/data';
-import { theme } from '@/lib/theme';
+import { theme, type as typeTokens } from '@/lib/theme';
+import { Button, Input } from '@/components/ui/primitives';
 import { Eye, EyeOff, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setToken } = useStore();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +23,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
@@ -73,255 +74,115 @@ export default function LoginPage() {
       } else {
         router.push('/profile/setup');
       }
-    } catch (err: any) {
-      setError(err?.message ?? 'Invalid email or password');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F0F6FA' }}>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        padding: '16px', 
-        paddingTop: 'max(16px, env(safe-area-inset-top))' 
-      }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
         <button
           onClick={() => router.back()}
-          style={{
-            padding: '8px',
-            marginLeft: '-8px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
+          aria-label="Back"
+          style={{ padding: '8px', marginLeft: '-8px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
         >
-          <ChevronLeft style={{ width: '24px', height: '24px', color: '#231E20' }} />
+          <ChevronLeft style={{ width: '24px', height: '24px', color: theme.text }} />
         </button>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '32px 24px' }}>
-        {/* Logo */}
+      <div style={{ padding: '32px 24px', maxWidth: '440px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: '96px',
-            height: '96px',
-            background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <span style={{
-              fontSize: '48px',
-              fontWeight: 'bold',
-              color: 'white',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>W</span>
+          <div
+            style={{
+              width: '96px',
+              height: '96px',
+              background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span style={{ fontSize: '48px', fontWeight: 700, color: 'white' }}>W</span>
           </div>
         </div>
 
-        {/* Title */}
-        <h1 style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          marginBottom: '8px',
-          color: '#231E20',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>Welcome Back</h1>
-        <p style={{
-          color: '#919191',
-          textAlign: 'center',
-          marginBottom: '32px',
-          fontSize: '16px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>
+        <h1 style={{ fontSize: typeTokens.title.fontSize, fontWeight: 700, textAlign: 'center', marginBottom: '8px', color: theme.text }}>
+          Welcome back
+        </h1>
+        <p style={{ color: theme.muted, textAlign: 'center', marginBottom: '32px', fontSize: typeTokens.body.fontSize }}>
           Sign in to continue to The W App
         </p>
 
-        {/* Error message */}
         {error && (
-          <div style={{
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FECACA',
-            color: '#DC2626',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            marginBottom: '16px',
-            fontSize: '14px',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>
+          <div
+            style={{
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#DC2626',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              marginBottom: '16px',
+              fontSize: '14px',
+            }}
+          >
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Email */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '8px',
-              color: '#231E20',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: 'white',
-                border: '1px solid #D5D5D5',
-                borderRadius: '12px',
-                fontSize: '16px',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                boxSizing: 'border-box'
-              }}
-              placeholder="Enter your email"
-              autoComplete="email"
+          <Input
+            type="email"
+            name="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            autoComplete="email"
+          />
+
+          <div style={{ position: 'relative' }}>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              style={{ paddingRight: '48px' }}
             />
-          </div>
-
-          {/* Password */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              marginBottom: '8px',
-              color: '#231E20',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Password</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 48px 12px 16px',
-                  backgroundColor: 'white',
-                  border: '1px solid #D5D5D5',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  boxSizing: 'border-box'
-                }}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#919191'
-                }}
-              >
-                {showPassword ? (
-                  <EyeOff style={{ width: '20px', height: '20px' }} />
-                ) : (
-                  <Eye style={{ width: '20px', height: '20px' }} />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Forgot Password */}
-          <div style={{ textAlign: 'right', marginTop: '-4px' }}>
-            <Link
-              href="/auth/forgot-password"
-              style={{
-                color: theme.accent,
-                fontSize: '14px',
-                textDecoration: 'none',
-                fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              style={{ position: 'absolute', right: '16px', top: '38px', background: 'none', border: 'none', cursor: 'pointer', color: theme.muted }}
             >
+              {showPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
+            </button>
+          </div>
+
+          <div style={{ textAlign: 'right', marginTop: '-4px' }}>
+            <Link href="/auth/forgot-password" style={{ color: theme.accent, fontSize: '14px', textDecoration: 'none' }}>
               Forgot password?
             </Link>
           </div>
 
-          {/* Login Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              backgroundColor: '#17BFD9',
-              color: 'white',
-              fontWeight: '600',
-              padding: '12px 24px',
-              borderRadius: '9999px',
-              border: 'none',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.7 : 1,
-              fontSize: '16px',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {isLoading ? (
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '2px solid rgba(255,255,255,0.3)',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }}></div>
-            ) : (
-              'Login'
-            )}
-          </button>
+          <Button type="submit" fullWidth disabled={isLoading}>
+            {isLoading ? 'Signing in…' : 'Log in'}
+          </Button>
         </form>
 
-        {/* Sign Up Link */}
-        <p style={{
-          textAlign: 'center',
-          marginTop: '32px',
-          color: '#919191',
-          fontSize: '16px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>
-          Don't have an account?{' '}
-          <Link href="/auth/register" style={{
-            color: '#17BFD9',
-            fontWeight: '600',
-            textDecoration: 'none'
-          }}>
-            Sign Up
+        <p style={{ textAlign: 'center', marginTop: '32px', color: theme.muted, fontSize: typeTokens.body.fontSize }}>
+          Don&apos;t have an account?{' '}
+          <Link href="/auth/register" style={{ color: theme.accent, fontWeight: 600, textDecoration: 'none' }}>
+            Sign up
           </Link>
         </p>
       </div>
-      
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

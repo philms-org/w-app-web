@@ -4,20 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
-import { theme } from '@/lib/theme';
+import { theme, type as typeTokens } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { updatePassword } from '@/lib/auth';
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 48px 12px 16px',
-  backgroundColor: 'white',
-  border: '1px solid #D5D5D5',
-  borderRadius: '12px',
-  fontSize: '16px',
-  fontFamily: 'Montserrat, system-ui, sans-serif',
-  boxSizing: 'border-box',
-};
+import { Button, Input } from '@/components/ui/primitives';
 
 type Status = 'checking' | 'ready' | 'invalid' | 'done';
 
@@ -74,36 +64,36 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'white' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family }}>
       <div style={{ padding: '48px 24px 32px', maxWidth: '440px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#231E20', marginBottom: '8px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+        <h1 style={{ fontSize: typeTokens.title.fontSize, fontWeight: 700, color: theme.text, marginBottom: '8px' }}>
           Set a new password
         </h1>
 
         {status === 'checking' && (
-          <p style={{ color: '#919191', fontSize: '15px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Checking your reset link…</p>
+          <p style={{ color: theme.muted, fontSize: typeTokens.body.fontSize }}>Checking your reset link…</p>
         )}
 
         {status === 'invalid' && (
           <>
-            <p style={{ color: '#919191', marginBottom: '24px', fontSize: '15px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            <p style={{ color: theme.muted, marginBottom: '24px', fontSize: typeTokens.body.fontSize }}>
               This reset link is invalid or has expired. Request a new one.
             </p>
-            <Link href="/auth/forgot-password" style={{ color: theme.accent, textDecoration: 'none', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            <Link href="/auth/forgot-password" style={{ color: theme.accent, textDecoration: 'none', fontWeight: 600 }}>
               Request a new link
             </Link>
           </>
         )}
 
         {status === 'done' && (
-          <p style={{ color: '#231E20', fontSize: '15px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          <p style={{ color: theme.text, fontSize: typeTokens.body.fontSize }}>
             Password updated. Taking you to sign in…
           </p>
         )}
 
         {status === 'ready' && (
           <>
-            <p style={{ color: '#919191', marginBottom: '32px', fontSize: '15px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            <p style={{ color: theme.muted, marginBottom: '32px', fontSize: typeTokens.body.fontSize }}>
               Choose a new password for your account.
             </p>
 
@@ -115,50 +105,35 @@ export default function ResetPasswordPage() {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ position: 'relative' }}>
-                <input
+                <Input
                   type={show ? 'text' : 'password'}
+                  name="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={inputStyle}
                   placeholder="New password"
                   autoComplete="new-password"
+                  style={{ paddingRight: '48px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShow(!show)}
-                  style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#919191' }}
+                  style={{ position: 'absolute', right: '16px', top: '12px', background: 'none', border: 'none', cursor: 'pointer', color: theme.muted }}
                   aria-label={show ? 'Hide password' : 'Show password'}
                 >
                   {show ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
                 </button>
               </div>
-              <input
+              <Input
                 type={show ? 'text' : 'password'}
+                name="confirm-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                style={{ ...inputStyle, padding: '12px 16px' }}
                 placeholder="Confirm new password"
                 autoComplete="new-password"
               />
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  width: '100%',
-                  backgroundColor: theme.accent,
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  cursor: isLoading ? 'default' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                }}
-              >
+              <Button type="submit" fullWidth disabled={isLoading}>
                 {isLoading ? 'Saving…' : 'Update password'}
-              </button>
+              </Button>
             </form>
           </>
         )}

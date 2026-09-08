@@ -179,3 +179,96 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     </div>
   );
 });
+
+/* ----------------------------------------------------------------- FeedRow */
+
+interface FeedRowProps {
+  avatar?: string | ReactNode; // image URL or a custom node
+  title: ReactNode;
+  subtitle?: ReactNode;
+  trailing?: ReactNode;
+  onClick?: () => void;
+  divider?: boolean; // bottom hairline
+  style?: React.CSSProperties;
+}
+
+export function FeedRow({
+  avatar,
+  title,
+  subtitle,
+  trailing,
+  onClick,
+  divider,
+  style,
+}: FeedRowProps) {
+  return (
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 16px',
+        background: theme.surface, // legacy `surface` == card
+        borderBottom: divider ? `1px solid ${theme.divider}` : undefined,
+        cursor: onClick ? 'pointer' : undefined,
+        fontFamily: typeTokens.family,
+        ...style,
+      }}
+    >
+      {avatar != null &&
+        (typeof avatar === 'string' ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatar}
+            alt=""
+            width={40}
+            height={40}
+            style={{ borderRadius: radius.pill, objectFit: 'cover', flexShrink: 0 }}
+          />
+        ) : (
+          <div style={{ flexShrink: 0 }}>{avatar}</div>
+        ))}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: typeTokens.heading.fontSize,
+            fontWeight: 700,
+            color: theme.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {title}
+        </div>
+        {subtitle != null && (
+          <div
+            style={{
+              fontSize: typeTokens.caption.fontSize,
+              color: theme.muted,
+              marginTop: 2,
+            }}
+          >
+            {subtitle}
+          </div>
+        )}
+      </div>
+
+      {trailing != null && <div style={{ flexShrink: 0 }}>{trailing}</div>}
+    </div>
+  );
+}
