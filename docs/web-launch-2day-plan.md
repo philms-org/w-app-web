@@ -36,6 +36,19 @@ inline-styled).
 
 Next: parity specs (Day 1 item 2), then Day 2.
 
+**Parity specs — DONE** (`docs/superpowers/specs/2026-09-08-web-parity-must-haves-design.md`).
+Open questions resolved per the doc's recommendations.
+
+**Parity feature 1/4 — 5-step onboarding — DONE** (commits `0431a77`..`9aac1e9`,
+plan `docs/superpowers/plans/2026-09-08-onboarding-5-step-wizard.md`).
+`/profile/setup` is now a 5-step wizard (`components/onboarding/`): looking-for
+· location · work · fun · visibility+review. One `upsertProfile` on Finish;
+non-destructive re-entry via `profileToData`. No migration — all `profiles`
+columns already existed. NOT yet verified: the live Finish→`/main` round-trip
+(dev env has a stale JWT — needs a real auth session; logic is tsc/build clean).
+
+**Parity 2/4 QR/Links, 3/4 word meter, 4/4 Badges** — plans not yet written.
+
 ---
 
 ## Day 1 — design-alignment finish + parity specs
