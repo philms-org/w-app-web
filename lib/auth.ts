@@ -31,6 +31,21 @@ export async function signOut() {
   if (error) throw error;
 }
 
+// Sends the Supabase recovery email. The link in it lands on /auth/reset,
+// where detectSessionInUrl establishes a short-lived recovery session.
+export async function requestPasswordReset(email: string) {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/reset` : undefined;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
+}
+
+// Called from /auth/reset once the recovery session is active.
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 export async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user.id ?? null;

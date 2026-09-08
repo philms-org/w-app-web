@@ -246,6 +246,21 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Forgot Password */}
+          <div style={{ textAlign: 'right', marginTop: '-4px' }}>
+            <Link
+              href="/auth/forgot-password"
+              style={{
+                color: theme.accent,
+                fontSize: '14px',
+                textDecoration: 'none',
+                fontFamily: 'Montserrat, system-ui, sans-serif'
+              }}
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {/* Login Button */}
           <button
             type="submit"
