@@ -391,7 +391,7 @@ function VenueCarouselPageInner() {
                         disabled={isBusy}
                         style={{
                           backgroundColor: banner.is_active ? theme.green : theme.surface2,
-                          color: 'white',
+                          color: banner.is_active ? '#0D0D0F' : theme.text,
                           border: 'none',
                           borderRadius: '9999px',
                           padding: '5px 12px',
@@ -481,11 +481,11 @@ function VenueCarouselPageInner() {
             justifyContent: 'center',
             gap: '8px',
             backgroundColor: theme.accent,
-            color: 'white',
-            borderRadius: '9999px',
+            color: '#0D0D0F',
+            borderRadius: '12px',
             padding: '12px 20px',
             fontSize: '14px',
-            fontWeight: 600,
+            fontWeight: 700,
             fontFamily: 'Montserrat, system-ui, sans-serif',
             cursor: uploading ? 'default' : 'pointer',
             opacity: uploading ? 0.6 : 1,

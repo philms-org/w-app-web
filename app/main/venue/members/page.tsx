@@ -177,7 +177,7 @@ function VenueMembersPageInner() {
             boxSizing: 'border-box',
             backgroundColor: theme.pill,
             border: 'none',
-            borderRadius: '9999px',
+            borderRadius: '12px',
             padding: '10px 16px',
             fontSize: '14px',
             color: theme.text,

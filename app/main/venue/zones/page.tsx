@@ -378,7 +378,7 @@ function VenueZonesPageInner() {
               <button
                 onClick={handleCreate}
                 disabled={creating || !newName.trim() || newLat == null || newLng == null}
-                style={{ flex: 1, backgroundColor: theme.accent, color: 'white', border: 'none', borderRadius: '9999px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: creating || !newName.trim() || newLat == null || newLng == null ? 'default' : 'pointer', opacity: creating || !newName.trim() || newLat == null || newLng == null ? 0.6 : 1, fontFamily: 'Montserrat, system-ui, sans-serif' }}
+                style={{ flex: 1, backgroundColor: theme.accent, color: '#0D0D0F', border: 'none', borderRadius: '12px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: creating || !newName.trim() || newLat == null || newLng == null ? 'default' : 'pointer', opacity: creating || !newName.trim() || newLat == null || newLng == null ? 0.6 : 1, fontFamily: 'Montserrat, system-ui, sans-serif' }}
               >
                 {creating ? 'Saving...' : 'Save'}
               </button>
@@ -387,7 +387,7 @@ function VenueZonesPageInner() {
         ) : (
           <button
             onClick={() => setShowNew(true)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: theme.accent, color: 'white', borderRadius: '9999px', padding: '12px 20px', fontSize: '14px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: theme.accent, color: '#0D0D0F', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif' }}
           >
             <Plus style={{ width: '18px', height: '18px' }} />
             Add zone
