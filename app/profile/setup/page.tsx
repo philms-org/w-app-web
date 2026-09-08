@@ -6,6 +6,43 @@ import { useStore } from '@/lib/store';
 import { upsertProfile } from '@/lib/data';
 import { ChevronLeft, Users, Briefcase, Heart } from 'lucide-react';
 import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
+import { theme, type as typeTokens, radius } from '@/lib/theme';
+import { Button, Input } from '@/components/ui/primitives';
+
+type OptionButtonProps = {
+  emoji: string;
+  label: string;
+  selected: boolean;
+  accent: string;
+  onClick: () => void;
+};
+
+function OptionButton({ emoji, label, selected, accent, onClick }: OptionButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: '12px',
+        borderRadius: radius.control,
+        border: `2px solid ${selected ? accent : theme.divider}`,
+        backgroundColor: selected ? accent : theme.surface,
+        color: selected ? '#0D0D0F' : theme.text,
+        fontSize: '14px',
+        fontWeight: selected ? 700 : 400,
+        fontFamily: typeTokens.family,
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}
+    >
+      <span style={{ fontSize: '18px' }}>{emoji}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
 
 export default function ProfileSetupPage() {
   const router = useRouter();
@@ -23,10 +60,6 @@ export default function ProfileSetupPage() {
     activity: '',
     profession: '',
   });
-
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleSave = async () => {
     if (!user) {
@@ -49,11 +82,7 @@ export default function ProfileSetupPage() {
         profession: formData.profession || null,
       });
 
-      setUser({
-        ...user,
-        ...formData,
-        setupComplete: true,
-      });
+      setUser({ ...user, ...formData, setupComplete: true });
       router.push('/main');
     } catch (err) {
       console.error('Profile save failed:', err);
@@ -62,434 +91,146 @@ export default function ProfileSetupPage() {
     }
   };
 
-  // Looking For (like ThirdSetupVC)
-  const renderStep3 = () => (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#231E20',
-      padding: '24px'
-    }}>
-      <h2 style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-        color: 'white',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>What are you looking for?</h2>
-      <p style={{
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginBottom: '32px',
-        fontSize: '16px',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>Choose what type of connections you want</p>
+  const sectionStyle: React.CSSProperties = { marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' };
+  const sectionHeadingStyle: React.CSSProperties = {
+    fontSize: typeTokens.heading.fontSize,
+    fontWeight: 700,
+    color: theme.text,
+    fontFamily: typeTokens.family,
+  };
+  const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' };
 
-      {/* Socializing */}
-      <div style={{ marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <Users style={{ width: '24px', height: '24px', color: '#17BFD9' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            Socializing
-          </h3>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-          {LOOKING_FOR_OPTIONS.socializing.options.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setFormData(prev => ({ ...prev, socialisingId: option.id.toString() }))}
-              style={{
-                padding: '12px',
-                borderRadius: '12px',
-                border: `2px solid ${formData.socialisingId === option.id.toString() ? '#17BFD9' : '#444'}`,
-                backgroundColor: formData.socialisingId === option.id.toString() ? '#17BFD9' : 'transparent',
-                color: formData.socialisingId === option.id.toString() ? 'white' : 'rgba(255, 255, 255, 0.8)',
-                fontSize: '14px',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>{option.emoji}</span>
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family }}>
+      <div
+        style={{
+          backgroundColor: theme.surface,
+          padding: '16px',
+          paddingTop: 'max(16px, env(safe-area-inset-top))',
+          display: 'flex',
+          alignItems: 'center',
+          borderBottom: `1px solid ${theme.divider}`,
+        }}
+      >
+        <button
+          onClick={() => router.back()}
+          aria-label="Back"
+          style={{ padding: '8px', marginLeft: '-8px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
+        >
+          <ChevronLeft style={{ width: '24px', height: '24px', color: theme.text }} />
+        </button>
+        <h1 style={{ flex: 1, textAlign: 'center', fontSize: typeTokens.heading.fontSize, fontWeight: 700, color: theme.text }}>
+          Set up your profile
+        </h1>
+        <div style={{ width: '40px' }} />
       </div>
 
-      {/* Business */}
-      <div style={{ marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <Briefcase style={{ width: '24px', height: '24px', color: '#EC2C91' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            Business
-          </h3>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-          {LOOKING_FOR_OPTIONS.business.options.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setFormData(prev => ({ ...prev, networkingId: option.id.toString() }))}
-              style={{
-                padding: '12px',
-                borderRadius: '12px',
-                border: `2px solid ${formData.networkingId === option.id.toString() ? '#EC2C91' : '#444'}`,
-                backgroundColor: formData.networkingId === option.id.toString() ? '#EC2C91' : 'transparent',
-                color: formData.networkingId === option.id.toString() ? 'white' : 'rgba(255, 255, 255, 0.8)',
-                fontSize: '14px',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>{option.emoji}</span>
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <div style={{ padding: '24px', paddingBottom: '96px' }}>
+        <h2 style={{ fontSize: typeTokens.title.fontSize, fontWeight: 700, marginBottom: '8px', color: theme.text, textAlign: 'center' }}>
+          What are you looking for?
+        </h2>
+        <p style={{ color: theme.muted, marginBottom: '32px', fontSize: typeTokens.body.fontSize, textAlign: 'center' }}>
+          Choose what type of connections you want
+        </p>
 
-      {/* Love */}
-      <div style={{ marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <Heart style={{ width: '24px', height: '24px', color: '#F59E0B' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            Love is always in the air — let people know where you stand
-          </h3>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-          {LOOKING_FOR_OPTIONS.love.options.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setFormData(prev => ({ ...prev, datingId: option.id.toString() }))}
-              style={{
-                padding: '12px',
-                borderRadius: '12px',
-                border: `2px solid ${formData.datingId === option.id.toString() ? '#F59E0B' : '#444'}`,
-                backgroundColor: formData.datingId === option.id.toString() ? '#F59E0B' : 'transparent',
-                color: formData.datingId === option.id.toString() ? 'white' : 'rgba(255, 255, 255, 0.8)',
-                fontSize: '14px',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>{option.emoji}</span>
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step 4: Personal Details
-  const renderStep4 = () => (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#231E20',
-      padding: '24px'
-    }}>
-      <h2 style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-        color: 'white',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>About You</h2>
-      <p style={{
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginBottom: '32px',
-        fontSize: '16px',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>Tell us more about yourself</p>
-
-      <div style={{ maxWidth: '400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Nationality */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginBottom: '8px',
-            color: 'white',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>Nationality</label>
-          <input
-            type="text"
-            value={formData.nationality}
-            onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: '#444',
-              border: '1px solid #666',
-              borderRadius: '12px',
-              fontSize: '16px',
-              color: 'white',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              boxSizing: 'border-box'
-            }}
-            placeholder="Your nationality"
-          />
-        </div>
-
-        {/* Profession */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginBottom: '8px',
-            color: 'white',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>Profession</label>
-          <input
-            type="text"
-            value={formData.profession}
-            onChange={(e) => setFormData(prev => ({ ...prev, profession: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: '#444',
-              border: '1px solid #666',
-              borderRadius: '12px',
-              fontSize: '16px',
-              color: 'white',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              boxSizing: 'border-box'
-            }}
-            placeholder="What do you do for work?"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step 5: Final Details (like FifthSetupVC)
-  const renderStep5 = () => (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#231E20',
-      padding: '24px'
-    }}>
-      <h2 style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-        color: 'white',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>Final Details</h2>
-      <p style={{
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginBottom: '32px',
-        fontSize: '16px',
-        textAlign: 'center',
-        fontFamily: 'Montserrat, system-ui, sans-serif'
-      }}>Almost done! Just a few more details</p>
-
-      <div style={{ maxWidth: '400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* City */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginBottom: '8px',
-            color: 'white',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>City</label>
-          <input
-            type="text"
-            value={formData.city}
-            onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: '#444',
-              border: '1px solid #666',
-              borderRadius: '12px',
-              fontSize: '16px',
-              color: 'white',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              boxSizing: 'border-box'
-            }}
-            placeholder="Your city"
-          />
-        </div>
-
-        {/* Drink */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginBottom: '8px',
-            color: 'white',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>Do you drink?</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {['Yes', 'No', 'Sometimes'].map((option) => (
-              <button
-                key={option}
-                onClick={() => setFormData(prev => ({ ...prev, drink: option }))}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: `2px solid ${formData.drink === option ? '#17BFD9' : '#444'}`,
-                  backgroundColor: formData.drink === option ? '#17BFD9' : 'transparent',
-                  color: formData.drink === option ? 'white' : 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '16px',
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {option}
-              </button>
+        <div style={sectionStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Users style={{ width: '24px', height: '24px', color: theme.accent }} />
+            <h3 style={sectionHeadingStyle}>Socializing</h3>
+          </div>
+          <div style={grid2}>
+            {LOOKING_FOR_OPTIONS.socializing.options.map((option) => (
+              <OptionButton
+                key={option.id}
+                emoji={option.emoji}
+                label={option.label}
+                accent={theme.accent}
+                selected={formData.socialisingId === option.id.toString()}
+                onClick={() => setFormData((prev) => ({ ...prev, socialisingId: option.id.toString() }))}
+              />
             ))}
           </div>
         </div>
 
-        {/* Activity */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginBottom: '8px',
-            color: 'white',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>Friday Activity</label>
-          <input
+        <div style={sectionStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Briefcase style={{ width: '24px', height: '24px', color: theme.accent2 }} />
+            <h3 style={sectionHeadingStyle}>Business</h3>
+          </div>
+          <div style={grid2}>
+            {LOOKING_FOR_OPTIONS.business.options.map((option) => (
+              <OptionButton
+                key={option.id}
+                emoji={option.emoji}
+                label={option.label}
+                accent={theme.accent2}
+                selected={formData.networkingId === option.id.toString()}
+                onClick={() => setFormData((prev) => ({ ...prev, networkingId: option.id.toString() }))}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Heart style={{ width: '24px', height: '24px', color: theme.warm1 }} />
+            <h3 style={sectionHeadingStyle}>Where you stand on dating</h3>
+          </div>
+          <div style={grid2}>
+            {LOOKING_FOR_OPTIONS.love.options.map((option) => (
+              <OptionButton
+                key={option.id}
+                emoji={option.emoji}
+                label={option.label}
+                accent={theme.warm1}
+                selected={formData.datingId === option.id.toString()}
+                onClick={() => setFormData((prev) => ({ ...prev, datingId: option.id.toString() }))}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ maxWidth: '400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <Input
+            label="City"
             type="text"
-            value={formData.activity}
-            onChange={(e) => setFormData(prev => ({ ...prev, activity: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: '#444',
-              border: '1px solid #666',
-              borderRadius: '12px',
-              fontSize: '16px',
-              color: 'white',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              boxSizing: 'border-box'
-            }}
-            placeholder="What do you like to do on Fridays?"
+            value={formData.city}
+            onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+            placeholder="Your city"
+          />
+          <Input
+            label="Profession"
+            type="text"
+            value={formData.profession}
+            onChange={(e) => setFormData((prev) => ({ ...prev, profession: e.target.value }))}
+            placeholder="What do you do for work?"
+          />
+          <Input
+            label="Nationality"
+            type="text"
+            value={formData.nationality}
+            onChange={(e) => setFormData((prev) => ({ ...prev, nationality: e.target.value }))}
+            placeholder="Your nationality"
           />
         </div>
       </div>
-    </div>
-  );
 
-  // Use the already defined functions above
-
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#231E20' }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: '#231E20',
-        padding: '16px',
-        paddingTop: 'max(16px, env(safe-area-inset-top))',
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid #444'
-      }}>
-        <button
-          onClick={handleBack}
-          style={{
-            padding: '8px',
-            marginLeft: '-8px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderRadius: '50%',
-            cursor: 'pointer'
-          }}
-        >
-          <ChevronLeft style={{ width: '24px', height: '24px', color: '#17BFD9' }} />
-        </button>
-        <h1 style={{
-          flex: 1,
-          textAlign: 'center',
-          fontSize: '20px',
-          fontWeight: '600',
-          color: 'white',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>Setup Profile</h1>
-        <div style={{ width: '40px' }} />
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: theme.surface,
+          borderTop: `1px solid ${theme.divider}`,
+          padding: '16px 24px',
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+        }}
+      >
+        <Button onClick={handleSave} fullWidth disabled={isLoading}>
+          {isLoading ? 'Saving…' : 'Complete setup'}
+        </Button>
       </div>
-
-      {/* Content */}
-      <div>
-        {renderStep3()}
-      </div>
-
-      {/* Bottom Button */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#231E20',
-        borderTop: '1px solid #444',
-        padding: '16px 24px',
-        paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
-      }}>
-        <button
-          onClick={handleSave}
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            backgroundColor: '#17BFD9',
-            color: 'white',
-            fontWeight: '600',
-            padding: '16px 24px',
-            borderRadius: '12px',
-            border: 'none',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.7 : 1,
-            fontSize: '18px',
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {isLoading ? (
-            <div style={{
-              width: '20px',
-              height: '20px',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderTop: '2px solid white',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-          ) : (
-            'Complete Setup'
-          )}
-        </button>
-      </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

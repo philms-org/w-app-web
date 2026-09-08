@@ -325,9 +325,9 @@ export default function AdminPage() {
                     disabled={creatingVenue}
                     style={{
                       backgroundColor: theme.accent,
-                      color: 'white',
+                      color: '#0D0D0F',
                       border: 'none',
-                      borderRadius: '9999px',
+                      borderRadius: '12px',
                       padding: '10px 16px',
                       fontSize: '13px',
                       fontWeight: 600,

@@ -91,7 +91,7 @@ export default function ProfileTab() {
               border: 'none',
               cursor: 'pointer'
             }}>
-              <Camera style={{ width: '16px', height: '16px', color: '#17BFD9' }} />
+              <Camera style={{ width: '16px', height: '16px', color: theme.accent }} />
             </button>
           </div>
 
@@ -179,9 +179,9 @@ export default function ProfileTab() {
                     flex: 1,
                     padding: '12px',
                     borderRadius: '12px',
-                    border: `2px solid ${item.active ? '#17BFD9' : '#D5D5D5'}`,
-                    backgroundColor: item.active ? '#D0F2F7' : 'white',
-                    color: item.active ? '#17BFD9' : '#919191',
+                    border: `2px solid ${item.active ? theme.accent : theme.divider}`,
+                    backgroundColor: item.active ? 'rgba(34,195,201,0.12)' : 'white',
+                    color: item.active ? theme.accent : theme.muted,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -216,19 +216,19 @@ export default function ProfileTab() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {user?.city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <MapPin style={{ width: '16px', height: '16px', color: '#919191' }} />
+                <MapPin style={{ width: '16px', height: '16px', color: theme.muted }} />
                 <span style={{ fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>{user.city}</span>
               </div>
             )}
             {user?.profession && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Briefcase style={{ width: '16px', height: '16px', color: '#919191' }} />
+                <Briefcase style={{ width: '16px', height: '16px', color: theme.muted }} />
                 <span style={{ fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>{user.profession}</span>
               </div>
             )}
             {(!user?.city && !user?.profession) && (
               <p style={{
-                color: '#919191',
+                color: theme.muted,
                 fontSize: '14px',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
               }}>
@@ -242,8 +242,8 @@ export default function ProfileTab() {
               width: '100%',
               marginTop: '16px',
               padding: '8px',
-              backgroundColor: '#D0F2F7',
-              color: '#17BFD9',
+              backgroundColor: 'rgba(34,195,201,0.12)',
+              color: theme.accent,
               borderRadius: '8px',
               fontWeight: '500',
               border: 'none',
@@ -274,7 +274,7 @@ export default function ProfileTab() {
               <div style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                 Share check-ins with connections
               </div>
-              <div style={{ color: '#919191', fontSize: '12px', marginTop: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              <div style={{ color: theme.muted, fontSize: '12px', marginTop: '2px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                 Lets people you&apos;ve connected with see which venues you visit.
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function ProfileTab() {
                   })
                   .finally(() => setShareCheckinsSaving(false));
               }}
-              style={{ width: '20px', height: '20px', accentColor: '#17BFD9', flexShrink: 0, cursor: 'pointer' }}
+              style={{ width: '20px', height: '20px', accentColor: theme.accent, flexShrink: 0, cursor: 'pointer' }}
             />
           </div>
         </div>
@@ -328,14 +328,14 @@ export default function ProfileTab() {
                   transition: 'background-color 0.2s ease',
                   fontFamily: 'Montserrat, system-ui, sans-serif'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F3F3'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.surface2}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Icon style={{ width: '20px', height: '20px', color: '#919191' }} />
+                  <Icon style={{ width: '20px', height: '20px', color: theme.muted }} />
                   <span style={{ fontWeight: '500', fontSize: '16px' }}>{item.label}</span>
                 </div>
-                <ChevronRight style={{ width: '20px', height: '20px', color: '#919191' }} />
+                <ChevronRight style={{ width: '20px', height: '20px', color: theme.muted }} />
               </button>
             );
           })}
@@ -398,7 +398,7 @@ export default function ProfileTab() {
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>Logout</h3>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               marginBottom: '24px',
               fontSize: '16px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -409,7 +409,7 @@ export default function ProfileTab() {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#F3F3F3',
+                  backgroundColor: theme.surface2,
                   borderRadius: '12px',
                   fontWeight: '500',
                   border: 'none',

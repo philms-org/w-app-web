@@ -146,7 +146,7 @@ export default function ProfileEditPage() {
               backgroundColor: theme.accent, borderRadius: '9999px', display: 'flex',
               alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: 'white', fontSize: '16px', fontWeight: 'bold' }}>+</span>
+              <span style={{ color: '#0D0D0F', fontSize: '16px', fontWeight: 'bold' }}>+</span>
             </div>
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
@@ -199,7 +199,7 @@ export default function ProfileEditPage() {
           onClick={handleSave}
           disabled={isLoading || !name.trim()}
           style={{
-            width: '100%', backgroundColor: theme.accent, color: 'white', border: 'none',
+            width: '100%', backgroundColor: theme.accent, color: '#0D0D0F', border: 'none',
             borderRadius: '12px', padding: '14px 0', fontSize: '15px', fontWeight: 700,
             cursor: isLoading || !name.trim() ? 'default' : 'pointer',
             opacity: isLoading || !name.trim() ? 0.6 : 1,
