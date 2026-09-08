@@ -39,8 +39,37 @@ Still needs the founder (no creds in the agent environment):
 4. Optional: `git config user.email` — recent commits recorded a
    `@Macbook-Pro-Santiago-Ramos.local` committer.
 
-Phase B (web⇄iOS design alignment) not started — see
-`docs/superpowers/specs/2026-09-03-web-ios-design-alignment-design.md`.
+### Phase B — web⇄iOS design alignment (started 2026-09-08)
+Spec: `docs/superpowers/specs/2026-09-03-web-ios-design-alignment-design.md`.
+Shared reference now written: `docs/design-system.md` (color roles, type,
+radius, elevation, component specs — both repos point at it).
+
+- **Stage 1 (design-system doc)** — DONE (`docs/design-system.md`).
+- **Stage 2 (web theme reconciliation)** — DONE. `lib/theme.ts` is now the
+  single token source: `lightTheme`/`darkTheme` role maps (spec §4) + a
+  legacy-shaped `theme` built from the light roles. **The whole web app
+  flipped from the stray dark palette back to iOS-matching light**
+  (`#F0F6FA` ground, white cards, `#231E20` ink, `#22C3C9` accent). Dark is
+  fully defined, not activated. `tailwind.config.ts` w-blue → `#22C3C9`;
+  dead `.bg-w-*` / gradient / shadow CSS stripped from `globals.css`.
+  Verified: `scripts/verify-theme-tokens.mjs`, `tsc`, `next build`, visual.
+  Plan doc: `docs/superpowers/plans/2026-09-03-web-theme-token-reconciliation.md`
+  (note: deviated from its flat-merge structure — role/legacy `surface`
+  keys collide; made them separate objects).
+- **Stage 3 (component layer)** — PARTIAL. `lib/theme.ts` gained
+  `radius`/`elevation`/`type` tokens; `components/ui/primitives.tsx` has
+  `Button`/`Card`/`Chip`/`Input`; `TabBar` upgraded to the dark
+  `tabBarBg`. **Not yet done:** wiring the primitives into the ~20 existing
+  screens (still hand-rolled inline styles), a `FeedRow` primitive, and a
+  `useTheme()` + `prefers-color-scheme`/toggle to actually switch dark on.
+
+### Phase B remaining (not started)
+- Stage 3 completion (primitive wiring across screens).
+- Stage 4–5: iOS token pass + 5-tab→3-tab IA (separate repo `w-app-ios`).
+- Stage 6: parity feature build-out (web: Events, Badges, QR/Links grid,
+  word meter, 5-step onboarding; iOS: Zones, analytics, Privacy page).
+- Stage 7: engagement / leveling system (shared spec, both platforms).
+- `.worktrees/location-requests`: migration 0020 + 5-task plan, unbuilt.
 
 ## ONE-LINE STATUS
 Prod migrations 0001-0019 are ALL APPLIED + VERIFIED on prod. As of
