@@ -7,7 +7,7 @@ import { signOut } from '@/lib/auth';
 import { fetchProfile, setShareCheckinsWithFriends } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import {
-  Camera, Edit2, Shield, HelpCircle,
+  Camera, Edit2, Shield,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
 } from 'lucide-react';
 
@@ -41,7 +41,6 @@ export default function ProfileTab() {
     { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/privacy') },
-    { id: 'help', label: 'Help & Support', icon: HelpCircle, action: () => router.push('/help') },
   ];
 
   const lookingForItems = [
