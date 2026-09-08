@@ -2,35 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The W App Custom Classes - Force Include */
-.bg-gradient-w {
-  background: linear-gradient(135deg, #5A6570 0%, #22262B 100%);
-}
-
-.bg-w-blue { background-color: #17BFD9; }
-.bg-w-pink { background-color: #EC2C91; }
-.bg-w-gray { background-color: #D5D5D5; }
-.bg-w-light-gray { background-color: #F3F3F3; }
-.bg-w-back-gray { background-color: #F0F6FA; }
-.bg-w-light-blue { background-color: #D0F2F7; }
-
-.bg-w-black { background-color: #231E20; }
-
-.text-w-blue { color: #17BFD9; }
-.text-w-pink { color: #EC2C91; }
-.text-w-black { color: #231E20; }
-.text-w-dark-gray { color: #919191; }
-
-.border-w-blue { border-color: #17BFD9; }
-.border-w-gray { border-color: #D5D5D5; }
-.border-w-light-gray { border-color: #F3F3F3; }
-
-.text-gradient {
-  background: linear-gradient(135deg, #5A6570 0%, #22262B 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* Colors live in lib/theme.ts (the .bg-w-* / .text-w-* / gradient / shadow
+   custom classes that used to sit here were unreferenced and drifted to the
+   stray dark palette — removed in the theme-token reconciliation). */
 
 @layer base {
   :root {
@@ -52,67 +26,14 @@
     overscroll-behavior: none;
   }
 
-  /* iOS Safe Area */
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    /* plain CSS: Tailwind v4 can't @apply the custom .bg-w-* classes */
-    background-color: #D5D5D5;
-    border-radius: 9999px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: #919191;
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: #D5D5D5; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: #919191; }
 }
-
-/* Component classes (.btn-primary, .card, etc.) removed: they were
-   never referenced by any component (all styling is inline) and their
-   @apply of custom .bg-w-* utilities broke under Tailwind v4, spamming
-   build errors. Rebuild a real component layer post-launch if desired. */
-
-
-@layer utilities {
-  /* Text styles */
-  .text-gradient {
-    /* plain CSS — @apply can't resolve the custom .bg-gradient-w class in v4 */
-    background: linear-gradient(135deg, #17BFD9 0%, #EC2C91 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Shadow styles */
-  .shadow-w {
-    box-shadow: 0 4px 20px rgba(23, 191, 217, 0.15);
-  }
-
-  /* Animation utilities */
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* iOS bounce scroll */
-  .ios-scroll {
-    -webkit-overflow-scrolling: touch;
-  }
-}/* Force rebuild */
 
 @keyframes spin {
   from { transform: rotate(0deg); }

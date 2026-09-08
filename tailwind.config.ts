@@ -9,14 +9,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        'w-blue': '#17BFD9',
-        'w-pink': '#EC2C91', 
+        // Bridges the few remaining `w-*` utility classes to the shared
+        // light palette. New work should use lib/theme.ts, not these.
+        'w-blue': '#22C3C9',       // == accent
+        'w-pink': '#EC2C91',       // == accent2
         'w-gray': '#D5D5D5',
-        'w-light-gray': '#F3F3F3',
-        'w-back-gray': '#F0F6FA',
+        'w-light-gray': '#F3F3F3', // == surfaceRaised2
+        'w-back-gray': '#F0F6FA',  // == surface
         'w-light-blue': '#D0F2F7',
-        'w-dark-gray': '#919191',
-        'w-black': '#231E20',
+        'w-dark-gray': '#919191',  // == contentMuted
+        'w-black': '#231E20',      // == content
       },
       fontFamily: {
         'montserrat': ['Montserrat', 'system-ui', 'sans-serif'],
