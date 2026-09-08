@@ -12,6 +12,7 @@ import StepLookingFor from '@/components/onboarding/StepLookingFor';
 import StepLocation from '@/components/onboarding/StepLocation';
 import StepWork from '@/components/onboarding/StepWork';
 import StepFun from '@/components/onboarding/StepFun';
+import StepVisibility from '@/components/onboarding/StepVisibility';
 import {
   EMPTY_DATA,
   STEP_TITLES,
@@ -114,7 +115,7 @@ export default function ProfileSetupPage() {
         {step === 2 && <StepLocation data={data} patch={patch} />}
         {step === 3 && <StepWork data={data} patch={patch} />}
         {step === 4 && <StepFun data={data} patch={patch} />}
-        {/* step 5 added in Task 6 */}
+        {step === 5 && <StepVisibility data={data} patch={patch} />}
       </div>
 
       <div
