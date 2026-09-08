@@ -9,6 +9,9 @@ import { theme, type as typeTokens } from '@/lib/theme';
 import { Button } from '@/components/ui/primitives';
 import WizardProgress from '@/components/onboarding/WizardProgress';
 import StepLookingFor from '@/components/onboarding/StepLookingFor';
+import StepLocation from '@/components/onboarding/StepLocation';
+import StepWork from '@/components/onboarding/StepWork';
+import StepFun from '@/components/onboarding/StepFun';
 import {
   EMPTY_DATA,
   STEP_TITLES,
@@ -108,7 +111,10 @@ export default function ProfileSetupPage() {
 
       <div style={{ flex: 1, padding: '24px', paddingBottom: 96, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {step === 1 && <StepLookingFor data={data} patch={patch} />}
-        {/* steps 2–5 added in Tasks 3–6 */}
+        {step === 2 && <StepLocation data={data} patch={patch} />}
+        {step === 3 && <StepWork data={data} patch={patch} />}
+        {step === 4 && <StepFun data={data} patch={patch} />}
+        {/* step 5 added in Task 6 */}
       </div>
 
       <div
