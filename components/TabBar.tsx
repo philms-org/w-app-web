@@ -1,7 +1,10 @@
 'use client';
 
 import { MapPin, MessageCircle } from 'lucide-react';
-import { theme } from '@/lib/theme';
+import { theme, lightTheme } from '@/lib/theme';
+
+// The tab bar keeps its dark `tabBarBg` even in the light theme (matches iOS).
+const INACTIVE = 'rgba(255,255,255,.55)';
 
 interface TabBarProps {
   activeTab: string;
@@ -22,8 +25,8 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: theme.bg,
-      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+      backgroundColor: lightTheme.tabBarBg,
+      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
@@ -34,7 +37,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
-        const color = isActive ? theme.accent : '#919191';
+        const color = isActive ? theme.accent : INACTIVE;
 
         return (
           <button

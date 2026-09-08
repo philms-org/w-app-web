@@ -90,3 +90,31 @@ export const theme = legacyView(lightTheme);
 // Also exported for the eventual switch-over.
 export const legacyLight = legacyView(lightTheme);
 export const legacyDark = legacyView(darkTheme);
+
+// --- non-color tokens (design-system.md §3–§5) ---
+
+export const radius = {
+  control: 12, // buttons, inputs
+  card: 16,
+  sheet: 20,
+  pill: 999, // chips, pills, avatars
+} as const;
+
+export const elevation = {
+  // Light theme: soft shadow. Dark theme: use a 1px `border` hairline instead.
+  card: '0 4px 16px rgba(35,30,32,.08)',
+  sheet: '0 8px 28px rgba(35,30,32,.12)',
+} as const;
+
+export const type = {
+  family: 'Montserrat, system-ui, sans-serif',
+  display: { fontSize: 32, lineHeight: 1.15, fontWeight: 700 },
+  title: { fontSize: 22, lineHeight: 1.2, fontWeight: 700 },
+  heading: { fontSize: 18, lineHeight: 1.3, fontWeight: 700 },
+  label: { fontSize: 14, lineHeight: 1.3, fontWeight: 600 },
+  body: { fontSize: 15, lineHeight: 1.5, fontWeight: 400 },
+  caption: { fontSize: 13, lineHeight: 1.4, fontWeight: 400 },
+} as const;
+
+// Readable text colour to sit on top of an `accent` fill.
+export const onAccent = '#0D0D0F';
