@@ -8,6 +8,7 @@ import { ChevronLeft } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button } from '@/components/ui/primitives';
 import WizardProgress from '@/components/onboarding/WizardProgress';
+import StepLookingFor from '@/components/onboarding/StepLookingFor';
 import {
   EMPTY_DATA,
   STEP_TITLES,
@@ -106,10 +107,8 @@ export default function ProfileSetupPage() {
       </div>
 
       <div style={{ flex: 1, padding: '24px', paddingBottom: 96, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-        {/* Task 2–6 replace this block with the step components. */}
-        <p style={{ color: theme.muted, fontSize: typeTokens.body.fontSize }}>
-          Step {step} of {TOTAL_STEPS}
-        </p>
+        {step === 1 && <StepLookingFor data={data} patch={patch} />}
+        {/* steps 2–5 added in Tasks 3–6 */}
       </div>
 
       <div
