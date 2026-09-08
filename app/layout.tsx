@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const montserrat = Montserrat({ 
@@ -10,13 +11,38 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "The W App",
-  description: "Connect with people at your location",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "The W App",
+    template: "%s · The W App",
+  },
+  applicationName: "The W App",
+  description:
+    "The W App connects you with the people around you. Check in at a venue to see who's there, make connections, and join the room's live chat.",
+  keywords: [
+    "meet people nearby",
+    "venue check-in",
+    "location social app",
+    "connect at events",
+    "who's here",
+  ],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "The W App",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "The W App",
+    url: SITE_URL,
+    title: "The W App",
+    description: "Connect with people at your location.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The W App",
+    description: "Connect with people at your location.",
   },
 };
 

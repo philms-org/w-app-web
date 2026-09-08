@@ -1,115 +1,139 @@
-'use client';
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import AuthedRedirect from '@/components/AuthedRedirect';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useStore } from '@/lib/store';
-import Image from 'next/image';
-import { theme } from '@/lib/theme';
+export const metadata: Metadata = {
+  description:
+    "Check in at a venue to see who's there, make connections, and join the room's live chat. The W App is a location-first way to meet the people around you.",
+  alternates: { canonical: '/' },
+};
 
-export default function LaunchPage() {
-  const router = useRouter();
-  const { isAuthenticated } = useStore();
+const VALUE_PROPS = [
+  {
+    title: 'See who’s here',
+    body: 'Check in at a venue and get a live view of the people in the room with you.',
+  },
+  {
+    title: 'Make the connection',
+    body: 'Swap contacts with a tap or a QR scan. Your connections stay with you after you leave.',
+  },
+  {
+    title: 'Join the room',
+    body: 'Every checked-in venue has its own live chat and feed while you’re there.',
+  },
+];
 
-  useEffect(() => {
-    // Check authentication status after a brief delay
-    const timer = setTimeout(() => {
-      if (isAuthenticated) {
-        router.push('/main');
-      } else {
-        router.push('/welcome');
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, router]);
-
+// Server-rendered so crawlers and link unfurls get real content. Authenticated
+// visitors are still bounced straight to the app by <AuthedRedirect>.
+export default function HomePage() {
   return (
-    <div 
+    <main
       style={{
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
-        padding: '32px'
+        background: 'linear-gradient(135deg, #0d0d0f 0%, #22262b 100%)',
+        color: '#f5f5f7',
+        padding: '64px 24px 48px',
+        fontFamily: 'Montserrat, system-ui, sans-serif',
       }}
     >
-      <div style={{ animation: 'scaleIn 0.6s ease-out' }}>
-        {/* W App Logo */}
-        <div 
+      <AuthedRedirect />
+
+      <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
+        <div
           style={{
+            width: 88,
+            height: 88,
+            borderRadius: 24,
+            background: '#22c3c9',
+            color: '#0d0d0f',
+            fontSize: 52,
+            fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '128px',
-            height: '128px',
-            backgroundColor: 'white',
-            borderRadius: '50%',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            margin: '0 auto 32px'
+            margin: '0 auto 28px',
           }}
         >
-          <span 
+          W
+        </div>
+
+        <h1 style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.1, margin: '0 0 12px' }}>
+          Connect with people at your location
+        </h1>
+        <p style={{ fontSize: 18, color: 'rgba(245,245,247,0.7)', margin: '0 0 36px' }}>
+          The W App turns the room you’re standing in into a way to meet people. Check in,
+          see who’s there, and connect.
+        </p>
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            href="/auth/register"
             style={{
-              fontSize: '64px',
-              fontWeight: 'bold',
-              background: `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
+              background: '#22c3c9',
+              color: '#0d0d0f',
+              fontWeight: 700,
+              fontSize: 16,
+              padding: '14px 28px',
+              borderRadius: 12,
+              textDecoration: 'none',
             }}
           >
-            W
-          </span>
-        </div>
-        
-        <h1 style={{ 
-          fontSize: '48px', 
-          fontWeight: 'bold', 
-          textAlign: 'center', 
-          color: 'white',
-          marginBottom: '8px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>
-          The W App
-        </h1>
-        <p style={{ 
-          textAlign: 'center', 
-          fontSize: '18px',
-          color: 'rgba(255, 255, 255, 0.8)',
-          marginBottom: '32px',
-          fontFamily: 'Montserrat, system-ui, sans-serif'
-        }}>
-          Connect at your location
-        </p>
-        
-        {/* Loading indicator */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div 
+            Get started
+          </Link>
+          <Link
+            href="/auth/login"
             style={{
-              width: '24px',
-              height: '24px',
-              border: '3px solid rgba(255, 255, 255, 0.3)',
-              borderTop: '3px solid white',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
+              border: '1.5px solid #22c3c9',
+              color: '#f5f5f7',
+              fontWeight: 700,
+              fontSize: 16,
+              padding: '14px 28px',
+              borderRadius: 12,
+              textDecoration: 'none',
             }}
-          ></div>
+          >
+            Sign in
+          </Link>
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes scaleIn {
-          0% { transform: scale(0.9); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
-    </div>
+      <section
+        style={{
+          width: '100%',
+          maxWidth: 900,
+          display: 'grid',
+          gap: 20,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          margin: '64px auto 0',
+        }}
+      >
+        {VALUE_PROPS.map((p) => (
+          <div
+            key={p.title}
+            style={{
+              background: '#1a1a1d',
+              border: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: 16,
+              padding: '24px 20px',
+              textAlign: 'left',
+            }}
+          >
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>{p.title}</h2>
+            <p style={{ fontSize: 15, color: 'rgba(245,245,247,0.6)', margin: 0, lineHeight: 1.5 }}>
+              {p.body}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      <footer style={{ marginTop: 56, fontSize: 13, color: 'rgba(245,245,247,0.4)' }}>
+        <Link href="/privacy" style={{ color: 'inherit' }}>
+          Privacy
+        </Link>
+      </footer>
+    </main>
   );
 }
