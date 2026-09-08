@@ -192,7 +192,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
                         padding: '10px 0',
                         fontSize: '16px',
                         textAlign: 'center',
-                        color: theme.bg,
+                        color: theme.text,
                         fontFamily: 'Montserrat, system-ui, sans-serif',
                       }}
                     />
@@ -210,7 +210,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
                         borderRadius: '9999px',
                         padding: '10px 16px',
                         fontSize: '14px',
-                        color: theme.bg,
+                        color: theme.text,
                         fontFamily: 'Montserrat, system-ui, sans-serif',
                       }}
                     />

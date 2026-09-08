@@ -173,7 +173,7 @@ export default function HistoryTab() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{
-                      color: theme.bg,
+                      color: theme.text,
                       fontSize: '14px',
                       fontWeight: 600,
                       fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -183,7 +183,7 @@ export default function HistoryTab() {
                     )}
                   </div>
                   <p style={{
-                    color: theme.bg,
+                    color: theme.text,
                     fontSize: '15px',
                     marginTop: '2px',
                     fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -257,7 +257,7 @@ export default function HistoryTab() {
             }}
           >
             <div style={{ textAlign: 'left' }}>
-              <div style={{ color: theme.bg, fontSize: '16px', fontWeight: 600 }}>{venue.name}</div>
+              <div style={{ color: theme.text, fontSize: '16px', fontWeight: 600 }}>{venue.name}</div>
               {venue.address && (
                 <div style={{ color: '#919191', fontSize: '13px', marginTop: '2px' }}>{venue.address}</div>
               )}

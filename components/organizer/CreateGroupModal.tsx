@@ -100,7 +100,7 @@ export default function CreateGroupModal({ attendees, onClose, onCreated }: Crea
             borderRadius: '9999px',
             padding: '10px 16px',
             fontSize: '14px',
-            color: theme.bg,
+            color: theme.text,
             fontFamily: 'Montserrat, system-ui, sans-serif',
             marginBottom: '12px'
           }}
@@ -158,7 +158,7 @@ export default function CreateGroupModal({ attendees, onClose, onCreated }: Crea
                     flexShrink: 0,
                     border: isSelected ? `2px solid ${theme.accent}` : '2px solid transparent'
                   }}>
-                    <span style={{ color: theme.bg, fontSize: '14px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                    <span style={{ color: theme.text, fontSize: '14px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                       {(attendee.display_name ?? '?').charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -196,7 +196,7 @@ export default function CreateGroupModal({ attendees, onClose, onCreated }: Crea
             borderRadius: '9999px',
             padding: '10px 16px',
             fontSize: '14px',
-            color: theme.bg,
+            color: theme.text,
             fontFamily: 'Montserrat, system-ui, sans-serif',
             marginBottom: '12px'
           }}

@@ -48,7 +48,7 @@ export default function InlineMessageComposer({ recipient, onSent }: InlineMessa
             borderRadius: '9999px',
             padding: '10px 16px',
             fontSize: '14px',
-            color: theme.bg,
+            color: theme.text,
             fontFamily: 'Montserrat, system-ui, sans-serif'
           }}
         />

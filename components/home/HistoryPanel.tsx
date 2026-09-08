@@ -185,7 +185,7 @@ export default function HistoryPanel() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <User style={{ width: '16px', height: '16px', color: theme.bg }} />
+                  <User style={{ width: '16px', height: '16px', color: theme.text }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

@@ -378,7 +378,7 @@ function VenueCarouselPageInner() {
                         borderRadius: '9999px',
                         padding: '8px 14px',
                         fontSize: '13px',
-                        color: theme.bg,
+                        color: theme.text,
                         fontFamily: 'Montserrat, system-ui, sans-serif',
                         width: '100%',
                         boxSizing: 'border-box',

@@ -43,7 +43,7 @@ export default function AttendeeStrip({ attendees, selectedId, onSelect, tagsByU
               justifyContent: 'center',
               border: attendee.id === selectedId ? `2px solid ${theme.accent}` : '2px solid transparent'
             }}>
-              <span style={{ color: theme.bg, fontSize: '16px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              <span style={{ color: theme.text, fontSize: '16px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                 {(attendee.display_name ?? '?').charAt(0).toUpperCase()}
               </span>
             </div>

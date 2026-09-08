@@ -180,7 +180,7 @@ function VenueMembersPageInner() {
             borderRadius: '9999px',
             padding: '10px 16px',
             fontSize: '14px',
-            color: theme.bg,
+            color: theme.text,
             fontFamily: 'Montserrat, system-ui, sans-serif',
             marginBottom: '16px',
           }}
@@ -222,7 +222,7 @@ function VenueMembersPageInner() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={m.profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ color: theme.bg, fontSize: '16px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                    <span style={{ color: theme.text, fontSize: '16px', fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                       {(m.profile.display_name ?? '?').charAt(0).toUpperCase()}
                     </span>
                   )}
