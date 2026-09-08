@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { theme } from '@/lib/theme';
 import { Users, Lock } from 'lucide-react';
 import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
+import { FeedRow } from '@/components/ui/primitives';
 import { fetchMyConnectionCount, fetchFriendsActivity } from '@/lib/data';
 import type { FriendActivityEntry } from '@/lib/types';
 
@@ -94,30 +95,22 @@ export default function FriendsActivityFeed() {
         </p>
       ) : (
         entries.map((e) => (
-          <div
+          <FeedRow
             key={`${e.user_id}-${e.checked_in_at}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0' }}
-          >
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '9999px',
-              backgroundColor: theme.surface2, flexShrink: 0, overflow: 'hidden',
-            }}>
-              {e.avatar_url && (
-                <img src={e.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
-            </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: theme.text, fontSize: '14px', fontWeight: 600 }}>
-                {e.name ?? 'Someone'}
-              </div>
-              <div style={{ color: theme.muted, fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {e.is_active ? 'At' : 'Was at'} {e.venue_name} · {fmtShortDate(e.checked_in_at)}
-              </div>
-            </div>
-            {e.is_active && (
-              <span style={{ width: '8px', height: '8px', borderRadius: '9999px', backgroundColor: theme.green, flexShrink: 0 }} />
-            )}
-          </div>
+            style={{ background: 'transparent', padding: '10px 0' }}
+            avatar={
+              e.avatar_url ?? (
+                <div style={{ width: 40, height: 40, borderRadius: 999, backgroundColor: theme.surface2 }} />
+              )
+            }
+            title={e.name ?? 'Someone'}
+            subtitle={`${e.is_active ? 'At' : 'Was at'} ${e.venue_name} · ${fmtShortDate(e.checked_in_at)}`}
+            trailing={
+              e.is_active ? (
+                <span style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: theme.green, display: 'block' }} />
+              ) : undefined
+            }
+          />
         ))
       )}
     </div>

@@ -128,8 +128,8 @@ export default function NearbyBanner() {
             onClick={() => handleCheckIn(venue)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              width: '100%', backgroundColor: theme.accent, color: 'white', border: 'none',
-              borderRadius: '9999px', padding: '8px 0', fontSize: '13px', fontWeight: 600,
+              width: '100%', backgroundColor: theme.accent, color: '#0D0D0F', border: 'none',
+              borderRadius: '12px', padding: '8px 0', fontSize: '13px', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
             }}
           >
@@ -142,7 +142,7 @@ export default function NearbyBanner() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               width: '100%', backgroundColor: theme.surface2, color: theme.accent,
-              border: `1px solid ${theme.divider}`, borderRadius: '9999px', padding: '8px 0',
+              border: `1px solid ${theme.divider}`, borderRadius: '12px', padding: '8px 0',
               fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               fontFamily: 'Montserrat, system-ui, sans-serif',
             }}
@@ -211,8 +211,8 @@ export default function NearbyBanner() {
             onClick={handleRefresh}
             disabled={refreshing}
             style={{
-              backgroundColor: theme.accent, color: 'white', border: 'none',
-              borderRadius: '9999px', padding: '10px 24px', fontSize: '14px', fontWeight: 600,
+              backgroundColor: theme.accent, color: '#0D0D0F', border: 'none',
+              borderRadius: '12px', padding: '10px 24px', fontSize: '14px', fontWeight: 700,
               cursor: refreshing ? 'default' : 'pointer', marginBottom: '12px',
               fontFamily: 'Montserrat, system-ui, sans-serif',
             }}

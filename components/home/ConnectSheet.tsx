@@ -90,12 +90,12 @@ export default function ConnectSheet() {
         href="/main/connect/scan"
         style={{
           backgroundColor: theme.accent,
-          color: 'white',
+          color: '#0D0D0F',
           border: 'none',
-          borderRadius: '9999px',
+          borderRadius: '12px',
           padding: '10px 24px',
           fontSize: '14px',
-          fontWeight: 600,
+          fontWeight: 700,
           cursor: 'pointer',
           fontFamily: 'Montserrat, system-ui, sans-serif',
           display: 'inline-flex',
