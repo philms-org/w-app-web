@@ -1,4 +1,46 @@
-# W App — Launch Prep: RESUME HERE (updated 2026-09-03)
+# W App — Launch Prep: RESUME HERE (updated 2026-09-08)
+
+## SHIP-READINESS PASS — 2026-09-08 (branch `main`, still unpushed)
+Consolidated the `docs/web-ios-design-alignment` branch back onto `main`
+(2 doc commits, rebased). `main` is now **95+ commits ahead of
+`origin/main`** and **builds clean** (`npm run build`, lint+type gates on).
+The earlier local build failure was only a stale `node_modules` (qrcode) —
+`npm install` fixed it; `package-lock.json` was already correct, so Vercel
+`npm ci` is fine.
+
+Done this pass:
+- **Stale worktrees pruned** — `friendly-franklin`, `quirky-montalcini`,
+  `happy-lewin` removed. `.worktrees/location-requests` kept (active:
+  migration 0020 + 5-task plan, not yet built).
+- **Dead nav links removed** — Settings, Notifications, Help (ProfileTab),
+  Forgot Password (login). All were 404s.
+- **Password reset flow built** — `/auth/forgot-password` + `/auth/reset`
+  (Supabase `resetPasswordForEmail` / `updateUser`), "Forgot password?"
+  link restored. Needs the Supabase project's redirect allow-list to
+  include `<origin>/auth/reset`, and the recovery email template.
+- **SEO/meta pack** — `app/robots.ts`, `app/sitemap.ts`,
+  `app/opengraph-image.tsx` (next/og), expanded `app/layout.tsx` metadata
+  (metadataBase, OG, twitter), `lib/site.ts` (origin resolver).
+- **Crawlable landing** — `app/page.tsx` was a client redirect to
+  `/welcome`; now server-rendered marketing content. Signed-in users still
+  bounce to `/main`. NOTE: first-time visitors no longer auto-land on the
+  `/welcome` carousel — it's still reachable but nothing links to it now.
+- **"Hide paused stubs" launch item is OBSOLETE** — Connect QR and Friends
+  Activity were built for real in the connections-v2 / friends-feed work.
+  Peek stays intentionally preview-only.
+
+Still needs the founder (no creds in the agent environment):
+1. `git push origin main` from an authenticated terminal.
+2. Deploy to Vercel (prod) + set env: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, optionally `NEXT_PUBLIC_SITE_URL`,
+   `NEXT_PUBLIC_SENTRY_DSN`, Sentry build vars.
+3. Supabase Auth: add the prod origin + `/auth/reset` to redirect URLs;
+   confirm the password-recovery email template.
+4. Optional: `git config user.email` — recent commits recorded a
+   `@Macbook-Pro-Santiago-Ramos.local` committer.
+
+Phase B (web⇄iOS design alignment) not started — see
+`docs/superpowers/specs/2026-09-03-web-ios-design-alignment-design.md`.
 
 ## ONE-LINE STATUS
 Prod migrations 0001-0019 are ALL APPLIED + VERIFIED on prod. As of
