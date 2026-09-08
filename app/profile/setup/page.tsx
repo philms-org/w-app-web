@@ -1,218 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { upsertProfile } from '@/lib/data';
-import { ChevronLeft, Users, Briefcase, Heart } from 'lucide-react';
-import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
-import { theme, type as typeTokens, radius } from '@/lib/theme';
-import { Button, Input } from '@/components/ui/primitives';
+import { fetchProfile, upsertProfile } from '@/lib/data';
+import { ChevronLeft } from 'lucide-react';
+import { theme, type as typeTokens } from '@/lib/theme';
+import { Button } from '@/components/ui/primitives';
+import WizardProgress from '@/components/onboarding/WizardProgress';
+import {
+  EMPTY_DATA,
+  STEP_TITLES,
+  profileToData,
+  dataToProfilePatch,
+  type OnboardingData,
+} from '@/components/onboarding/types';
 
-type OptionButtonProps = {
-  emoji: string;
-  label: string;
-  selected: boolean;
-  accent: string;
-  onClick: () => void;
-};
-
-function OptionButton({ emoji, label, selected, accent, onClick }: OptionButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: '12px',
-        borderRadius: radius.control,
-        border: `2px solid ${selected ? accent : theme.divider}`,
-        backgroundColor: selected ? accent : theme.surface,
-        color: selected ? '#0D0D0F' : theme.text,
-        fontSize: '14px',
-        fontWeight: selected ? 700 : 400,
-        fontFamily: typeTokens.family,
-        cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}
-    >
-      <span style={{ fontSize: '18px' }}>{emoji}</span>
-      <span>{label}</span>
-    </button>
-  );
-}
+const TOTAL_STEPS = STEP_TITLES.length;
 
 export default function ProfileSetupPage() {
   const router = useRouter();
   const { user, setUser } = useStore();
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState(1); // 1-indexed
+  const [data, setData] = useState<OnboardingData>(EMPTY_DATA);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
-    datingId: '0',
-    socialisingId: '0',
-    networkingId: '0',
-    nationality: '',
-    city: '',
-    drink: '',
-    activity: '',
-    profession: '',
-  });
+  // Pre-fill from the existing profile row (non-destructive re-entry).
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchProfile(user.id)
+      .then((p) => { if (!cancelled) setData(profileToData(p)); })
+      .catch(() => { /* new user with no row yet — keep EMPTY_DATA */ });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
-  const handleSave = async () => {
+  const patch = (partial: Partial<OnboardingData>) =>
+    setData((d) => ({ ...d, ...partial }));
+
+  const canAdvance = step !== 1
+    ? true
+    : data.socialisingId !== '0' || data.networkingId !== '0' || data.datingId !== '0';
+
+  const handleBack = () => {
+    if (step === 1) router.back();
+    else setStep((s) => s - 1);
+  };
+
+  const handleNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+
+  const handleFinish = async () => {
     if (!user) {
       router.push('/auth/login');
       return;
     }
-    setIsLoading(true);
-
+    setIsSaving(true);
     try {
-      await upsertProfile({
-        id: user.id,
-        display_name: user.name,
-        dating_id: formData.datingId ? parseInt(formData.datingId, 10) : null,
-        socialising_id: formData.socialisingId ? parseInt(formData.socialisingId, 10) : null,
-        networking_id: formData.networkingId ? parseInt(formData.networkingId, 10) : null,
-        nationality: formData.nationality || null,
-        city: formData.city || null,
-        fave_drink: formData.drink || null,
-        friday_night: formData.activity || null,
-        profession: formData.profession || null,
+      await upsertProfile(dataToProfilePatch(user.id, data));
+      setUser({
+        ...user,
+        socialisingId: data.socialisingId,
+        networkingId: data.networkingId,
+        datingId: data.datingId,
+        city: data.city.trim(),
+        nationality: data.nationality.trim(),
+        profession: data.profession.trim(),
+        drink: data.favouriteDrink.trim(),
+        activity: data.fridayNight.trim(),
+        relationship: data.relationship.trim() || undefined,
+        setupComplete: true,
       });
-
-      setUser({ ...user, ...formData, setupComplete: true });
       router.push('/main');
     } catch (err) {
-      console.error('Profile save failed:', err);
+      console.error('Onboarding save failed:', err);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const sectionStyle: React.CSSProperties = { marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' };
-  const sectionHeadingStyle: React.CSSProperties = {
-    fontSize: typeTokens.heading.fontSize,
-    fontWeight: 700,
-    color: theme.text,
-    fontFamily: typeTokens.family,
-  };
-  const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' };
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family, display: 'flex', flexDirection: 'column' }}>
       <div
         style={{
           backgroundColor: theme.surface,
           padding: '16px',
           paddingTop: 'max(16px, env(safe-area-inset-top))',
-          display: 'flex',
-          alignItems: 'center',
           borderBottom: `1px solid ${theme.divider}`,
         }}
       >
-        <button
-          onClick={() => router.back()}
-          aria-label="Back"
-          style={{ padding: '8px', marginLeft: '-8px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
-        >
-          <ChevronLeft style={{ width: '24px', height: '24px', color: theme.text }} />
-        </button>
-        <h1 style={{ flex: 1, textAlign: 'center', fontSize: typeTokens.heading.fontSize, fontWeight: 700, color: theme.text }}>
-          Set up your profile
-        </h1>
-        <div style={{ width: '40px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+          <button
+            onClick={handleBack}
+            aria-label="Back"
+            style={{ padding: 8, marginLeft: -8, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
+          >
+            <ChevronLeft style={{ width: 24, height: 24, color: theme.text }} />
+          </button>
+          <h1 style={{ flex: 1, textAlign: 'center', fontSize: typeTokens.heading.fontSize, fontWeight: 700, color: theme.text }}>
+            {STEP_TITLES[step - 1]}
+          </h1>
+          <div style={{ width: 40 }} />
+        </div>
+        <WizardProgress step={step} total={TOTAL_STEPS} />
       </div>
 
-      <div style={{ padding: '24px', paddingBottom: '96px' }}>
-        <h2 style={{ fontSize: typeTokens.title.fontSize, fontWeight: 700, marginBottom: '8px', color: theme.text, textAlign: 'center' }}>
-          What are you looking for?
-        </h2>
-        <p style={{ color: theme.muted, marginBottom: '32px', fontSize: typeTokens.body.fontSize, textAlign: 'center' }}>
-          Choose what type of connections you want
+      <div style={{ flex: 1, padding: '24px', paddingBottom: 96, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {/* Task 2–6 replace this block with the step components. */}
+        <p style={{ color: theme.muted, fontSize: typeTokens.body.fontSize }}>
+          Step {step} of {TOTAL_STEPS}
         </p>
-
-        <div style={sectionStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Users style={{ width: '24px', height: '24px', color: theme.accent }} />
-            <h3 style={sectionHeadingStyle}>Socializing</h3>
-          </div>
-          <div style={grid2}>
-            {LOOKING_FOR_OPTIONS.socializing.options.map((option) => (
-              <OptionButton
-                key={option.id}
-                emoji={option.emoji}
-                label={option.label}
-                accent={theme.accent}
-                selected={formData.socialisingId === option.id.toString()}
-                onClick={() => setFormData((prev) => ({ ...prev, socialisingId: option.id.toString() }))}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Briefcase style={{ width: '24px', height: '24px', color: theme.accent2 }} />
-            <h3 style={sectionHeadingStyle}>Business</h3>
-          </div>
-          <div style={grid2}>
-            {LOOKING_FOR_OPTIONS.business.options.map((option) => (
-              <OptionButton
-                key={option.id}
-                emoji={option.emoji}
-                label={option.label}
-                accent={theme.accent2}
-                selected={formData.networkingId === option.id.toString()}
-                onClick={() => setFormData((prev) => ({ ...prev, networkingId: option.id.toString() }))}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Heart style={{ width: '24px', height: '24px', color: theme.warm1 }} />
-            <h3 style={sectionHeadingStyle}>Where you stand on dating</h3>
-          </div>
-          <div style={grid2}>
-            {LOOKING_FOR_OPTIONS.love.options.map((option) => (
-              <OptionButton
-                key={option.id}
-                emoji={option.emoji}
-                label={option.label}
-                accent={theme.warm1}
-                selected={formData.datingId === option.id.toString()}
-                onClick={() => setFormData((prev) => ({ ...prev, datingId: option.id.toString() }))}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ maxWidth: '400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <Input
-            label="City"
-            type="text"
-            value={formData.city}
-            onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
-            placeholder="Your city"
-          />
-          <Input
-            label="Profession"
-            type="text"
-            value={formData.profession}
-            onChange={(e) => setFormData((prev) => ({ ...prev, profession: e.target.value }))}
-            placeholder="What do you do for work?"
-          />
-          <Input
-            label="Nationality"
-            type="text"
-            value={formData.nationality}
-            onChange={(e) => setFormData((prev) => ({ ...prev, nationality: e.target.value }))}
-            placeholder="Your nationality"
-          />
-        </div>
       </div>
 
       <div
@@ -227,9 +124,15 @@ export default function ProfileSetupPage() {
           paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
         }}
       >
-        <Button onClick={handleSave} fullWidth disabled={isLoading}>
-          {isLoading ? 'Saving…' : 'Complete setup'}
-        </Button>
+        {step < TOTAL_STEPS ? (
+          <Button onClick={handleNext} fullWidth disabled={!canAdvance}>
+            Next
+          </Button>
+        ) : (
+          <Button onClick={handleFinish} fullWidth disabled={isSaving}>
+            {isSaving ? 'Saving…' : 'Complete setup'}
+          </Button>
+        )}
       </div>
     </div>
   );
