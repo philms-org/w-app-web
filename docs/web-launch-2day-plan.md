@@ -74,8 +74,24 @@ prod apply pending founder confirmation. `lib/data.ts` helpers,
 - **0020 note:** `location_requests` still lives only in its worktree; this
   migration took `0021` per the parity spec's convention.
 
-**Parity 4/4 Badges** — plan not yet written. Largest of the four (new
-`badges` + `user_badges` tables + a `recompute_user_badges` function).
+**Parity feature 4/4 — Badges — DONE**
+(plan `docs/superpowers/plans/2026-09-09-badges.md`).
+Migration `0022_badges.sql` (`badges` catalog + `user_badges` +
+`recompute_user_badges()` SECURITY DEFINER + 6 seed rows) **applied to QA**;
+prod apply pending founder confirmation. `lib/data.ts` helpers
+(`fetchBadges`, `fetchMyBadgeIds`, `recomputeMyBadges`,
+`fetchMyActivityWords`) + best-effort `recomputeMyBadges()` fired after
+`checkIn()` and `recordQrScan()`. `/profile/badges` screen
+(`components/profile/BadgeTile.tsx` + `app/profile/badges/page.tsx`):
+earned-first catalog grid, "Your words" chips from activity picks,
+`sessionStorage`-diff "New badge earned!" toast. `ProfileTab` earned strip
++ "Badges" menu entry.
+- Verified in dev: `/profile/badges` renders all 6 tiles with the dev
+  session's "First check-in" lit and the rest locked; ProfileTab card shows
+  the earned chip and routes through. Console clean. tsc + build + lint clean.
+- All awarding is server-side; `user_badges` RLS write policy is `false`.
+
+**All four web parity must-haves are DONE.**
 
 ---
 
