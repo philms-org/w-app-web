@@ -211,6 +211,25 @@ export interface AttendeeActivityPick {
   picked_at: string;
 }
 
+// ---- Badges ----
+
+export interface Badge {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  criteria_kind: string;
+  criteria_threshold: number;
+  sort_order: number;
+}
+
+export interface UserBadge {
+  user_id: string;
+  badge_id: string;
+  earned_at: string;
+}
+
 // ---- Organizer report ----
 
 export interface AttendanceStats {
