@@ -5,7 +5,8 @@ import { ArrowLeft, Send, AlertCircle } from 'lucide-react';
 import { fetchMessages, sendMessage, fetchConversationStatus, respondToConversationRequest } from '@/lib/data';
 import { getCurrentUserId } from '@/lib/auth';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
-import type { Message } from '@/lib/types';
+import TagBadge from '@/components/shared/TagBadge';
+import type { Message, VerificationTag } from '@/lib/types';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 
@@ -20,6 +21,7 @@ export interface ChatConversation {
 interface ChatViewProps {
   conversation: ChatConversation;
   onClose: () => void;
+  tagsByUserId?: Map<string, VerificationTag[]>;
 }
 
 function formatTime(iso: string): string {
@@ -32,7 +34,7 @@ function formatTime(iso: string): string {
   return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
-export default function ChatView({ conversation, onClose }: ChatViewProps) {
+export default function ChatView({ conversation, onClose, tagsByUserId }: ChatViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [uid, setUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -282,8 +284,9 @@ export default function ChatView({ conversation, onClose }: ChatViewProps) {
                 }}
               >
                 {showName && (
-                  <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: FONT, margin: '0 4px 2px' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: FONT, margin: '0 4px 2px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {msg.profiles?.display_name ?? 'Member'}
+                    {(tagsByUserId?.get(msg.sender_id) ?? []).map((t) => <TagBadge key={t.id} tag={t} size="sm" />)}
                   </span>
                 )}
                 <div style={{

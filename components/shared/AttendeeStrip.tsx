@@ -2,6 +2,7 @@
 
 import { theme } from '@/lib/theme';
 import type { Profile, VerificationTag } from '@/lib/types';
+import TagBadge from '@/components/shared/TagBadge';
 
 interface AttendeeStripProps {
   attendees: Profile[];
@@ -58,19 +59,9 @@ export default function AttendeeStrip({ attendees, selectedId, onSelect, tagsByU
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>{attendee.display_name ?? 'Someone'}</span>
             {tags && tags.length > 0 && (
-              <span style={{
-                backgroundColor: theme.surface2,
-                color: theme.text,
-                fontSize: '10px',
-                lineHeight: 1.2,
-                borderRadius: '9999px',
-                padding: '2px 8px',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>{tags.map((t) => (t.icon ? `${t.icon} ` : '') + t.tag).join(', ')}</span>
+              <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                {tags.map((t) => <TagBadge key={t.id} tag={t} size="sm" />)}
+              </span>
             )}
           </button>
         );

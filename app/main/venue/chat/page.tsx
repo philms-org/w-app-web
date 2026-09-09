@@ -21,9 +21,10 @@ import {
   fetchPendingJoinRequests,
   approveJoinRequest,
   denyJoinRequest,
+  fetchVerificationTags,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
-import type { Venue, Conversation, ChatParticipant, JoinRequest } from '@/lib/types';
+import type { Venue, Conversation, ChatParticipant, JoinRequest, VerificationTag } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import ChatView, { type ChatConversation } from '@/components/ChatView';
 
@@ -64,6 +65,7 @@ function VenueChatPageInner() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openChat, setOpenChat] = useState<ChatConversation | null>(null);
   const [modeSaving, setModeSaving] = useState(false);
+  const [tagsByUserId, setTagsByUserId] = useState<Map<string, VerificationTag[]>>(new Map());
 
   const { canManage } = useIsOrganizer(venue?.id);
 
@@ -148,6 +150,26 @@ function VenueChatPageInner() {
   }, [venue, canManage, loadConversationState]);
 
   useEffect(loadEverything, [loadEverything]);
+
+  // Load this venue's verification tags once per venue so ChatView can show
+  // title icons next to group-chat sender names.
+  useEffect(() => {
+    if (!venue?.id) return;
+    let cancelled = false;
+    fetchVerificationTags(venue.id)
+      .then((rows) => {
+        if (cancelled) return;
+        const m = new Map<string, VerificationTag[]>();
+        for (const t of rows) {
+          const list = m.get(t.user_id) ?? [];
+          list.push(t);
+          m.set(t.user_id, list);
+        }
+        setTagsByUserId(m);
+      })
+      .catch((e) => console.error('Failed to load venue tags for chat:', e));
+    return () => { cancelled = true; };
+  }, [venue?.id]);
 
   if (venueLoading) {
     return (
@@ -267,7 +289,7 @@ function VenueChatPageInner() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
-      {openChat && <ChatView conversation={openChat} onClose={() => setOpenChat(null)} />}
+      {openChat && <ChatView conversation={openChat} onClose={() => setOpenChat(null)} tagsByUserId={tagsByUserId} />}
 
       <div style={{ backgroundColor: theme.bg, padding: '16px', paddingTop: 'max(16px, env(safe-area-inset-top))', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.divider}` }}>
         <button onClick={() => router.push('/main')} style={{ padding: '8px', marginLeft: '-8px', backgroundColor: 'transparent', border: 'none', borderRadius: '50%', cursor: 'pointer' }}>
