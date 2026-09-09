@@ -4,10 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
-import { fetchProfile, setShareCheckinsWithFriends } from '@/lib/data';
+import {
+  fetchProfile, setShareCheckinsWithFriends,
+  fetchBadges, fetchMyBadgeIds, recomputeMyBadges,
+} from '@/lib/data';
+import type { Badge } from '@/lib/types';
 import { theme } from '@/lib/theme';
 import {
-  Camera, Edit2, Shield, Link2,
+  Camera, Edit2, Shield, Link2, Award,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
 } from 'lucide-react';
 
@@ -17,6 +21,7 @@ export default function ProfileTab() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [shareCheckins, setShareCheckins] = useState(false);
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState<Badge[]>([]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -26,6 +31,19 @@ export default function ProfileTab() {
       .catch((err) => console.error('Failed to load sharing preference:', err));
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    recomputeMyBadges().catch(() => {});
+    Promise.all([fetchBadges(), fetchMyBadgeIds()])
+      .then(([cat, ids]) => {
+        if (cancelled) return;
+        const set = new Set(ids);
+        setEarnedBadges(cat.filter((b) => set.has(b.id)));
+      })
+      .catch((err) => console.error('Failed to load badges:', err));
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -41,6 +59,7 @@ export default function ProfileTab() {
     { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
     { id: 'links', label: 'My Links', icon: Link2, action: () => router.push('/main/connect/links') },
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
+    { id: 'badges', label: 'Badges', icon: Award, action: () => router.push('/profile/badges') },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/privacy') },
   ];
 
@@ -256,6 +275,37 @@ export default function ProfileTab() {
             Complete Profile
           </button>
         </div>
+
+        {/* Badges */}
+        <button
+          onClick={() => router.push('/profile/badges')}
+          style={{
+            width: '100%', textAlign: 'left', backgroundColor: 'white', borderRadius: '16px',
+            padding: '16px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', marginBottom: '16px',
+            border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
+          }}
+        >
+          <h3 style={{ fontWeight: 600, marginBottom: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Badges</h3>
+          {earnedBadges.length === 0 ? (
+            <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              No badges yet — check in and connect to earn them.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              {earnedBadges.map((b) => (
+                <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '64px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: theme.accent,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Award style={{ width: '20px', height: '20px', color: '#0D0D0F' }} />
+                  </div>
+                  <span style={{ fontSize: '10px', color: theme.muted, textAlign: 'center', lineHeight: 1.2 }}>{b.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </button>
 
         {/* Privacy */}
         <div style={{
