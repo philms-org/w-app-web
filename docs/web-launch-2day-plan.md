@@ -94,10 +94,28 @@ earned-first catalog grid, "Your words" chips from activity picks,
 
 **All four web parity must-haves are DONE.**
 
-**Verified Titles (verification tag catalog) — migration:**
-`0023_verification_tag_types applied + verified on QA (2026-09-09) —
-verification_tag_types catalog + verification_tags.type_id + tag-icons
-bucket + backfill. Prod apply pending.`
+**Verified Titles (verification tag catalog) — DONE**
+(spec `docs/superpowers/specs/2026-09-09-verification-tag-catalog-design.md`,
+plan `docs/superpowers/plans/2026-09-09-verification-tag-catalog.md`).
+Migration `0023_verification_tag_types` (`verification_tag_types` catalog +
+`verification_tags.type_id` + `tag-icons` bucket + backfill) **applied +
+verified on QA and PROD** (2026-09-09): catalog table, `type_id` column,
+`tag-icons` bucket (public), all 4 policies (2 table + 2 storage) present
+on both; QA backfill left 0 unlinked rows, prod had no legacy rows.
+Evolves `verification_tags` in place — a per-venue catalog of reusable
+titles (label + lucide/emoji/image icon), organizer CRUD at
+`/main/venue/titles` + rebuilt `/admin/venue/[id]/tags`, shared `TagBadge`
+renderer on the checked-in feed contact card + venue chat + attendee
+strips, and a "Titles at this venue" grouped roster card. 9 commits
+`c9abe0f`..`1508f73`, subagent-driven with a whole-branch review + fix
+wave. Not exercised in a live browser (previews skipped — no dev auth
+session); tsc + build + lint clean throughout.
+- Fast-follow: standalone roster route; title-rename propagation (snapshot
+  `tag`/`icon` cols don't auto-update, and `fetchTagBreakdown` groups by
+  `type.label` so historical report rows re-group on rename); drop the
+  `verification_tags.tag`/`icon` fallback columns once prod is stable;
+  align the `/admin/venue/[id]/tags` page `<h1>` + unauthorized copy with
+  the "Titles" rename.
 
 ---
 
