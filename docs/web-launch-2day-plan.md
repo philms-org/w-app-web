@@ -77,8 +77,9 @@ prod apply pending founder confirmation. `lib/data.ts` helpers,
 **Parity feature 4/4 — Badges — DONE**
 (plan `docs/superpowers/plans/2026-09-09-badges.md`).
 Migration `0022_badges.sql` (`badges` catalog + `user_badges` +
-`recompute_user_badges()` SECURITY DEFINER + 6 seed rows) **applied to QA**;
-prod apply pending founder confirmation. `lib/data.ts` helpers
+`recompute_user_badges()` SECURITY DEFINER + 6 seed rows) **applied +
+verified on QA and PROD** (2026-09-09): 6 seed rows, `prosecdef` fn,
+all 4 RLS policies present on both. `lib/data.ts` helpers
 (`fetchBadges`, `fetchMyBadgeIds`, `recomputeMyBadges`,
 `fetchMyActivityWords`) + best-effort `recomputeMyBadges()` fired after
 `checkIn()` and `recordQrScan()`. `/profile/badges` screen
