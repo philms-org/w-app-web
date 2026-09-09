@@ -21,6 +21,7 @@ import type {
   ContactMethodBreakdownEntry,
   EngagementStats,
   VenueZone,
+  ActivityMenuItem,
   ZoneAnalytics,
   CrossVenueMovementEntry,
   Connection,
@@ -497,6 +498,66 @@ export async function updateVenueZone(
 
 export async function deleteVenueZone(id: string): Promise<void> {
   const { error } = await supabase.from('venue_zones').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---- Activity menu (per-venue "activity words") ----
+
+export async function fetchActivityMenu(locationId: string): Promise<ActivityMenuItem[]> {
+  const { data, error } = await supabase
+    .from('activity_menu_items')
+    .select()
+    .eq('location_id', locationId)
+    .order('sort_order');
+  if (error) throw error;
+  return (data ?? []) as ActivityMenuItem[];
+}
+
+export async function createActivityMenuItem(
+  locationId: string,
+  label: string,
+  sortOrder: number,
+): Promise<ActivityMenuItem> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('activity_menu_items')
+    .insert({ location_id: locationId, label, sort_order: sortOrder, created_by: uid })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ActivityMenuItem;
+}
+
+export async function updateActivityMenuItem(
+  id: string,
+  fields: Partial<Pick<ActivityMenuItem, 'label' | 'sort_order'>>,
+): Promise<void> {
+  const { error } = await supabase.from('activity_menu_items').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteActivityMenuItem(id: string): Promise<void> {
+  const { error } = await supabase.from('activity_menu_items').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchMyActivityPicks(locationId: string): Promise<string[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('attendee_activity_picks')
+    .select('item_id')
+    .eq('user_id', uid)
+    .eq('location_id', locationId);
+  if (error) throw error;
+  return (data ?? []).map((r) => (r as { item_id: string }).item_id);
+}
+
+export async function setMyActivityPicks(locationId: string, itemIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('set_activity_picks', {
+    p_location_id: locationId,
+    p_item_ids: itemIds,
+  });
   if (error) throw error;
 }
 
