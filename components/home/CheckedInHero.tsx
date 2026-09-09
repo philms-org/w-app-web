@@ -9,7 +9,7 @@ import {
   fetchPresence,
   fetchAttendeeHistory,
   fetchVerificationTags,
-  assignVerificationTag,
+  assignVerificationTagFreeform,
   removeVerificationTag,
   startConversation,
   fetchBanners,
@@ -217,7 +217,7 @@ export default function CheckedInHero() {
     if (!selectedAttendee || !tagText.trim()) return;
     setTagSaving(true);
     setTagError(null);
-    assignVerificationTag(selectedAttendee.id, selectedLocation.id, tagText.trim(), tagIcon.trim() || null)
+    assignVerificationTagFreeform(selectedAttendee.id, selectedLocation.id, tagText.trim(), tagIcon.trim() || null)
       .then(() => {
         setTagText('');
         setTagIcon('');

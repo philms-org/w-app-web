@@ -6,7 +6,7 @@ import {
   fetchVenue,
   fetchAttendeeHistory,
   fetchVerificationTags,
-  assignVerificationTag,
+  assignVerificationTagFreeform,
   removeVerificationTag,
 } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
@@ -64,7 +64,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
     setSavingUserId(userId);
     setError(null);
     const icon = (tagIconByUserId[userId] ?? '').trim() || null;
-    assignVerificationTag(userId, locationId, value, icon)
+    assignVerificationTagFreeform(userId, locationId, value, icon)
       .then(() => {
         setTagTextByUserId((prev) => ({ ...prev, [userId]: '' }));
         setTagIconByUserId((prev) => ({ ...prev, [userId]: '' }));

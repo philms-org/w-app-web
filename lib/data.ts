@@ -707,13 +707,16 @@ export async function fetchVenueMembers(locationId: string): Promise<VenueMember
 
   const { data: tagRows, error: tagError } = await supabase
     .from('verification_tags')
-    .select('*')
+    .select('*, verification_tag_types(*)')
     .eq('location_id', locationId);
   if (tagError) throw tagError;
   const tagsByUser = new Map<string, VerificationTag[]>();
-  for (const t of (tagRows ?? []) as VerificationTag[]) {
+  for (const t of (tagRows ?? []) as (VerificationTag & {
+    verification_tag_types: VerificationTagType | null;
+  })[]) {
     const list = tagsByUser.get(t.user_id) ?? [];
-    list.push(t);
+    const { verification_tag_types, ...rest } = t;
+    list.push({ ...rest, type: verification_tag_types ?? undefined } as VerificationTag);
     tagsByUser.set(t.user_id, list);
   }
 
@@ -745,13 +748,18 @@ export async function fetchVenueMembers(locationId: string): Promise<VenueMember
 export async function fetchVerificationTags(locationId: string): Promise<VerificationTag[]> {
   const { data, error } = await supabase
     .from('verification_tags')
-    .select('*')
+    .select('*, verification_tag_types(*)')
     .eq('location_id', locationId);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((r) => {
+    const { verification_tag_types, ...rest } = r as VerificationTag & {
+      verification_tag_types: VerificationTagType | null;
+    };
+    return { ...rest, type: verification_tag_types ?? undefined } as VerificationTag;
+  });
 }
 
-export async function assignVerificationTag(
+export async function assignVerificationTagFreeform(
   userId: string,
   locationId: string,
   tag: string,
@@ -763,6 +771,86 @@ export async function assignVerificationTag(
     .from('verification_tags')
     .insert({ user_id: userId, location_id: locationId, tag, icon: icon ?? null, assigned_by: uid });
   if (error) throw error;
+}
+
+export async function assignVerificationTag(
+  userId: string,
+  locationId: string,
+  typeId: string,
+): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  const { data: type, error: typeError } = await supabase
+    .from('verification_tag_types')
+    .select('label, icon')
+    .eq('id', typeId)
+    .single();
+  if (typeError) throw typeError;
+  const { error } = await supabase.from('verification_tags').insert({
+    user_id: userId,
+    location_id: locationId,
+    type_id: typeId,
+    tag: (type as { label: string }).label,        // snapshot for the fallback path
+    icon: (type as { icon: string }).icon,
+    assigned_by: uid,
+  });
+  if (error) throw error;
+}
+
+const TAG_ICON_MAX_BYTES = 512 * 1024;
+const TAG_ICON_TYPES: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+};
+
+export async function uploadTagIcon(file: File, locationId: string): Promise<string> {
+  const ext = TAG_ICON_TYPES[file.type];
+  if (!ext) throw new Error('Icon must be a PNG, JPG, WebP, or SVG.');
+  if (file.size > TAG_ICON_MAX_BYTES) throw new Error('Icon must be 512 KB or smaller.');
+  const path = `${locationId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('tag-icons')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+export function tagIconPublicUrl(path: string): string {
+  return supabase.storage.from('tag-icons').getPublicUrl(path).data.publicUrl;
+}
+
+export async function fetchVenueTitleRoster(
+  locationId: string,
+): Promise<{ type: VerificationTagType; people: Profile[] }[]> {
+  const { data, error } = await supabase
+    .from('verification_tags')
+    .select('type_id, verification_tag_types(*), profiles(*)')
+    .eq('location_id', locationId)
+    .not('type_id', 'is', null);
+  if (error) throw error;
+
+  const groups = new Map<string, { type: VerificationTagType; people: Profile[] }>();
+  for (const row of (data ?? []) as unknown as {
+    type_id: string;
+    verification_tag_types: VerificationTagType | null;
+    profiles: Profile | null;
+  }[]) {
+    const type = row.verification_tag_types;
+    const person = row.profiles;
+    if (!type || !person) continue;
+    const g = groups.get(row.type_id) ?? { type, people: [] };
+    if (!g.people.some((p) => p.id === person.id)) g.people.push(person);
+    groups.set(row.type_id, g);
+  }
+  return [...groups.values()]
+    .sort((a, b) => a.type.sort_order - b.type.sort_order)
+    .map((g) => ({
+      type: g.type,
+      people: g.people.sort((a, b) =>
+        (a.display_name ?? '').localeCompare(b.display_name ?? '')),
+    }));
 }
 
 export async function removeVerificationTag(tagId: string): Promise<void> {
@@ -1340,13 +1428,17 @@ export async function fetchAttendanceStats(locationId: string): Promise<Attendan
 export async function fetchTagBreakdown(locationId: string): Promise<TagBreakdownEntry[]> {
   const { data, error } = await supabase
     .from('verification_tags')
-    .select('tag')
+    .select('tag, verification_tag_types(label)')
     .eq('location_id', locationId);
   if (error) throw error;
 
   const counts = new Map<string, number>();
-  for (const row of (data ?? []) as { tag: string }[]) {
-    counts.set(row.tag, (counts.get(row.tag) ?? 0) + 1);
+  for (const row of (data ?? []) as unknown as {
+    tag: string;
+    verification_tag_types: { label: string } | null;
+  }[]) {
+    const label = row.verification_tag_types?.label ?? row.tag;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return Array.from(counts.entries())
     .map(([tag, count]) => ({ tag, count }))
