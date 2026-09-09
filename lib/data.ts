@@ -10,6 +10,8 @@ import type {
   Conversation,
   Message,
   VerificationTag,
+  VerificationTagType,
+  TagIconKind,
   Banner,
   LocationManager,
   VenueMember,
@@ -766,6 +768,72 @@ export async function assignVerificationTag(
 export async function removeVerificationTag(tagId: string): Promise<void> {
   const { error } = await supabase.from('verification_tags').delete().eq('id', tagId);
   if (error) throw error;
+}
+
+// ---- Verification Tag Catalog (per-venue title types) ----
+
+export async function fetchVerificationTagTypes(locationId: string): Promise<VerificationTagType[]> {
+  const { data, error } = await supabase
+    .from('verification_tag_types')
+    .select('*')
+    .eq('location_id', locationId)
+    .order('sort_order');
+  if (error) throw error;
+  return (data ?? []) as VerificationTagType[];
+}
+
+export async function createVerificationTagType(
+  locationId: string,
+  fields: { label: string; icon: string; icon_kind: TagIconKind; sort_order: number },
+): Promise<VerificationTagType> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('verification_tag_types')
+    .insert({ location_id: locationId, created_by: uid, ...fields })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VerificationTagType;
+}
+
+export async function updateVerificationTagType(
+  id: string,
+  fields: Partial<Pick<VerificationTagType, 'label' | 'icon' | 'icon_kind' | 'sort_order'>>,
+): Promise<void> {
+  const { error } = await supabase.from('verification_tag_types').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteVerificationTagType(id: string): Promise<void> {
+  const { error } = await supabase.from('verification_tag_types').delete().eq('id', id);
+  if (error) throw error;
+}
+
+const DEFAULT_TAG_TYPES: { label: string; icon: string; sort_order: number }[] = [
+  { label: 'Mentor', icon: 'brain', sort_order: 10 },
+  { label: 'Judge', icon: 'gavel', sort_order: 20 },
+  { label: 'Speaker', icon: 'mic', sort_order: 30 },
+  { label: 'Organizer', icon: 'star', sort_order: 40 },
+  { label: 'Sponsor', icon: 'gem', sort_order: 50 },
+  { label: 'Host', icon: 'crown', sort_order: 60 },
+  { label: 'Volunteer', icon: 'heart-handshake', sort_order: 70 },
+];
+
+export async function seedDefaultVerificationTagTypes(locationId: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  const rows = DEFAULT_TAG_TYPES.map((t) => ({
+    location_id: locationId,
+    created_by: uid,
+    icon_kind: 'lucide' as const,
+    ...t,
+  }));
+  // The unique index is on the expression (location_id, lower(label)), which
+  // supabase-js `onConflict` cannot target. Insert row-by-row and swallow the
+  // 23505 unique-violation so a re-run is a safe no-op.
+  for (const row of rows) {
+    const { error } = await supabase.from('verification_tag_types').insert(row);
+    if (error && error.code !== '23505') throw error;
+  }
 }
 
 // ---- Avatar Storage ----
