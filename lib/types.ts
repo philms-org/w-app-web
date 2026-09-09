@@ -195,6 +195,22 @@ export interface VenueZone {
   created_at: string;
 }
 
+export interface ActivityMenuItem {
+  id: string;
+  location_id: string;
+  label: string;
+  sort_order: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface AttendeeActivityPick {
+  user_id: string;
+  location_id: string;
+  item_id: string;
+  picked_at: string;
+}
+
 // ---- Organizer report ----
 
 export interface AttendanceStats {
