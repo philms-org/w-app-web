@@ -96,9 +96,7 @@ export default function VenuePeekModal({ venue, onClose }: VenuePeekModalProps) 
             </div>
           </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <TitleRosterCard locationId={venue.id} />
-          </div>
+          <TitleRosterCard locationId={venue.id} />
         </div>
       </div>
     </div>

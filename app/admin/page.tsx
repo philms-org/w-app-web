@@ -408,7 +408,7 @@ export default function AdminPage() {
                         Manage Carousel
                       </Link>
                       <Link href={`/admin/venue/${venue.id}/tags`} style={linkButtonStyle}>
-                        Manage Tags
+                        Manage Titles
                       </Link>
                       <Link href={`/main/venue/report?locationId=${venue.id}`} style={linkButtonStyle}>
                         View Report

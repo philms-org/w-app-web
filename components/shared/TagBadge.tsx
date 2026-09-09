@@ -30,6 +30,18 @@ export default function TagBadge({ tag, size = 'md' }: { tag: VerificationTag; s
     }
   } else if (tag.icon) {
     icon = <span style={{ fontSize: dim }}>{tag.icon}</span>;
+  } else {
+    // Legacy free-text grant with no icon (custom / null-icon case): still
+    // needs a visible glyph, especially in the icon-only `sm` variant.
+    const Fallback = resolveTagIcon('award');
+    icon = <Fallback style={{ width: dim, height: dim, color: theme.accent }} />;
+  }
+
+  // Final safety net: any branch above that resolved to an empty node
+  // (e.g. a catalog type with an empty `icon` string) still gets a glyph.
+  if (!icon) {
+    const Fallback = resolveTagIcon('award');
+    icon = <Fallback style={{ width: dim, height: dim, color: theme.accent }} />;
   }
 
   if (size === 'sm') {

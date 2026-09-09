@@ -17,6 +17,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
   const [error, setError] = useState<string | null>(null);
 
   const { canManage } = useIsOrganizer(locationId);
+  const [catalogRefresh, setCatalogRefresh] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -85,8 +86,11 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
           </p>
         )}
 
-        <TagCatalogPanel locationId={locationId} />
-        <TagAssignPanel locationId={locationId} />
+        <TagCatalogPanel
+          locationId={locationId}
+          onCatalogChange={() => setCatalogRefresh((n) => n + 1)}
+        />
+        <TagAssignPanel locationId={locationId} refreshKey={catalogRefresh} />
       </div>
     </div>
   );

@@ -22,10 +22,10 @@ export default function TitleRosterCard({ locationId }: { locationId: string }) 
   return (
     <div style={{
       backgroundColor: theme.surface, borderRadius: radius.card, border: `1px solid ${theme.divider}`,
-      padding: 16, fontFamily: typeTokens.family,
+      padding: 16, marginBottom: 20, fontFamily: typeTokens.family,
     }}>
       <h3 style={{ fontSize: typeTokens.label.fontSize, fontWeight: 700, color: theme.text, marginBottom: 12 }}>
-        Who&apos;s here
+        Titles at this venue
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {groups.map(({ type, people }) => {

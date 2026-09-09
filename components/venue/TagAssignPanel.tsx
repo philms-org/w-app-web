@@ -10,7 +10,9 @@ import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Input } from '@/components/ui/primitives';
 import TagBadge from '@/components/shared/TagBadge';
 
-export default function TagAssignPanel({ locationId }: { locationId: string }) {
+export default function TagAssignPanel(
+  { locationId, refreshKey }: { locationId: string; refreshKey?: number },
+) {
   const [attendees, setAttendees] = useState<Profile[]>([]);
   const [tags, setTags] = useState<VerificationTag[]>([]);
   const [types, setTypes] = useState<VerificationTagType[]>([]);
@@ -24,10 +26,18 @@ export default function TagAssignPanel({ locationId }: { locationId: string }) {
   }, [locationId]);
 
   useEffect(() => {
-    Promise.all([fetchAttendeeHistory(locationId), fetchVerificationTags(locationId), fetchVerificationTagTypes(locationId)])
-      .then(([a, t, ty]) => { setAttendees(a); setTags(t); setTypes(ty); })
+    Promise.all([fetchAttendeeHistory(locationId), fetchVerificationTags(locationId)])
+      .then(([a, t]) => { setAttendees(a); setTags(t); })
       .catch((e) => { console.error('Failed to load assign panel:', e); setError("Couldn't load attendees."); });
   }, [locationId]);
+
+  // Types are re-fetched whenever the catalog panel signals a change
+  // (refreshKey bump), so a title added there shows up here without a remount.
+  useEffect(() => {
+    fetchVerificationTagTypes(locationId)
+      .then(setTypes)
+      .catch((e) => console.error('Failed to load title types:', e));
+  }, [locationId, refreshKey]);
 
   const tagsByUser = useMemo(() => {
     const m = new Map<string, VerificationTag[]>();

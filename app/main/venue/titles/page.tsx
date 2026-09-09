@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
@@ -12,6 +12,7 @@ function Inner() {
   const router = useRouter();
   const locationId = useSearchParams().get('locationId') ?? '';
   const { canManage } = useIsOrganizer(locationId || null);
+  const [catalogRefresh, setCatalogRefresh] = useState(0);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg, fontFamily: typeTokens.family }}>
@@ -29,8 +30,11 @@ function Inner() {
           <p style={{ color: theme.muted }}>You&apos;re not authorized to manage this venue&apos;s titles.</p>
         ) : (
           <>
-            <TagCatalogPanel locationId={locationId} />
-            <TagAssignPanel locationId={locationId} />
+            <TagCatalogPanel
+              locationId={locationId}
+              onCatalogChange={() => setCatalogRefresh((n) => n + 1)}
+            />
+            <TagAssignPanel locationId={locationId} refreshKey={catalogRefresh} />
           </>
         )}
       </div>

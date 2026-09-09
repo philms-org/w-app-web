@@ -798,16 +798,17 @@ export async function assignVerificationTag(
 }
 
 const TAG_ICON_MAX_BYTES = 512 * 1024;
+// SVG is deliberately excluded: the `tag-icons` bucket is public, so a stored
+// SVG opened at its URL would execute script in the storage origin.
 const TAG_ICON_TYPES: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
 };
 
 export async function uploadTagIcon(file: File, locationId: string): Promise<string> {
   const ext = TAG_ICON_TYPES[file.type];
-  if (!ext) throw new Error('Icon must be a PNG, JPG, WebP, or SVG.');
+  if (!ext) throw new Error('Icon must be a PNG, JPG, or WebP.');
   if (file.size > TAG_ICON_MAX_BYTES) throw new Error('Icon must be 512 KB or smaller.');
   const path = `${locationId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
@@ -826,17 +827,27 @@ export async function fetchVenueTitleRoster(
 ): Promise<{ type: VerificationTagType; people: Profile[] }[]> {
   const { data, error } = await supabase
     .from('verification_tags')
-    .select('type_id, verification_tag_types(*), profiles(*)')
+    .select('type_id, user_id, verification_tag_types(*), profiles!verification_tags_user_id_fkey(*)')
     .eq('location_id', locationId)
     .not('type_id', 'is', null);
   if (error) throw error;
 
+  // Respect attendee-history opt-outs, exactly like fetchVenueMembers.
+  const { data: optOuts, error: optOutError } = await supabase
+    .from('attendee_history_opt_outs')
+    .select('user_id')
+    .eq('location_id', locationId);
+  if (optOutError) throw optOutError;
+  const optedOutIds = new Set((optOuts ?? []).map((r: { user_id: string }) => r.user_id));
+
   const groups = new Map<string, { type: VerificationTagType; people: Profile[] }>();
   for (const row of (data ?? []) as unknown as {
     type_id: string;
+    user_id: string;
     verification_tag_types: VerificationTagType | null;
     profiles: Profile | null;
   }[]) {
+    if (optedOutIds.has(row.user_id)) continue;
     const type = row.verification_tag_types;
     const person = row.profiles;
     if (!type || !person) continue;

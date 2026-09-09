@@ -5,6 +5,7 @@ import { Trash2 } from 'lucide-react';
 import {
   fetchVerificationTagTypes, createVerificationTagType, updateVerificationTagType,
   deleteVerificationTagType, seedDefaultVerificationTagTypes, uploadTagIcon,
+  tagIconPublicUrl,
 } from '@/lib/data';
 import { TAG_ICON_CHOICES, resolveTagIcon } from '@/lib/tagIcons';
 import type { VerificationTagType, TagIconKind } from '@/lib/types';
@@ -14,7 +15,9 @@ import { Button, Input } from '@/components/ui/primitives';
 type Draft = { label: string; iconKind: TagIconKind; icon: string };
 const EMPTY: Draft = { label: '', iconKind: 'lucide', icon: 'brain' };
 
-export default function TagCatalogPanel({ locationId }: { locationId: string }) {
+export default function TagCatalogPanel(
+  { locationId, onCatalogChange }: { locationId: string; onCatalogChange?: () => void },
+) {
   const [types, setTypes] = useState<VerificationTagType[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +42,10 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
   const save = async () => {
     const label = draft.label.trim();
     if (!label) return;
+    if (draft.iconKind === 'emoji' && !draft.icon.trim()) {
+      setError('Pick an emoji for this title.');
+      return;
+    }
     setBusy(true); setError(null);
     try {
       if (editingId) {
@@ -50,6 +57,7 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
       }
       resetDraft();
       load();
+      onCatalogChange?.();
     } catch (e) {
       console.error('Failed to save title:', e);
       setError((e as Error).message || "Couldn't save the title.");
@@ -60,14 +68,14 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
 
   const remove = async (id: string) => {
     setBusy(true); setError(null);
-    try { await deleteVerificationTagType(id); load(); }
+    try { await deleteVerificationTagType(id); load(); onCatalogChange?.(); }
     catch (e) { console.error('Failed to delete title:', e); setError("Couldn't delete the title."); }
     finally { setBusy(false); }
   };
 
   const seed = async () => {
     setBusy(true); setError(null);
-    try { await seedDefaultVerificationTagTypes(locationId); load(); }
+    try { await seedDefaultVerificationTagTypes(locationId); load(); onCatalogChange?.(); }
     catch (e) { console.error('Failed to seed defaults:', e); setError("Couldn't add the defaults."); }
     finally { setBusy(false); }
   };
@@ -117,7 +125,9 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
               <span style={{ width: 24, display: 'inline-flex', justifyContent: 'center' }}>
                 {t.icon_kind === 'lucide' && <Icon style={{ width: 18, height: 18, color: theme.accent }} />}
                 {t.icon_kind === 'emoji' && <span style={{ fontSize: 18 }}>{t.icon}</span>}
-                {t.icon_kind === 'image' && <span style={{ fontSize: 11, color: theme.muted }}>IMG</span>}
+                {t.icon_kind === 'image' && (
+                  <img src={tagIconPublicUrl(t.icon)} alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                )}
               </span>
               <span style={{ flex: 1, fontWeight: 600, color: theme.text, fontSize: 14 }}>{t.label}</span>
               <button
@@ -168,7 +178,7 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
             </button>
           ))}
           <input
-            ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden
+            ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ''; }}
           />
         </div>
@@ -184,7 +194,7 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
         )}
         {draft.iconKind === 'image' && (
           <p style={{ fontSize: 12, color: theme.muted }}>
-            {draft.icon ? 'Image uploaded.' : 'Tap "Upload" to choose an image (PNG/JPG/WebP/SVG, ≤512 KB).'}
+            {draft.icon ? 'Image uploaded.' : 'Tap "Upload" to choose an image (PNG/JPG/WebP, ≤512 KB).'}
           </p>
         )}
         {draft.iconKind === 'lucide' && (
@@ -212,7 +222,10 @@ export default function TagCatalogPanel({ locationId }: { locationId: string }) 
         )}
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button onClick={save} disabled={busy || !draft.label.trim()}>
+          <Button
+            onClick={save}
+            disabled={busy || !draft.label.trim() || (draft.iconKind === 'emoji' && !draft.icon.trim())}
+          >
             {editingId ? 'Save' : 'Add'}
           </Button>
           {editingId && (
