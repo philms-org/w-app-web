@@ -5,6 +5,7 @@ import { theme } from '@/lib/theme';
 import { getCurrentUserId } from '@/lib/auth';
 import { fetchConnection, fetchProfile, fetchContactMethods, recordContactMethodChoice } from '@/lib/data';
 import type { ContactMethod } from '@/lib/types';
+import ContactGrid from '@/components/connect/ContactGrid';
 import { Check } from 'lucide-react';
 
 export default function ConnectResult({ connectionId }: { connectionId: string }) {
@@ -43,12 +44,6 @@ export default function ConnectResult({ connectionId }: { connectionId: string }
     return () => { cancelled = true; };
   }, [connectionId]);
 
-  const choose = (type: string) => {
-    setChosen(type);
-    // Best-effort analytics write.
-    recordContactMethodChoice(connectionId, type).catch(() => {});
-  };
-
   const dateLine = scannedAt
     ? new Date(scannedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : null;
@@ -70,32 +65,26 @@ export default function ConnectResult({ connectionId }: { connectionId: string }
       </p>
 
       {methods.length > 0 && (
-        <p style={{ color: theme.muted, fontSize: '13px', marginBottom: '12px' }}>
-          How do you want to stay in touch?
-        </p>
+        <>
+          <p style={{ color: theme.muted, fontSize: '13px', marginBottom: '12px' }}>
+            How do you want to stay in touch?
+          </p>
+          <ContactGrid
+            methods={methods}
+            mode="readonly"
+            onLinkOpen={(type) => {
+              setChosen(type);
+              // Best-effort analytics write.
+              recordContactMethodChoice(connectionId, type).catch(() => {});
+            }}
+          />
+        </>
       )}
 
-      {methods.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => choose(m.type)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            width: '100%', padding: '14px 16px', marginBottom: '10px',
-            backgroundColor: chosen === m.type ? theme.accent : theme.surface,
-            color: chosen === m.type ? 'white' : theme.text,
-            border: `1px solid ${theme.divider}`, borderRadius: '12px',
-            fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-          }}
-        >
-          <span style={{ textTransform: 'capitalize' }}>{m.type}</span>
-          <span style={{ opacity: 0.7, fontWeight: 400 }}>{m.value ?? ''}</span>
-        </button>
-      ))}
-
       {chosen && (
-        <p style={{ color: theme.muted, fontSize: '12px', marginTop: '10px' }}>Saved.</p>
+        <p style={{ color: theme.muted, fontSize: '12px', marginTop: '10px' }}>
+          Saved — opening {chosen}…
+        </p>
       )}
     </div>
   );
