@@ -127,12 +127,20 @@ wave. tsc + build + lint clean throughout.
   `VenuePeekModal`, `TagBadge sm` in strips/chat, and the image
   `icon_kind` upload (no file-input automation) — data paths for all
   three are independently proven.
-- Fast-follow: standalone roster route; title-rename propagation (snapshot
+- Fast-follow: standalone full-screen roster route (`/main/venue/[id]/roster`)
+  + a "See all" link on the card; title-rename propagation (snapshot
   `tag`/`icon` cols don't auto-update, and `fetchTagBreakdown` groups by
-  `type.label` so historical report rows re-group on rename); drop the
-  `verification_tags.tag`/`icon` fallback columns once prod is stable;
-  align the `/admin/venue/[id]/tags` page `<h1>` + unauthorized copy with
-  the "Titles" rename.
+  `type.label` so historical report rows re-group under the new label on
+  rename); drop the `verification_tags.tag`/`icon` fallback columns once
+  prod backfill is confirmed stable (only after the `TagBadge` legacy
+  branch is no longer the sole renderer for null-icon grants — already
+  handled by the `Award` fallback, so this is unblocked); optional
+  client-side thumbnailing in `uploadTagIcon` (currently raw upload +
+  512 KB / MIME guard). The residual browser smoke-test gap (roster card,
+  `TagBadge sm` in strips/chat, image-icon upload) is noted above — one
+  pass as a genuinely checked-in venue manager clears it.
+- DONE (fb1e0be): `/admin/venue/[id]/tags` `<h1>` + unauthorized copy
+  aligned with the "Titles" rename.
 
 ---
 
