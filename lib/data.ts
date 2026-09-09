@@ -22,6 +22,7 @@ import type {
   EngagementStats,
   VenueZone,
   ActivityMenuItem,
+  Badge,
   ZoneAnalytics,
   CrossVenueMovementEntry,
   Connection,
@@ -307,6 +308,9 @@ export async function checkIn(locationId: string): Promise<void> {
   } catch (err) {
     console.error('Auto-join venue chat failed:', err);
   }
+
+  // Best-effort: refresh earned badges after a successful check-in.
+  recomputeMyBadges().catch(() => {});
 }
 
 async function autoJoinVenueChatIfEnabled(locationId: string, uid: string): Promise<void> {
@@ -559,6 +563,52 @@ export async function setMyActivityPicks(locationId: string, itemIds: string[]):
     p_item_ids: itemIds,
   });
   if (error) throw error;
+}
+
+// ---- Badges ----
+
+export async function fetchBadges(): Promise<Badge[]> {
+  const { data, error } = await supabase.from('badges').select().order('sort_order');
+  if (error) throw error;
+  return (data ?? []) as Badge[];
+}
+
+export async function fetchMyBadgeIds(): Promise<string[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase.from('user_badges').select('badge_id').eq('user_id', uid);
+  if (error) throw error;
+  return (data ?? []).map((r) => (r as { badge_id: string }).badge_id);
+}
+
+export async function recomputeMyBadges(): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  const { error } = await supabase.rpc('recompute_user_badges', { p_user_id: uid });
+  if (error) throw error;
+}
+
+export async function fetchMyActivityWords(): Promise<string[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data: picks, error: picksError } = await supabase
+    .from('attendee_activity_picks')
+    .select('item_id')
+    .eq('user_id', uid);
+  if (picksError) throw picksError;
+  const itemIds = [...new Set((picks ?? []).map((r) => (r as { item_id: string }).item_id))];
+  if (itemIds.length === 0) return [];
+  const { data: items, error: itemsError } = await supabase
+    .from('activity_menu_items')
+    .select('label')
+    .in('id', itemIds);
+  if (itemsError) throw itemsError;
+  const seen = new Set<string>();
+  for (const row of (items ?? []) as { label: string | null }[]) {
+    const label = row.label?.trim();
+    if (label) seen.add(label);
+  }
+  return [...seen].slice(0, 12);
 }
 
 export async function hasFeatureAccess(featureName: string): Promise<boolean> {
@@ -1352,6 +1402,8 @@ export async function recordQrScan(token: string, lat?: number, lng?: number): P
     p_lng: lng ?? null,
   });
   if (error) throw error;
+  // Best-effort: refresh earned badges after a successful QR connect.
+  recomputeMyBadges().catch(() => {});
   return data as string;
 }
 
