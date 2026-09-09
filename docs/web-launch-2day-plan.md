@@ -60,7 +60,22 @@ from ProfileTab / ConnectSheet / connections list.
   the post-scan grid (needs a real two-account scan), and the connections-row
   "Links" sheet (needs real connections). All tsc + build + lint clean.
 
-**Parity 3/4 word meter, 4/4 Badges** — plans not yet written.
+**Parity feature 3/4 — word meter + organizer activity menu — DONE**
+(plan `docs/superpowers/plans/2026-09-08-word-meter-activity-menu.md`).
+Migration `0021_activity_menu.sql` (`activity_menu_items` +
+`attendee_activity_picks` + `set_activity_picks` RPC) **applied to QA**;
+prod apply pending founder confirmation. `lib/data.ts` helpers,
+`lib/activity.ts` (`ACTIVITY_TARGET`/`meterFill`), `components/ui/Meter.tsx`,
+`/main/venue/activities` organizer CRUD, `ActivityMeterCard` on
+`CheckedInHero` (renders nothing when the venue has no menu) + an
+"Activities" organizer chip.
+- NOT verified in dev (stale JWT): the CRUD round-trip and the pick
+  round-trip (both need a real auth session / managed venue). tsc + build clean.
+- **0020 note:** `location_requests` still lives only in its worktree; this
+  migration took `0021` per the parity spec's convention.
+
+**Parity 4/4 Badges** — plan not yet written. Largest of the four (new
+`badges` + `user_badges` tables + a `recompute_user_badges` function).
 
 ---
 
