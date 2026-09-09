@@ -42,7 +42,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '16px' }}>
         <p style={{ color: theme.text, fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: '16px', textAlign: 'center' }}>
-          You&apos;re not authorized to manage this venue&apos;s tags.
+          You&apos;re not authorized to manage this venue&apos;s titles.
         </p>
         <Link
           href="/admin"
@@ -75,7 +75,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
           fontFamily: 'Montserrat, system-ui, sans-serif',
           marginTop: '8px',
         }}>
-          Manage Tags{venue ? ` — ${venue.name}` : ''}
+          Manage Titles{venue ? ` — ${venue.name}` : ''}
         </h1>
       </div>
 
