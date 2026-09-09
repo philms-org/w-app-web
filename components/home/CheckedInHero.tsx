@@ -22,6 +22,7 @@ import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
+import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
@@ -390,9 +391,27 @@ export default function CheckedInHero() {
               >
                 Zones
               </Link>
+              <Link
+                href={`/main/venue/activities?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Activities
+              </Link>
             </>
           )}
         </div>
+
+        {checkedIn && <ActivityMeterCard locationId={selectedLocation.id} />}
 
         <div style={{
           backgroundColor: theme.surface,
