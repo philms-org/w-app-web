@@ -7,7 +7,7 @@ import { signOut } from '@/lib/auth';
 import { fetchProfile, setShareCheckinsWithFriends } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import {
-  Camera, Edit2, Shield,
+  Camera, Edit2, Shield, Link2,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
 } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export default function ProfileTab() {
 
   const menuItems = [
     { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
+    { id: 'links', label: 'My Links', icon: Link2, action: () => router.push('/main/connect/links') },
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/privacy') },
   ];

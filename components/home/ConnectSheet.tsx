@@ -107,6 +107,21 @@ export default function ConnectSheet() {
         <Camera style={{ width: '16px', height: '16px' }} />
         Scan a code
       </Link>
+
+      <Link
+        href="/main/connect/links"
+        style={{
+          display: 'block',
+          marginTop: '12px',
+          color: theme.accent,
+          fontSize: '13px',
+          fontWeight: 600,
+          textDecoration: 'none',
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+        }}
+      >
+        Edit my links
+      </Link>
     </div>
   );
 }
