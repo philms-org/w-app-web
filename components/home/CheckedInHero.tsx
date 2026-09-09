@@ -26,6 +26,7 @@ import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
 import TagBadge from '@/components/shared/TagBadge';
+import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters } from '@/lib/geo';
 
@@ -392,6 +393,8 @@ export default function CheckedInHero() {
         </div>
 
         {checkedIn && <ActivityMeterCard locationId={selectedLocation.id} />}
+
+        {selectedLocation && <TitleRosterCard locationId={selectedLocation.id} />}
 
         <div style={{
           backgroundColor: theme.surface,

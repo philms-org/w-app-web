@@ -7,6 +7,7 @@ import { theme } from '@/lib/theme';
 import type { Venue, Banner } from '@/lib/types';
 import HeroCarousel from '@/components/HeroCarousel';
 import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
+import TitleRosterCard from '@/components/venue/TitleRosterCard';
 
 interface VenuePeekModalProps {
   venue: Venue;
@@ -93,6 +94,10 @@ export default function VenuePeekModal({ venue, onClose }: VenuePeekModalProps) 
                 Check in to see what&apos;s happening here
               </p>
             </div>
+          </div>
+
+          <div style={{ marginTop: '20px' }}>
+            <TitleRosterCard locationId={venue.id} />
           </div>
         </div>
       </div>
