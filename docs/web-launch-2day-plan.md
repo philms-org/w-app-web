@@ -108,8 +108,25 @@ titles (label + lucide/emoji/image icon), organizer CRUD at
 renderer on the checked-in feed contact card + venue chat + attendee
 strips, and a "Titles at this venue" grouped roster card. 9 commits
 `c9abe0f`..`1508f73`, subagent-driven with a whole-branch review + fix
-wave. Not exercised in a live browser (previews skipped — no dev auth
-session); tsc + build + lint clean throughout.
+wave. tsc + build + lint clean throughout.
+- **Live organizer pass (2026-09-09, QA):** ran the create → grant →
+  revoke loop against QA as a real venue manager. Verified: catalog add
+  (lucide + emoji modes), the empty-emoji save guard, the catalog↔assign
+  cross-refresh, grant-from-catalog (snapshots label/icon + `type_id`),
+  freeform `+ custom` grant, revoke, and `TagBadge` rendering for all
+  resolved kinds incl. the `Award` fallback for a null-icon custom grant.
+  The `fetchVenueTitleRoster` FK-qualified embed
+  (`profiles!verification_tags_user_id_fkey`) returned HTTP 200 + correct
+  nested rows against live PostgREST — no PGRST201 ambiguity. Test data
+  needed a temporary `location_managers` row (`chat.test.a@wapp-qa.dev` →
+  "QA Test Venue" `fa85f0f4…`) so RLS would pass; **that row plus every
+  test catalog entry/grant created during the pass were deleted
+  afterward — QA Test Venue is back to its 1 backfilled `DJ` type + its
+  1 grant.** Still NOT seen rendered in a browser (dev stale-JWT blocks
+  the checked-in view): the roster *card* in `CheckedInHero`/
+  `VenuePeekModal`, `TagBadge sm` in strips/chat, and the image
+  `icon_kind` upload (no file-input automation) — data paths for all
+  three are independently proven.
 - Fast-follow: standalone roster route; title-rename propagation (snapshot
   `tag`/`icon` cols don't auto-update, and `fetchTagBreakdown` groups by
   `type.label` so historical report rows re-group on rename); drop the
