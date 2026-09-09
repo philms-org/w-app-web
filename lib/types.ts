@@ -141,12 +141,27 @@ export interface ChatParticipant {
   profiles?: Profile;
 }
 
+export type TagIconKind = 'lucide' | 'image' | 'emoji';
+
+export interface VerificationTagType {
+  id: string;
+  location_id: string;
+  label: string;
+  icon: string;
+  icon_kind: TagIconKind;
+  sort_order: number;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface VerificationTag {
   id: string;
   user_id: string;
   location_id: string;
   tag: string;
   icon?: string | null;
+  type_id: string | null;
+  type?: VerificationTagType;
   assigned_by: string;
   assigned_at: string;
   profiles?: Profile;

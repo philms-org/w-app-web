@@ -94,6 +94,11 @@ earned-first catalog grid, "Your words" chips from activity picks,
 
 **All four web parity must-haves are DONE.**
 
+**Verified Titles (verification tag catalog) — migration:**
+`0023_verification_tag_types applied + verified on QA (2026-09-09) —
+verification_tag_types catalog + verification_tags.type_id + tag-icons
+bucket + backfill. Prod apply pending.`
+
 ---
 
 ## Day 1 — design-alignment finish + parity specs
