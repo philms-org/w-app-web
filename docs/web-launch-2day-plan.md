@@ -47,7 +47,20 @@ non-destructive re-entry via `profileToData`. No migration — all `profiles`
 columns already existed. NOT yet verified: the live Finish→`/main` round-trip
 (dev env has a stale JWT — needs a real auth session; logic is tsc/build clean).
 
-**Parity 2/4 QR/Links, 3/4 word meter, 4/4 Badges** — plans not yet written.
+**Parity feature 2/4 — QR/Links contact grid — DONE** (commits `14d1466`..`df7debc`,
+plan `docs/superpowers/plans/2026-09-08-qr-links-contact-grid.md`).
+`lib/contact-methods.ts` (10-type vocabulary + deep-link builders), shared
+`ContactGrid` (edit/readonly), `/main/connect/links` My Links route +
+`EditLinkSheet`, `ConnectResult` swapped to the readonly grid, entry points
+from ProfileTab / ConnectSheet / connections list.
+- **Task 4 (RLS) — no migration:** the existing `contacts_select` policy is
+  `(is_enabled = true) OR (user_id = auth.uid())` — any authed user can
+  already read anyone's enabled links, so User Links works today.
+- NOT verified in dev (stale JWT): the `upsertContactMethod` save round-trip,
+  the post-scan grid (needs a real two-account scan), and the connections-row
+  "Links" sheet (needs real connections). All tsc + build + lint clean.
+
+**Parity 3/4 word meter, 4/4 Badges** — plans not yet written.
 
 ---
 
