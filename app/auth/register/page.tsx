@@ -201,7 +201,7 @@ export default function RegisterPage() {
                 justifyContent: 'center',
               }}
             >
-              <span style={{ color: '#0D0D0F', fontSize: '18px', fontWeight: 700 }}>+</span>
+              <span style={{ color: theme.onAccent, fontSize: '18px', fontWeight: 700 }}>+</span>
             </div>
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>

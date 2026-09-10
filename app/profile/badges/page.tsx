@@ -82,7 +82,7 @@ export default function BadgesPage() {
       {toast && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, display: 'flex', justifyContent: 'center', zIndex: 60 }}>
           <div style={{
-            backgroundColor: theme.accent, color: '#0D0D0F', fontWeight: 700,
+            backgroundColor: theme.accent, color: theme.onAccent, fontWeight: 700,
             fontSize: typeTokens.label.fontSize, padding: '10px 18px', borderRadius: radius.pill,
             fontFamily: typeTokens.family,
           }}>

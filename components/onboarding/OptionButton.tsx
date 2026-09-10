@@ -20,7 +20,7 @@ export default function OptionButton({ emoji, label, selected, accent, onClick }
         borderRadius: radius.control,
         border: `2px solid ${selected ? accent : theme.divider}`,
         backgroundColor: selected ? accent : theme.surface,
-        color: selected ? '#0D0D0F' : theme.text,
+        color: selected ? theme.onAccent : theme.text,
         fontSize: 14,
         fontWeight: selected ? 700 : 400,
         fontFamily: typeTokens.family,

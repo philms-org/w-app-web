@@ -9,7 +9,7 @@ import {
   fetchBadges, fetchMyBadgeIds, recomputeMyBadges,
 } from '@/lib/data';
 import type { Badge } from '@/lib/types';
-import { theme } from '@/lib/theme';
+import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
   Camera, Edit2, Shield, Link2, Award,
@@ -179,10 +179,10 @@ export default function ProfileTab() {
       <div style={{ padding: '0 24px', marginTop: '-32px' }}>
         {/* Looking For Section */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '16px',
           padding: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: elevation.glass,
           marginBottom: '16px'
         }}>
           <h3 style={{
@@ -201,7 +201,7 @@ export default function ProfileTab() {
                     padding: '12px',
                     borderRadius: '12px',
                     border: `2px solid ${item.active ? theme.accent : theme.divider}`,
-                    backgroundColor: item.active ? 'rgba(34,195,201,0.12)' : 'white',
+                    backgroundColor: item.active ? 'rgba(34,195,201,0.12)' : theme.surface,
                     color: item.active ? theme.accent : theme.muted,
                     display: 'flex',
                     flexDirection: 'column',
@@ -223,10 +223,10 @@ export default function ProfileTab() {
 
         {/* Profile Details */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '16px',
           padding: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: elevation.glass,
           marginBottom: '16px'
         }}>
           <h3 style={{
@@ -281,8 +281,8 @@ export default function ProfileTab() {
         <button
           onClick={() => router.push('/profile/badges')}
           style={{
-            width: '100%', textAlign: 'left', backgroundColor: 'white', borderRadius: '16px',
-            padding: '16px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', marginBottom: '16px',
+            width: '100%', textAlign: 'left', backgroundColor: theme.surface, borderRadius: '16px',
+            padding: '16px', boxShadow: elevation.glass, marginBottom: '16px',
             border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
           }}
         >
@@ -299,7 +299,7 @@ export default function ProfileTab() {
                     width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: theme.accent,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Award style={{ width: '20px', height: '20px', color: '#0D0D0F' }} />
+                    <Award style={{ width: '20px', height: '20px', color: theme.onAccent }} />
                   </div>
                   <span style={{ fontSize: '10px', color: theme.muted, textAlign: 'center', lineHeight: 1.2 }}>{b.name}</span>
                 </div>
@@ -310,10 +310,10 @@ export default function ProfileTab() {
 
         {/* Privacy */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '16px',
           padding: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: elevation.glass,
           marginBottom: '16px'
         }}>
           <h3 style={{
@@ -358,9 +358,9 @@ export default function ProfileTab() {
 
         {/* Menu Items */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: elevation.glass,
           marginBottom: '16px',
           overflow: 'hidden'
         }}>
@@ -376,15 +376,15 @@ export default function ProfileTab() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: 'white',
-                  borderBottom: index < menuItems.length - 1 ? '1px solid #F3F3F3' : 'none',
+                  backgroundColor: theme.surface,
+                  borderBottom: index < menuItems.length - 1 ? `1px solid ${theme.divider}` : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
                   fontFamily: 'Montserrat, system-ui, sans-serif'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.surface2}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.surface}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Icon style={{ width: '20px', height: '20px', color: theme.muted }} />
@@ -401,9 +401,9 @@ export default function ProfileTab() {
           onClick={() => setShowLogoutConfirm(true)}
           style={{
             width: '100%',
-            backgroundColor: 'white',
+            backgroundColor: theme.surface,
             borderRadius: '16px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            boxShadow: elevation.glass,
             padding: '16px',
             display: 'flex',
             alignItems: 'center',
@@ -439,7 +439,7 @@ export default function ProfileTab() {
           zIndex: 50
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: theme.surface,
             borderRadius: '16px',
             padding: '24px',
             maxWidth: '384px',
