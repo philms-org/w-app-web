@@ -152,7 +152,17 @@ Keep `ThemeRoles`, `lightTheme`, `darkTheme`, `legacyView`, `theme`,
    `var(--x)` string.** The maps become the *contract* (which roles
    exist); `globals.css` holds the *values*. e.g.
    `darkTheme.surface = 'var(--surface)'`.
-2. **New roles** (added to `ThemeRoles`, defined for both themes):
+2. **No cyan.** `accent` (was `#22C3C9`) becomes a **neutral** — it is
+   the filled-CTA / interactive / link colour only, never a brand hue.
+   `onAccent` (text on an `accent` fill) becomes a role so it can flip.
+   | role | dark value | light value |
+   |---|---|---|
+   | `accent` | `#EDEDF0` (near-white) | `#231E20` (ink) |
+   | `onAccent` | `#0C0C0E` | `#FFFFFF` |
+   `accent2` (`#EC2C91` pink — currently used for form errors / alerts)
+   is **left untouched** in P1; whether it collapses into `accentReact`
+   is a P7 question.
+3. **New roles** (added to `ThemeRoles`, defined for both themes):
    | role | dark value | light value (P1 = "legible", polish in P7) |
    |---|---|---|
    | `glassFill` | `rgba(255,255,255,.05)` | `rgba(255,255,255,.75)` |
@@ -162,13 +172,14 @@ Keep `ThemeRoles`, `lightTheme`, `darkTheme`, `legacyView`, `theme`,
    | `liftBottom` | `rgba(200,212,228,.05)` | `rgba(0,0,0,0)` |
    | `shadowDepth` | `0 6px 22px rgba(0,0,0,.32)` | `0 4px 16px rgba(35,30,32,.08)` |
    | `countRest` | `#B9B9C0` | `#6B7280` |
-   | `accentReact` | `#E5322D` *(placeholder)* | `#E5322D` |
+   | `accentReact` | `#E5322D` *(placeholder landing-red)* | `#E5322D` |
    `glassBlur` is a non-colour token: `'blur(20px) saturate(1.08)'` — put
    it on the `type`/`elevation` side, not `ThemeRoles`, since it is
    theme-agnostic.
-3. **`elevation`** gains `glass: 'var(--shadow-depth)'`.
-4. **`legacyView`** unchanged in shape; its outputs are now `var()`
-   strings via the role maps.
+4. **`elevation`** gains `glass: 'var(--shadow-depth)'`.
+5. **`legacyView`** unchanged in shape; its outputs are now `var()`
+   strings via the role maps. `onAccent` moves from a bare constant to a
+   per-theme role (see item 2).
 
 `scripts/verify-theme-tokens.mjs` is extended: for every key in
 `ThemeRoles`, assert (a) the value is `var(--x)`, (b) `--x` is defined in
@@ -271,11 +282,8 @@ No automated suite in the repo. Gate per task = `tsc` + `next build` +
 2. **Winged-W asset** — founder to send SVG/PNG; swap `WMark` internals.
 3. **Toggle placement** — final IA home for the theme control is a P7
    decision.
-4. **`accent` (`#22C3C9` cyan) scope** — the founder redirected the
-   *glow*, the `+` button, and the reaction-count colour away from cyan,
-   but did not rule cyan out everywhere. P1 assumption: `accent` stays
-   `#22C3C9` as the **filled-CTA / interactive / link** colour (login
-   button, theme toggle, text links) — the `+` button and count-at-rest
-   are deliberately *not* `accent`. Confirm at spec review; if cyan is
-   out entirely, `accent` becomes a neutral (white/`#EDEDF0`) and only
-   `accentReact` carries colour.
+4. ~~`accent` cyan scope~~ **RESOLVED (founder, 2026-09-10): no cyan.**
+   `accent` is neutral (dark `#EDEDF0` / light `#231E20`), used only for
+   filled CTAs / interactive / links. `accentReact` (landing-red) is the
+   only chromatic token. `#17BFD9` / `#22C3C9` literals found in the
+   triage sweep map to `accent`, not kept.
