@@ -120,9 +120,9 @@ export default function LoginPage() {
         {error && (
           <div
             style={{
-              backgroundColor: '#FEF2F2',
+              backgroundColor: '#FEF2F2', // TODO(P7): tokenize error-banner bg
               border: '1px solid #FECACA',
-              color: '#DC2626',
+              color: theme.accent2,
               padding: '12px 16px',
               borderRadius: '12px',
               marginBottom: '16px',

@@ -353,7 +353,7 @@ function VenueRewardsPageInner() {
                       disabled={isBusy}
                       style={{
                         backgroundColor: reward.is_active ? theme.green : theme.surface2,
-                        color: reward.is_active ? '#0D0D0F' : theme.text,
+                        color: reward.is_active ? '#0D0D0F' : theme.text, // TODO(P7): tokenize on-green text (readable both themes)
                         border: 'none',
                         borderRadius: '9999px',
                         padding: '5px 12px',
@@ -394,7 +394,7 @@ function VenueRewardsPageInner() {
               <button
                 onClick={handleCreate}
                 disabled={creating || !newName.trim()}
-                style={{ flex: 1, backgroundColor: theme.accent, color: '#0D0D0F', border: 'none', borderRadius: '12px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: creating || !newName.trim() ? 'default' : 'pointer', opacity: creating || !newName.trim() ? 0.6 : 1, fontFamily: 'Montserrat, system-ui, sans-serif' }}
+                style={{ flex: 1, backgroundColor: theme.accent, color: theme.onAccent, border: 'none', borderRadius: '12px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: creating || !newName.trim() ? 'default' : 'pointer', opacity: creating || !newName.trim() ? 0.6 : 1, fontFamily: 'Montserrat, system-ui, sans-serif' }}
               >
                 {creating ? 'Creating...' : 'Create Reward'}
               </button>
@@ -403,7 +403,7 @@ function VenueRewardsPageInner() {
         ) : (
           <button
             onClick={() => setShowNew(true)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: theme.accent, color: '#0D0D0F', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: theme.accent, color: theme.onAccent, borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif' }}
           >
             <Plus style={{ width: '18px', height: '18px' }} />
             Add reward

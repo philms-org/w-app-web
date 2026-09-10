@@ -124,7 +124,7 @@ export default function TagAssignPanel(
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <Input value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="One-off title" />
                   <button onClick={() => grantCustom(a.id)} disabled={busy || !customText.trim()}
-                    style={{ padding: '8px 16px', borderRadius: radius.pill, border: 'none', backgroundColor: theme.accent, color: '#0D0D0F', fontWeight: 700, cursor: 'pointer', fontFamily: typeTokens.family, fontSize: 13 }}>
+                    style={{ padding: '8px 16px', borderRadius: radius.pill, border: 'none', backgroundColor: theme.accent, color: theme.onAccent, fontWeight: 700, cursor: 'pointer', fontFamily: typeTokens.family, fontSize: 13 }}>
                     Add
                   </button>
                 </div>

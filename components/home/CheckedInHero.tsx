@@ -488,7 +488,7 @@ export default function CheckedInHero() {
                   disabled={broadcastSending || !broadcastText.trim()}
                   style={{
                     backgroundColor: theme.accent,
-                    color: 'white',
+                    color: theme.onAccent,
                     border: 'none',
                     borderRadius: '9999px',
                     padding: '10px 20px',

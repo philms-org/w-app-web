@@ -89,7 +89,7 @@ export default function RewardsPanel() {
                   width: '32px',
                   height: '32px',
                   borderRadius: '9999px',
-                  backgroundColor: `${theme.accent}22`,
+                  backgroundColor: `color-mix(in srgb, ${theme.accent} 13%, transparent)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

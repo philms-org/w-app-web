@@ -156,7 +156,7 @@ export default function WelcomePage() {
           onClick={handleNext}
           style={{
             width: '100%',
-            backgroundColor: 'white',
+            backgroundColor: theme.surface,
             color: theme.accent,
             fontWeight: 700,
             fontSize: '16px',

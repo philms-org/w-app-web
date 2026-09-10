@@ -26,7 +26,7 @@ export default function BadgeTile({ badge, earned }: { badge: Badge; earned: boo
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backgroundColor: earned ? theme.accent : theme.surface2,
       }}>
-        <Icon style={{ width: 20, height: 20, color: earned ? '#0D0D0F' : theme.muted }} />
+        <Icon style={{ width: 20, height: 20, color: earned ? theme.onAccent : theme.muted }} />
       </div>
       <span style={{ fontSize: typeTokens.label.fontSize, fontWeight: 700, color: earned ? theme.text : theme.muted }}>
         {badge.name}

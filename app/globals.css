@@ -11,6 +11,87 @@
     --font-montserrat: 'Montserrat', system-ui, sans-serif;
   }
 
+  /* ---- Theme tokens -------------------------------------------------------
+     Dark is the bare-root default. @media below flips a *first-time* visitor
+     (no data-theme yet) to light when their OS asks for it. An explicit
+     [data-theme] (set by ThemeScript / the toggle) always wins. */
+  :root,
+  :root[data-theme='dark'] {
+    --surface: #0C0C0E;
+    --surface-raised: #1A1A1D;
+    --surface-raised-2: #232327;
+    --pill: #232327;
+    --content: #F5F5F7;
+    --content-muted: rgba(245, 245, 247, 0.55);
+    --border: rgba(255, 255, 255, 0.09);
+    --accent: #EDEDF0;
+    --on-accent: #0C0C0E;
+    --accent-2: #EC2C91;
+    --accent-react: #E5322D;      /* PLACEHOLDER landing-red — founder to confirm */
+    --count-rest: #B9B9C0;
+    --tab-bar-bg: #000000;
+    --glass-fill: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-highlight: rgba(255, 255, 255, 0.14);
+    --bloom-top: rgba(255, 255, 255, 0.06);
+    --lift-bottom: rgba(200, 212, 228, 0.05);
+    --shadow-depth: 0 6px 22px rgba(0, 0, 0, 0.32);
+    --gradient-premium-a: #7C5CFF;
+    --gradient-premium-b: #D24BD6;
+    --gradient-warm-a: #F3B56D;
+    --gradient-warm-b: #E8836A;
+  }
+
+  :root[data-theme='light'] {
+    --surface: #F0F6FA;
+    --surface-raised: #FFFFFF;
+    --surface-raised-2: #F3F3F3;
+    --pill: #F0F6FA;
+    --content: #231E20;
+    --content-muted: #919191;
+    --border: #E7EDF2;
+    --accent: #231E20;
+    --on-accent: #FFFFFF;
+    --accent-2: #EC2C91;
+    --accent-react: #E5322D;
+    --count-rest: #6B7280;
+    --tab-bar-bg: #231E20;
+    --glass-fill: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(20, 20, 25, 0.10);
+    --glass-highlight: rgba(255, 255, 255, 0.90);
+    --bloom-top: rgba(255, 255, 255, 0);
+    --lift-bottom: rgba(0, 0, 0, 0);
+    --shadow-depth: 0 4px 16px rgba(35, 30, 32, 0.08);
+    --gradient-premium-a: #7C5CFF;
+    --gradient-premium-b: #D24BD6;
+    --gradient-warm-a: #F3B56D;
+    --gradient-warm-b: #E8836A;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --surface: #F0F6FA;
+      --surface-raised: #FFFFFF;
+      --surface-raised-2: #F3F3F3;
+      --pill: #F0F6FA;
+      --content: #231E20;
+      --content-muted: #919191;
+      --border: #E7EDF2;
+      --accent: #231E20;
+      --on-accent: #FFFFFF;
+      --accent-2: #EC2C91;
+      --accent-react: #E5322D;
+      --count-rest: #6B7280;
+      --tab-bar-bg: #231E20;
+      --glass-fill: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(20, 20, 25, 0.10);
+      --glass-highlight: rgba(255, 255, 255, 0.90);
+      --bloom-top: rgba(255, 255, 255, 0);
+      --lift-bottom: rgba(0, 0, 0, 0);
+      --shadow-depth: 0 4px 16px rgba(35, 30, 32, 0.08);
+    }
+  }
+
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -24,6 +105,40 @@
   body {
     @apply min-h-screen;
     overscroll-behavior: none;
+    background: var(--surface);
+    color: var(--content);
+  }
+
+  /* Super-light ambient light — behind everything, does not scroll.
+     Dark: a faint white bloom off the top edge + a cool lift off the
+     bottom. Light: both tokens are transparent, so these render nothing. */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    top: 0;
+    height: 30vh;
+    background: linear-gradient(180deg,
+      var(--bloom-top) 0%,
+      color-mix(in srgb, var(--bloom-top) 40%, transparent) 45%,
+      transparent 100%);
+  }
+  body::after {
+    bottom: 0;
+    height: 26vh;
+    background: linear-gradient(0deg, var(--lift-bottom) 0%, transparent 100%);
+    filter: blur(6px);
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
   }
 
   .safe-top { padding-top: env(safe-area-inset-top); }

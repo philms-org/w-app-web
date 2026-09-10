@@ -201,7 +201,7 @@ export default function RegisterPage() {
                 justifyContent: 'center',
               }}
             >
-              <span style={{ color: '#0D0D0F', fontSize: '18px', fontWeight: 700 }}>+</span>
+              <span style={{ color: theme.onAccent, fontSize: '18px', fontWeight: 700 }}>+</span>
             </div>
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
@@ -210,9 +210,9 @@ export default function RegisterPage() {
         {error && (
           <div
             style={{
-              backgroundColor: '#FEF2F2',
+              backgroundColor: '#FEF2F2', // TODO(P7): tokenize error-banner bg
               border: '1px solid #FECACA',
-              color: '#DC2626',
+              color: theme.accent2,
               padding: '12px 16px',
               borderRadius: '12px',
               marginBottom: '16px',

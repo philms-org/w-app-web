@@ -128,7 +128,7 @@ export default function NearbyBanner() {
             onClick={() => handleCheckIn(venue)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              width: '100%', backgroundColor: theme.accent, color: '#0D0D0F', border: 'none',
+              width: '100%', backgroundColor: theme.accent, color: theme.onAccent, border: 'none',
               borderRadius: '12px', padding: '8px 0', fontSize: '13px', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
             }}
@@ -211,7 +211,7 @@ export default function NearbyBanner() {
             onClick={handleRefresh}
             disabled={refreshing}
             style={{
-              backgroundColor: theme.accent, color: '#0D0D0F', border: 'none',
+              backgroundColor: theme.accent, color: theme.onAccent, border: 'none',
               borderRadius: '12px', padding: '10px 24px', fontSize: '14px', fontWeight: 700,
               cursor: refreshing ? 'default' : 'pointer', marginBottom: '12px',
               fontFamily: 'Montserrat, system-ui, sans-serif',

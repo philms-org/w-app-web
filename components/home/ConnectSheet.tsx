@@ -90,7 +90,7 @@ export default function ConnectSheet() {
         href="/main/connect/scan"
         style={{
           backgroundColor: theme.accent,
-          color: '#0D0D0F',
+          color: theme.onAccent,
           border: 'none',
           borderRadius: '12px',
           padding: '10px 24px',

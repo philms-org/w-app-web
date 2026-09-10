@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import AuthedRedirect from '@/components/AuthedRedirect';
+import { theme } from '@/lib/theme';
 
 export const metadata: Metadata = {
   description:
@@ -33,8 +34,8 @@ export default function HomePage() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #0d0d0f 0%, #22262b 100%)',
-        color: '#f5f5f7',
+        background: theme.bg,
+        color: theme.text,
         padding: '64px 24px 48px',
         fontFamily: 'Montserrat, system-ui, sans-serif',
       }}
@@ -47,8 +48,8 @@ export default function HomePage() {
             width: 88,
             height: 88,
             borderRadius: 24,
-            background: '#22c3c9',
-            color: '#0d0d0f',
+            background: theme.accent,
+            color: theme.onAccent,
             fontSize: 52,
             fontWeight: 800,
             display: 'flex',
@@ -63,7 +64,7 @@ export default function HomePage() {
         <h1 style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.1, margin: '0 0 12px' }}>
           Connect with people at your location
         </h1>
-        <p style={{ fontSize: 18, color: 'rgba(245,245,247,0.7)', margin: '0 0 36px' }}>
+        <p style={{ fontSize: 18, color: theme.muted, margin: '0 0 36px' }}>
           The W App turns the room you’re standing in into a way to meet people. Check in,
           see who’s there, and connect.
         </p>
@@ -72,8 +73,8 @@ export default function HomePage() {
           <Link
             href="/auth/register"
             style={{
-              background: '#22c3c9',
-              color: '#0d0d0f',
+              background: theme.accent,
+              color: theme.onAccent,
               fontWeight: 700,
               fontSize: 16,
               padding: '14px 28px',
@@ -86,8 +87,8 @@ export default function HomePage() {
           <Link
             href="/auth/login"
             style={{
-              border: '1.5px solid #22c3c9',
-              color: '#f5f5f7',
+              border: `1.5px solid ${theme.accent}`,
+              color: theme.text,
               fontWeight: 700,
               fontSize: 16,
               padding: '14px 28px',
@@ -114,22 +115,22 @@ export default function HomePage() {
           <div
             key={p.title}
             style={{
-              background: '#1a1a1d',
-              border: '1px solid rgba(255,255,255,0.09)',
+              background: theme.surface,
+              border: `1px solid ${theme.divider}`,
               borderRadius: 16,
               padding: '24px 20px',
               textAlign: 'left',
             }}
           >
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>{p.title}</h2>
-            <p style={{ fontSize: 15, color: 'rgba(245,245,247,0.6)', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 15, color: theme.muted, margin: 0, lineHeight: 1.5 }}>
               {p.body}
             </p>
           </div>
         ))}
       </section>
 
-      <footer style={{ marginTop: 56, fontSize: 13, color: 'rgba(245,245,247,0.4)' }}>
+      <footer style={{ marginTop: 56, fontSize: 13, color: theme.muted }}>
         <Link href="/privacy" style={{ color: 'inherit' }}>
           Privacy
         </Link>

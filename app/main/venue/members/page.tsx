@@ -249,7 +249,7 @@ function VenueMembersPageInner() {
                         const tier = highestEarnedTier(tierRewards, m.checkinCount);
                         return tier ? (
                           <span style={{
-                            backgroundColor: `${theme.accent}22`,
+                            backgroundColor: `color-mix(in srgb, ${theme.accent} 13%, transparent)`,
                             color: theme.accent,
                             fontSize: '11px',
                             fontWeight: 600,

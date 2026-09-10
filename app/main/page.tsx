@@ -11,7 +11,7 @@ import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
 import HistoryTab from '@/components/tabs/HistoryTab';
-import { theme } from '@/lib/theme';
+import { theme, elevation } from '@/lib/theme';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
@@ -107,29 +107,29 @@ export default function MainPage() {
           padding: '16px'
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: theme.surface,
             borderRadius: '20px',
             padding: '32px 24px',
             width: '100%',
             maxWidth: '400px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: elevation.glass,
             textAlign: 'center'
           }}>
             {/* Location Icon */}
             <div style={{
               width: '80px',
               height: '80px',
-              backgroundColor: '#E0F7FA',
+              backgroundColor: theme.surface2,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px'
             }}>
-              <MapPin style={{ 
-                width: '40px', 
-                height: '40px', 
-                color: '#17BFD9' 
+              <MapPin style={{
+                width: '40px',
+                height: '40px',
+                color: theme.accent
               }} />
             </div>
 
@@ -137,14 +137,14 @@ export default function MainPage() {
               fontWeight: '700',
               fontSize: '24px',
               marginBottom: '12px',
-              color: '#1F2937',
+              color: theme.text,
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
               Share Your Location
             </h2>
 
             <p style={{
-              color: '#6B7280',
+              color: theme.muted,
               fontSize: '16px',
               lineHeight: '1.5',
               marginBottom: '32px',
@@ -162,8 +162,8 @@ export default function MainPage() {
                 onClick={handleAllowLocation}
                 style={{
                   width: '100%',
-                  backgroundColor: '#17BFD9',
-                  color: 'white',
+                  backgroundColor: theme.accent,
+                  color: theme.onAccent,
                   padding: '16px 24px',
                   borderRadius: '12px',
                   border: 'none',
@@ -184,10 +184,10 @@ export default function MainPage() {
                 style={{
                   width: '100%',
                   backgroundColor: 'transparent',
-                  color: '#6B7280',
+                  color: theme.muted,
                   padding: '16px 24px',
                   borderRadius: '12px',
-                  border: '1px solid #E5E7EB',
+                  border: `1px solid ${theme.divider}`,
                   fontWeight: '500',
                   fontSize: '16px',
                   cursor: 'pointer',
@@ -195,12 +195,12 @@ export default function MainPage() {
                   transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F9FAFB';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
+                  e.currentTarget.style.backgroundColor = theme.surface2;
+                  e.currentTarget.style.borderColor = theme.divider;
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = '#E5E7EB';
+                  e.currentTarget.style.borderColor = theme.divider;
                 }}
               >
                 Maybe Later
@@ -208,13 +208,13 @@ export default function MainPage() {
             </div>
 
             <p style={{
-              color: '#9CA3AF',
+              color: theme.muted,
               fontSize: '12px',
               marginTop: '16px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
               Manage location access in your browser or device settings ·{' '}
-              <a href="/privacy" style={{ color: '#17BFD9', textDecoration: 'underline' }}>
+              <a href="/privacy" style={{ color: theme.accent, textDecoration: 'underline' }}>
                 Learn more
               </a>
             </p>

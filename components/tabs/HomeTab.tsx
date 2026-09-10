@@ -30,19 +30,19 @@ export default function HomeTab() {
     {
       id: 'history',
       label: 'History',
-      icon: <Clock style={{ width: '24px', height: '24px', color: activePanel === 'history' ? '#0D0D0F' : theme.text }} />,
+      icon: <Clock style={{ width: '24px', height: '24px', color: activePanel === 'history' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('history')
     },
     {
       id: 'rewards',
       label: 'Rewards',
-      icon: <Trophy style={{ width: '24px', height: '24px', color: activePanel === 'rewards' ? '#0D0D0F' : theme.text }} />,
+      icon: <Trophy style={{ width: '24px', height: '24px', color: activePanel === 'rewards' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('rewards')
     },
     {
       id: 'connect',
       label: 'Connect',
-      icon: <QrCode style={{ width: '24px', height: '24px', color: activePanel === 'connect' ? '#0D0D0F' : theme.text }} />,
+      icon: <QrCode style={{ width: '24px', height: '24px', color: activePanel === 'connect' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('connect')
     }
   ];
