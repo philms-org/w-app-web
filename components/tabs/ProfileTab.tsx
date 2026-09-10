@@ -10,6 +10,7 @@ import {
 } from '@/lib/data';
 import type { Badge } from '@/lib/types';
 import { theme } from '@/lib/theme';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
   Camera, Edit2, Shield, Link2, Award,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
@@ -351,6 +352,9 @@ export default function ProfileTab() {
             />
           </div>
         </div>
+
+        {/* Theme toggle */}
+        <ThemeToggle style={{ marginBottom: 12 }} />
 
         {/* Menu Items */}
         <div style={{

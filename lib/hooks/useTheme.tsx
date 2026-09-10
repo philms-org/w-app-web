@@ -44,7 +44,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try { stored = localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
     if (stored === 'light' || stored === 'dark') return;
     const mq = window.matchMedia('(prefers-color-scheme: light)');
-    const onChange = () => apply(mq.matches ? 'light' : 'dark', false);
+    const onChange = () => {
+      // An explicit choice made after mount must not be overridden by the OS.
+      let now: string | null = null;
+      try { now = localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
+      if (now === 'light' || now === 'dark') return;
+      apply(mq.matches ? 'light' : 'dark', false);
+    };
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, [apply]);
