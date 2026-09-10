@@ -137,7 +137,7 @@ export default function LocationRequestsPage() {
                     <button
                       onClick={() => reject(r.id)}
                       disabled={busyId === r.id}
-                      style={{ background: theme.accent2, color: 'white', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ background: theme.accent2, color: theme.onAccent, border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                     >
                       {busyId === r.id ? '…' : 'Confirm Reject'}
                     </button>
@@ -154,7 +154,7 @@ export default function LocationRequestsPage() {
                   <button
                     onClick={() => approve(r.id)}
                     disabled={busyId === r.id}
-                    style={{ background: theme.accent, color: 'white', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ background: theme.accent, color: theme.onAccent, border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                   >
                     {busyId === r.id ? '…' : 'Approve'}
                   </button>

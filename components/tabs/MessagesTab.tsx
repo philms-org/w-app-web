@@ -99,8 +99,8 @@ export default function MessagesTab() {
       {openChat && <ChatView conversation={openChat} onClose={handleCloseChat} />}
       {/* Header */}
       <div style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #F3F3F3',
+        backgroundColor: theme.surface,
+        borderBottom: `1px solid ${theme.divider}`,
         padding: '24px',
         paddingTop: 'max(48px, env(safe-area-inset-top) + 16px)',
         paddingBottom: '16px'
@@ -121,7 +121,7 @@ export default function MessagesTab() {
             transform: 'translateY(-50%)',
             width: '20px',
             height: '20px',
-            color: '#919191'
+            color: theme.muted
           }} />
           <input
             type="text"
@@ -134,7 +134,7 @@ export default function MessagesTab() {
               paddingRight: '16px',
               paddingTop: '12px',
               paddingBottom: '12px',
-              backgroundColor: '#F3F3F3',
+              backgroundColor: theme.surface2,
               borderRadius: '9999px',
               border: 'none',
               fontSize: '16px',
@@ -155,8 +155,8 @@ export default function MessagesTab() {
                 borderRadius: '9999px',
                 textTransform: 'capitalize',
                 transition: 'all 0.2s ease',
-                backgroundColor: activeFilter === filter ? '#17BFD9' : '#F3F3F3',
-                color: activeFilter === filter ? 'white' : '#919191',
+                backgroundColor: activeFilter === filter ? theme.accent : theme.surface2,
+                color: activeFilter === filter ? theme.onAccent : theme.muted,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '14px',
@@ -170,20 +170,20 @@ export default function MessagesTab() {
       </div>
 
       {/* Messages List */}
-      <div style={{ backgroundColor: 'white' }}>
+      <div style={{ backgroundColor: theme.surface }}>
         {loadError ? (
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <h3 style={{ fontWeight: '600', marginBottom: '8px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
               Couldn&apos;t load messages
             </h3>
-            <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            <p style={{ color: theme.muted, fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
               Check your connection and try again
             </p>
             <button
               onClick={loadConversations}
               style={{
-                backgroundColor: '#17BFD9',
-                color: 'white',
+                backgroundColor: theme.accent,
+                color: theme.onAccent,
                 fontWeight: '600',
                 padding: '10px 24px',
                 borderRadius: '9999px',
@@ -207,22 +207,22 @@ export default function MessagesTab() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: 'white',
-                borderBottom: index < filteredMessages.length - 1 ? '1px solid #F3F3F3' : 'none',
+                backgroundColor: theme.surface,
+                borderBottom: index < filteredMessages.length - 1 ? `1px solid ${theme.divider}` : 'none',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 textAlign: 'left'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F3F3'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.surface2}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.surface}
             >
               {/* Profile Image */}
               <div style={{ position: 'relative' }}>
                 <div style={{
                   width: '56px',
                   height: '56px',
-                  backgroundColor: '#F3F3F3',
+                  backgroundColor: theme.surface2,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -231,7 +231,7 @@ export default function MessagesTab() {
                   <span style={{
                     fontSize: '20px',
                     fontWeight: '600',
-                    color: '#919191',
+                    color: theme.muted,
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
                     {message.userName.charAt(0)}
@@ -244,9 +244,9 @@ export default function MessagesTab() {
                     right: 0,
                     width: '16px',
                     height: '16px',
-                    backgroundColor: '#10B981',
+                    backgroundColor: '#10B981', // TODO(P7): tokenize online-status green
                     borderRadius: '50%',
-                    border: '2px solid white'
+                    border: `2px solid ${theme.surface}`
                   }}></div>
                 )}
               </div>
@@ -256,7 +256,7 @@ export default function MessagesTab() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <h3 style={{
                     fontWeight: '600',
-                    color: message.unread ? '#231E20' : '#919191',
+                    color: message.unread ? theme.text : theme.muted,
                     fontSize: '16px',
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
@@ -264,7 +264,7 @@ export default function MessagesTab() {
                   </h3>
                   <span style={{
                     fontSize: '12px',
-                    color: message.unread ? '#17BFD9' : '#919191',
+                    color: message.unread ? theme.accent : theme.muted,
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
                     {formatTimestamp(message.timestamp)}
@@ -273,7 +273,7 @@ export default function MessagesTab() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <p style={{
                     fontSize: '14px',
-                    color: message.unread ? '#231E20' : '#919191',
+                    color: message.unread ? theme.text : theme.muted,
                     fontWeight: message.unread ? '500' : '400',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -289,7 +289,7 @@ export default function MessagesTab() {
                       <div style={{
                         width: '8px',
                         height: '8px',
-                        backgroundColor: '#17BFD9',
+                        backgroundColor: theme.accent,
                         borderRadius: '50%'
                       }}></div>
                     )}
@@ -303,14 +303,14 @@ export default function MessagesTab() {
             <div style={{
               width: '96px',
               height: '96px',
-              backgroundColor: '#F3F3F3',
+              backgroundColor: theme.surface2,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px'
             }}>
-              <Search style={{ width: '48px', height: '48px', color: '#919191' }} />
+              <Search style={{ width: '48px', height: '48px', color: theme.muted }} />
             </div>
             <h3 style={{
               fontWeight: '600',
@@ -318,7 +318,7 @@ export default function MessagesTab() {
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>No messages found</h3>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               fontSize: '14px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
@@ -341,6 +341,7 @@ export default function MessagesTab() {
             <div style={{
               width: '96px',
               height: '96px',
+              // TODO(P7): tokenize accent-tint circle (bg + icon colour below)
               backgroundColor: '#D0F2F7',
               borderRadius: '50%',
               display: 'flex',
@@ -354,11 +355,11 @@ export default function MessagesTab() {
               fontSize: '24px',
               fontWeight: 'bold',
               marginBottom: '8px',
-              color: 'white',
+              color: theme.text,
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>No Messages Yet</h2>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               marginBottom: '24px',
               fontSize: '16px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -368,8 +369,8 @@ export default function MessagesTab() {
             <button
               onClick={() => setActiveTab('map')}
               style={{
-                backgroundColor: '#17BFD9',
-                color: 'white',
+                backgroundColor: theme.accent,
+                color: theme.onAccent,
                 fontWeight: '600',
                 padding: '12px 24px',
                 borderRadius: '9999px',

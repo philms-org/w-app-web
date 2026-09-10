@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/lib/auth';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import TagBadge from '@/components/shared/TagBadge';
 import type { Message, VerificationTag } from '@/lib/types';
+import { theme } from '@/lib/theme';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 
@@ -165,7 +166,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
         zIndex: 2000,
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: 'white',
+        backgroundColor: theme.bg,
       }}
     >
       {/* Header */}
@@ -175,8 +176,8 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
         gap: '12px',
         padding: '12px 16px',
         paddingTop: 'max(12px, env(safe-area-inset-top))',
-        borderBottom: '1px solid #F3F3F3',
-        backgroundColor: 'white',
+        borderBottom: `1px solid ${theme.divider}`,
+        backgroundColor: theme.surface,
         flexShrink: 0,
       }}>
         <button
@@ -194,13 +195,13 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
             borderRadius: '50%',
           }}
         >
-          <ArrowLeft style={{ width: '24px', height: '24px', color: '#231E20' }} />
+          <ArrowLeft style={{ width: '24px', height: '24px', color: theme.text }} />
         </button>
         <div style={{
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          backgroundColor: '#F3F3F3',
+          backgroundColor: theme.surface2,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -211,7 +212,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
             // eslint-disable-next-line @next/next/no-img-element
             <img src={conversation.userImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: '16px', fontWeight: 600, color: '#6B7280', fontFamily: FONT }}>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: theme.muted, fontFamily: FONT }}>
               {conversation.userName.charAt(0)}
             </span>
           )}
@@ -219,7 +220,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
         <h2 style={{
           fontSize: '18px',
           fontWeight: 600,
-          color: '#231E20',
+          color: theme.text,
           fontFamily: FONT,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -233,23 +234,23 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        style={{ flex: 1, overflowY: 'auto', padding: '16px', backgroundColor: '#FAFAFA' }}
+        style={{ flex: 1, overflowY: 'auto', padding: '16px', backgroundColor: theme.bg }}
       >
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '48px' }}>
-            <p style={{ color: '#6B7280', fontSize: '14px', fontFamily: FONT }}>Loading messages…</p>
+            <p style={{ color: theme.muted, fontSize: '14px', fontFamily: FONT }}>Loading messages…</p>
           </div>
         ) : loadError ? (
           <div style={{ textAlign: 'center', paddingTop: '48px' }}>
-            <AlertCircle style={{ width: '32px', height: '32px', color: '#EC2C91', margin: '0 auto 12px' }} />
-            <p style={{ color: '#231E20', fontSize: '15px', fontFamily: FONT, marginBottom: '16px' }}>
+            <AlertCircle style={{ width: '32px', height: '32px', color: theme.accent2, margin: '0 auto 12px' }} />
+            <p style={{ color: theme.text, fontSize: '15px', fontFamily: FONT, marginBottom: '16px' }}>
               Couldn&apos;t load this conversation
             </p>
             <button
               onClick={() => { setLoading(true); setLoadError(false); loadMessages(true); }}
               style={{
-                backgroundColor: '#17BFD9',
-                color: 'white',
+                backgroundColor: theme.accent,
+                color: theme.onAccent,
                 border: 'none',
                 borderRadius: '9999px',
                 padding: '10px 24px',
@@ -264,7 +265,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
           </div>
         ) : messages.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: '48px' }}>
-            <p style={{ color: '#6B7280', fontSize: '14px', fontFamily: FONT }}>
+            <p style={{ color: theme.muted, fontSize: '14px', fontFamily: FONT }}>
               No messages yet — say hi 👋
             </p>
           </div>
@@ -284,7 +285,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                 }}
               >
                 {showName && (
-                  <span style={{ fontSize: '12px', color: '#6B7280', fontFamily: FONT, margin: '0 4px 2px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: '12px', color: theme.muted, fontFamily: FONT, margin: '0 4px 2px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {msg.profiles?.display_name ?? 'Member'}
                     {(tagsByUserId?.get(msg.sender_id) ?? []).map((t) => <TagBadge key={t.id} tag={t} size="sm" />)}
                   </span>
@@ -293,8 +294,8 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                   maxWidth: '78%',
                   padding: '10px 14px',
                   borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                  backgroundColor: mine ? '#17BFD9' : '#F3F3F3',
-                  color: mine ? 'white' : '#231E20',
+                  backgroundColor: mine ? theme.accent : theme.surface2,
+                  color: mine ? theme.onAccent : theme.text,
                   fontSize: '15px',
                   lineHeight: 1.4,
                   fontFamily: FONT,
@@ -303,7 +304,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                 }}>
                   {msg.content}
                 </div>
-                <span style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: FONT, margin: '3px 4px 0' }}>
+                <span style={{ fontSize: '11px', color: theme.muted, fontFamily: FONT, margin: '3px 4px 0' }}>
                   {formatTime(msg.created_at)}
                 </span>
               </div>
@@ -315,14 +316,14 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
       {/* Composer / pending request bar */}
       <div style={{
         flexShrink: 0,
-        borderTop: '1px solid #F3F3F3',
-        backgroundColor: 'white',
+        borderTop: `1px solid ${theme.divider}`,
+        backgroundColor: theme.surface,
         padding: '12px 16px',
         paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
       }}>
         {isPending ? (
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: '#231E20', fontFamily: FONT, marginBottom: '12px' }}>
+            <p style={{ fontSize: '14px', color: theme.text, fontFamily: FONT, marginBottom: '12px' }}>
               {conversation.userName} wants to connect with you
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -330,8 +331,8 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                 onClick={() => handleRespond(true)}
                 disabled={responding}
                 style={{
-                  backgroundColor: '#17BFD9',
-                  color: 'white',
+                  backgroundColor: theme.accent,
+                  color: theme.onAccent,
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '12px 32px',
@@ -349,8 +350,8 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                 disabled={responding}
                 style={{
                   backgroundColor: 'transparent',
-                  color: '#6B7280',
-                  border: '1px solid #E5E7EB',
+                  color: theme.muted,
+                  border: `1px solid ${theme.divider}`,
                   borderRadius: '9999px',
                   padding: '12px 32px',
                   fontSize: '15px',
@@ -377,12 +378,12 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                 aria-label="Message text"
                 style={{
                   flex: 1,
-                  backgroundColor: '#F3F3F3',
+                  backgroundColor: theme.surface2,
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '12px 18px',
                   fontSize: '16px',
-                  color: '#231E20',
+                  color: theme.text,
                   fontFamily: FONT,
                   minWidth: 0,
                 }}
@@ -395,7 +396,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                   width: '44px',
                   height: '44px',
                   borderRadius: '50%',
-                  backgroundColor: '#17BFD9',
+                  backgroundColor: theme.accent,
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -405,11 +406,11 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
                   flexShrink: 0,
                 }}
               >
-                <Send style={{ width: '20px', height: '20px', color: 'white' }} />
+                <Send style={{ width: '20px', height: '20px', color: theme.onAccent }} />
               </button>
             </div>
             {sendError && (
-              <p style={{ color: '#EC2C91', fontSize: '12px', marginTop: '6px', fontFamily: FONT }}>
+              <p style={{ color: theme.accent2, fontSize: '12px', marginTop: '6px', fontFamily: FONT }}>
                 {sendError}
               </p>
             )}

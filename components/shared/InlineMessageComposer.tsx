@@ -57,7 +57,7 @@ export default function InlineMessageComposer({ recipient, onSent }: InlineMessa
           disabled={sending || !messageText.trim()}
           style={{
             backgroundColor: theme.accent,
-            color: 'white',
+            color: theme.onAccent,
             border: 'none',
             borderRadius: '9999px',
             padding: '10px 20px',
