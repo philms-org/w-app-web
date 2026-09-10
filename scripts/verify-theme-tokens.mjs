@@ -1,61 +1,56 @@
 // Standalone token assertions — this repo has no test runner.
 // Run: node scripts/verify-theme-tokens.mjs
-import { lightTheme, darkTheme, theme } from '../lib/theme.ts';
+import { lightTheme, darkTheme, theme, onAccent } from '../lib/theme.ts';
 import { readFileSync } from 'node:fs';
 
 const fail = (m) => { console.error('FAIL:', m); process.exitCode = 1; };
-const eq = (a, b, m) => { if (a !== b) fail(`${m}: expected ${b}, got ${a}`); };
+const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+const tw = readFileSync(new URL('../tailwind.config.ts', import.meta.url), 'utf8');
 
-// Light values (spec §4)
-eq(lightTheme.surface, '#F0F6FA', 'lightTheme.surface');
-eq(lightTheme.surfaceRaised, '#FFFFFF', 'lightTheme.surfaceRaised');
-eq(lightTheme.surfaceRaised2, '#F3F3F3', 'lightTheme.surfaceRaised2');
-eq(lightTheme.content, '#231E20', 'lightTheme.content');
-eq(lightTheme.contentMuted, '#919191', 'lightTheme.contentMuted');
-eq(lightTheme.border, '#E7EDF2', 'lightTheme.border');
-eq(lightTheme.accent, '#22C3C9', 'lightTheme.accent');
-eq(lightTheme.accent2, '#EC2C91', 'lightTheme.accent2');
-eq(lightTheme.tabBarBg, '#231E20', 'lightTheme.tabBarBg');
+// 1. Every ThemeRoles colour value is a bare var() reference.
+const varRe = /^var\(--[a-z0-9-]+\)$/;
+for (const [name, obj] of [['lightTheme', lightTheme], ['darkTheme', darkTheme]]) {
+  for (const [k, v] of Object.entries(obj)) {
+    for (const val of (Array.isArray(v) ? v : [v])) {
+      if (!varRe.test(val)) fail(`${name}.${k} is not a var() ref: ${val}`);
+    }
+  }
+}
 
-// Dark values (spec §4)
-eq(darkTheme.surface, '#0D0D0F', 'darkTheme.surface');
-eq(darkTheme.surfaceRaised, '#1A1A1D', 'darkTheme.surfaceRaised');
-eq(darkTheme.content, '#F5F5F7', 'darkTheme.content');
-eq(darkTheme.tabBarBg, '#000000', 'darkTheme.tabBarBg');
-eq(darkTheme.accent, '#22C3C9', 'darkTheme.accent');
-
-// Legacy keys re-pointed to LIGHT values (no call-site churn)
-eq(theme.bg, '#F0F6FA', 'theme.bg (legacy) -> light surface');
-eq(theme.surface, '#FFFFFF', 'theme.surface (legacy) -> light card');
-eq(theme.surface2, '#F3F3F3', 'theme.surface2 (legacy)');
-eq(theme.text, '#231E20', 'theme.text (legacy) -> light content');
-eq(theme.muted, '#919191', 'theme.muted (legacy)');
-eq(theme.divider, '#E7EDF2', 'theme.divider (legacy) -> light border');
-eq(theme.accent, '#22C3C9', 'theme.accent (legacy)');
-eq(theme.accent2, '#EC2C91', 'theme.accent2 (legacy)');
-eq(theme.pill, '#F0F6FA', 'theme.pill (legacy, unchanged)');
-
-// Light/dark key parity
+// 2. light/dark key parity (unchanged invariant).
 const lk = Object.keys(lightTheme).sort().join(',');
 const dk = Object.keys(darkTheme).sort().join(',');
 if (lk !== dk) fail(`key parity: light=[${lk}] dark=[${dk}]`);
 
-// `theme` is the legacy-shaped view of the light role map (a separate object,
-// because legacy `surface` == card collides with the role `surface` == page bg).
-eq(theme.bg, lightTheme.surface, 'theme.bg == lightTheme.surface');
-eq(theme.surface, lightTheme.surfaceRaised, 'theme.surface == lightTheme.surfaceRaised');
-eq(theme.divider, lightTheme.border, 'theme.divider == lightTheme.border');
-
-const tw = readFileSync(new URL('../tailwind.config.ts', import.meta.url), 'utf8');
-for (const [cls, hex] of [
-  ['w-blue', '#22C3C9'],
-  ['w-pink', '#EC2C91'],
-  ['w-back-gray', '#F0F6FA'],
-  ['w-black', '#231E20'],
-  ['w-light-gray', '#F3F3F3'],
-  ['w-dark-gray', '#919191'],
-]) {
-  if (!tw.includes(`'${cls}': '${hex}'`)) fail(`tailwind.config missing ${cls}: '${hex}'`);
+// 3. Every --token used by a role is defined for BOTH themes in globals.css.
+const usedVars = new Set();
+for (const v of Object.values(lightTheme)) {
+  for (const s of (Array.isArray(v) ? v : [v])) {
+    const m = s.match(/^var\((--[a-z0-9-]+)\)$/);
+    if (m) usedVars.add(m[1]);
+  }
+}
+const oa = onAccent.match(/var\((--[a-z0-9-]+)\)/);
+usedVars.add(oa ? oa[1] : '--on-accent');
+const darkBlock = css.match(/:root,\s*:root\[data-theme='dark'\]\s*{([^}]*)}/s)?.[1] ?? '';
+const lightBlock = css.match(/:root\[data-theme='light'\]\s*{([^}]*)}/s)?.[1] ?? '';
+for (const v of usedVars) {
+  if (!darkBlock.includes(`${v}:`)) fail(`globals.css dark block missing ${v}`);
+  if (!lightBlock.includes(`${v}:`)) fail(`globals.css light block missing ${v}`);
 }
 
-if (!process.exitCode) console.log('OK: theme tokens verified');
+// 4. Legacy `theme` still exposes its keys (call sites depend on them),
+//    plus the new dark-glass roles the component layer reads off `theme`.
+for (const k of [
+  'bg', 'surface', 'surface2', 'text', 'muted', 'divider', 'accent', 'accent2', 'pill',
+  'glassFill', 'glassBorder', 'glassHighlight', 'countRest', 'accentReact', 'onAccent',
+]) {
+  if (!(k in theme)) fail(`legacy theme.${k} missing`);
+}
+
+// 5. Tailwind w-* colours point at vars, not hex.
+for (const cls of ['w-blue', 'w-pink', 'w-back-gray', 'w-black', 'w-light-gray', 'w-dark-gray']) {
+  if (!new RegExp(`'${cls}':\\s*'var\\(--`).test(tw)) fail(`tailwind.config ${cls} is not a var()`);
+}
+
+if (!process.exitCode) console.log('OK: theme token contract verified');

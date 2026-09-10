@@ -11,14 +11,14 @@ export default {
       colors: {
         // Bridges the few remaining `w-*` utility classes to the shared
         // light palette. New work should use lib/theme.ts, not these.
-        'w-blue': '#22C3C9',       // == accent
-        'w-pink': '#EC2C91',       // == accent2
+        'w-blue': 'var(--accent)',
+        'w-pink': 'var(--accent-2)',
         'w-gray': '#D5D5D5',
-        'w-light-gray': '#F3F3F3', // == surfaceRaised2
-        'w-back-gray': '#F0F6FA',  // == surface
+        'w-light-gray': 'var(--surface-raised-2)',
+        'w-back-gray': 'var(--surface)',
         'w-light-blue': '#D0F2F7',
-        'w-dark-gray': '#919191',  // == contentMuted
-        'w-black': '#231E20',      // == content
+        'w-dark-gray': 'var(--content-muted)',
+        'w-black': 'var(--content)',
       },
       fontFamily: {
         'montserrat': ['Montserrat', 'system-ui', 'sans-serif'],

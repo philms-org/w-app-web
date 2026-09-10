@@ -26,39 +26,49 @@ export interface ThemeRoles {
   contentMuted: string;
   border: string;
   accent: string;
+  onAccent: string;
   accent2: string;
+  accentReact: string;
+  countRest: string;
   tabBarBg: string;
+  glassFill: string;
+  glassBorder: string;
+  glassHighlight: string;
+  bloomTop: string;
+  liftBottom: string;
+  shadowDepth: string;
   gradientPremium: Duo;
   gradientWarm: Duo;
 }
 
-export const lightTheme: ThemeRoles = {
-  surface: '#F0F6FA',
-  surfaceRaised: '#FFFFFF',
-  surfaceRaised2: '#F3F3F3',
-  content: '#231E20',
-  contentMuted: '#919191',
-  border: '#E7EDF2',
-  accent: '#22C3C9',
-  accent2: '#EC2C91',
-  tabBarBg: '#231E20',
-  gradientPremium: ['#7C5CFF', '#D24BD6'],
-  gradientWarm: ['#F3B56D', '#E8836A'],
+// Values are CSS custom properties — see app/globals.css for the actual
+// colours per theme. Both maps are identical (that is the point: the role
+// contract is theme-independent; globals.css swaps the values).
+const roles: ThemeRoles = {
+  surface: 'var(--surface)',
+  surfaceRaised: 'var(--surface-raised)',
+  surfaceRaised2: 'var(--surface-raised-2)',
+  content: 'var(--content)',
+  contentMuted: 'var(--content-muted)',
+  border: 'var(--border)',
+  accent: 'var(--accent)',
+  onAccent: 'var(--on-accent)',
+  accent2: 'var(--accent-2)',
+  accentReact: 'var(--accent-react)',
+  countRest: 'var(--count-rest)',
+  tabBarBg: 'var(--tab-bar-bg)',
+  glassFill: 'var(--glass-fill)',
+  glassBorder: 'var(--glass-border)',
+  glassHighlight: 'var(--glass-highlight)',
+  bloomTop: 'var(--bloom-top)',
+  liftBottom: 'var(--lift-bottom)',
+  shadowDepth: 'var(--shadow-depth)',
+  gradientPremium: ['var(--gradient-premium-a)', 'var(--gradient-premium-b)'],
+  gradientWarm: ['var(--gradient-warm-a)', 'var(--gradient-warm-b)'],
 };
 
-export const darkTheme: ThemeRoles = {
-  surface: '#0D0D0F',
-  surfaceRaised: '#1A1A1D',
-  surfaceRaised2: '#232327',
-  content: '#F5F5F7',
-  contentMuted: 'rgba(245,245,247,0.55)',
-  border: 'rgba(255,255,255,0.09)',
-  accent: '#22C3C9',
-  accent2: '#EC2C91',
-  tabBarBg: '#000000',
-  gradientPremium: ['#7C5CFF', '#D24BD6'],
-  gradientWarm: ['#F3B56D', '#E8836A'],
-};
+export const lightTheme: ThemeRoles = roles;
+export const darkTheme: ThemeRoles = roles;
 
 export type ThemeRole = keyof ThemeRoles;
 
@@ -82,6 +92,16 @@ const legacyView = (r: ThemeRoles) =>
     premium1: r.gradientPremium[0],
     premium2: r.gradientPremium[1],
     green: '#3ECF6B', // success green — unchanged
+    // New dark-glass roles — surfaced on the legacy object so the component
+    // layer (components/ui/primitives.tsx, a later task) can read them off
+    // `theme` as `theme.glassFill` etc. All resolve to var() at runtime.
+    onAccent: r.onAccent,
+    glassFill: r.glassFill,
+    glassBorder: r.glassBorder,
+    glassHighlight: r.glassHighlight,
+    shadowDepth: r.shadowDepth,
+    countRest: r.countRest,
+    accentReact: r.accentReact,
   }) as const;
 
 // Active theme — forced light until the theme-switching plan lands.
@@ -104,7 +124,11 @@ export const elevation = {
   // Light theme: soft shadow. Dark theme: use a 1px `border` hairline instead.
   card: '0 4px 16px rgba(35,30,32,.08)',
   sheet: '0 8px 28px rgba(35,30,32,.12)',
+  glass: 'var(--shadow-depth)',
 } as const;
+
+// Frosted-glass surface treatment (theme-agnostic — same blur both modes).
+export const glassBlur = 'blur(20px) saturate(1.08)';
 
 export const type = {
   family: 'Montserrat, system-ui, sans-serif',
@@ -117,4 +141,4 @@ export const type = {
 } as const;
 
 // Readable text colour to sit on top of an `accent` fill.
-export const onAccent = '#0D0D0F';
+export const onAccent = 'var(--on-accent)';
