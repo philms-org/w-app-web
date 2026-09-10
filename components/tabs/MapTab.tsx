@@ -698,7 +698,7 @@ export default function MapTab() {
 
                 {requestError && (
                   <p style={{
-                    color: '#DC2626',
+                    color: theme.accent2,
                     fontSize: '13px',
                     marginBottom: '16px',
                     fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -734,8 +734,8 @@ export default function MapTab() {
                     style={{
                       flex: 1,
                       padding: '12px 24px',
-                      backgroundColor: newLocationName.trim() ? theme.accent : theme.divider, // TODO(P7): tokenize disabled-state fill
-                      color: theme.onAccent,
+                      backgroundColor: newLocationName.trim() ? theme.accent : theme.surface2,
+                      color: newLocationName.trim() ? theme.onAccent : theme.muted,
                       border: 'none',
                       borderRadius: '8px',
                       fontWeight: '600',

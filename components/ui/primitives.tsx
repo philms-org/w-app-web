@@ -1,8 +1,11 @@
 'use client';
 
-// Shared UI primitives — design-system.md §6. Light theme only for now
-// (colours come from lib/theme.ts `theme`, which is the active light view).
-// New screens should reach for these instead of hand-rolled inline styles.
+// Shared UI primitives — design-system.md §6. Colours come from lib/theme.ts
+// `theme`, whose values are `var(--*)` custom properties resolved per
+// `data-theme` in app/globals.css — so these primitives follow the active
+// theme (dark by default, light via the toggle) automatically, no per-theme
+// branching here. New screens should reach for these instead of hand-rolled
+// inline styles.
 
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';

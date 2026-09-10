@@ -201,7 +201,7 @@ export default function ProfileTab() {
                     padding: '12px',
                     borderRadius: '12px',
                     border: `2px solid ${item.active ? theme.accent : theme.divider}`,
-                    backgroundColor: item.active ? 'rgba(34,195,201,0.12)' : theme.surface,
+                    backgroundColor: item.active ? 'rgba(34,195,201,0.12)' : theme.surface, // TODO(P7): tokenize accent-tint
                     color: item.active ? theme.accent : theme.muted,
                     display: 'flex',
                     flexDirection: 'column',
@@ -263,7 +263,7 @@ export default function ProfileTab() {
               width: '100%',
               marginTop: '16px',
               padding: '8px',
-              backgroundColor: 'rgba(34,195,201,0.12)',
+              backgroundColor: 'rgba(34,195,201,0.12)', // TODO(P7): tokenize accent-tint
               color: theme.accent,
               borderRadius: '8px',
               fontWeight: '500',

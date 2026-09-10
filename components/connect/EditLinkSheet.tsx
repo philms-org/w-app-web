@@ -54,7 +54,7 @@ export default function EditLinkSheet({ slotOrder, existing, onSave, onClose }: 
                 display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: radius.pill,
                 border: `1px solid ${type === c.type ? theme.accent : theme.divider}`,
                 backgroundColor: type === c.type ? theme.accent : theme.surface,
-                color: type === c.type ? '#0D0D0F' : theme.text,
+                color: type === c.type ? theme.onAccent : theme.text,
                 fontSize: typeTokens.label.fontSize, fontWeight: 600, cursor: 'pointer', fontFamily: typeTokens.family,
               }}
             >

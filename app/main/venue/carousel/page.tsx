@@ -391,7 +391,7 @@ function VenueCarouselPageInner() {
                         disabled={isBusy}
                         style={{
                           backgroundColor: banner.is_active ? theme.green : theme.surface2,
-                          color: banner.is_active ? '#0D0D0F' : theme.text,
+                          color: banner.is_active ? '#0D0D0F' : theme.text, // TODO(P7): tokenize on-green text (readable both themes)
                           border: 'none',
                           borderRadius: '9999px',
                           padding: '5px 12px',

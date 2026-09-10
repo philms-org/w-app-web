@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
             </p>
 
             {error && (
-              <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '12px 16px', borderRadius: '12px', marginBottom: '16px', fontSize: '14px' }}>
+              <div style={{ backgroundColor: '#FEF2F2' /* TODO(P7): tokenize error-banner bg */, border: '1px solid #FECACA', color: theme.accent2, padding: '12px 16px', borderRadius: '12px', marginBottom: '16px', fontSize: '14px' }}>
                 {error}
               </div>
             )}

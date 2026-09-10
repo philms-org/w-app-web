@@ -283,7 +283,9 @@ export default function WMap({
       </div>
       )}
 
-      {/* Add Leaflet CSS */}
+      {/* Add Leaflet CSS. intentional: always-light surface — Leaflet popup /
+          zoom-control chrome sits on the light OSM map tiles in both themes;
+          full tokenization tracked for P7. */}
       <style jsx global>{`
         .w-marker {
           background: none !important;

@@ -353,7 +353,7 @@ function VenueRewardsPageInner() {
                       disabled={isBusy}
                       style={{
                         backgroundColor: reward.is_active ? theme.green : theme.surface2,
-                        color: reward.is_active ? '#0D0D0F' : theme.text,
+                        color: reward.is_active ? '#0D0D0F' : theme.text, // TODO(P7): tokenize on-green text (readable both themes)
                         border: 'none',
                         borderRadius: '9999px',
                         padding: '5px 12px',

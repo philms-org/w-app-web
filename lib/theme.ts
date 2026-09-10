@@ -13,8 +13,13 @@
 // to light. A later plan renames the call sites to role names and deletes
 // `theme` in favour of a `useTheme()` that returns light or dark.
 //
-// Dark is fully defined but NOT activated here — no prefers-color-scheme or
-// toggle wiring in this plan.
+// Both themes are live. The actual colour values live in app/globals.css as
+// `--*` custom properties under `:root` / `:root[data-theme='light']`; every
+// key here is just a `var(--token)` string, so a single map serves both
+// themes and the resolved colour follows whichever theme is active. Dark is
+// the bare-root default; `useTheme()` (client) and `<ThemeScript>` (no-flash
+// boot) switch it by setting `data-theme`, honouring `prefers-color-scheme`
+// on the first visit only.
 
 type Duo = readonly [string, string];
 
@@ -104,7 +109,8 @@ const legacyView = (r: ThemeRoles) =>
     accentReact: r.accentReact,
   }) as const;
 
-// Active theme — forced light until the theme-switching plan lands.
+// Active theme, legacy-shaped. Both role maps are the same `var(--*)` map,
+// so this follows `data-theme` at runtime — it is no longer pinned to light.
 export const theme = legacyView(lightTheme);
 
 // Also exported for the eventual switch-over.
