@@ -82,7 +82,7 @@ export type ThemeRole = keyof ThemeRoles;
 const legacyView = (r: ThemeRoles) =>
   ({
     bg: r.surface,
-    pill: '#F0F6FA', // iOS Colors.back_gray — theme-agnostic field bg, unchanged
+    pill: 'var(--pill)', // field / input ground
     accent: r.accent,
     accent2: r.accent2,
     gradientStart: '#5A6570', // brand steel gradient — unchanged

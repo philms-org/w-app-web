@@ -8,6 +8,7 @@ import { UserCircle } from 'lucide-react';
 // icon on the right (Profile now lives behind this icon instead of a tab).
 export default function AppHeader() {
   const { setActiveTab } = useStore();
+  const glow = `color-mix(in srgb, ${theme.accent} 40%, transparent)`;
 
   return (
     <div style={{
@@ -27,7 +28,7 @@ export default function AppHeader() {
         fontWeight: 'bold',
         color: theme.accent,
         fontFamily: 'Montserrat, system-ui, sans-serif',
-        textShadow: `0 0 16px ${theme.accent}66`
+        textShadow: `0 0 16px ${glow}`
       }}>
         W
       </span>
