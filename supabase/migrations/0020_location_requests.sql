@@ -53,6 +53,16 @@ create policy location_requests_select_admin on location_requests for select to 
 -- ---- System sender ----------------------------------------------------
 -- Fixed, well-known id -- never regenerated. Mirrored as SYSTEM_PROFILE_ID
 -- in lib/constants.ts. No email/phone, not a master admin.
+--
+-- profiles.id is FK -> auth.users(id) ON DELETE CASCADE, so the auth row
+-- must exist first. This is an inert service account: no email, no
+-- encrypted_password, no auth.identities row, so it can never be signed
+-- into -- it exists only to be the sender_id of the automated
+-- location-request notification messages.
+insert into auth.users (id, aud, role, created_at, updated_at)
+values ('00000000-0000-4000-8000-00000000a99d', 'authenticated', 'authenticated', now(), now())
+on conflict (id) do nothing;
+
 insert into profiles (id, display_name, is_master_admin)
 values ('00000000-0000-4000-8000-00000000a99d', 'The W App', false)
 on conflict (id) do nothing;
