@@ -26,6 +26,7 @@ import type {
   Connection,
   MyConnection,
   FriendActivityEntry,
+  LocationRequest,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1478,4 +1479,60 @@ export async function setShareCheckinsWithFriends(value: boolean): Promise<void>
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
   await upsertProfile({ id: uid, share_checkins_with_friends: value });
+}
+
+// ---- Location requests ----
+
+// Creates a request for the current user and (server-side, same transaction)
+// posts a "pending approval" message from the system sender. Returns the
+// request id.
+export async function requestLocation(
+  name: string,
+  description: string,
+  lat: number,
+  lng: number
+): Promise<string> {
+  const { data, error } = await supabase.rpc('request_location', {
+    p_name: name,
+    p_description: description || null,
+    p_lat: lat,
+    p_lng: lng,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// Master-admin-only by RLS (location_requests_select_admin) -- a non-admin
+// calling this only ever gets back their own requests
+// (location_requests_select_own), never an error.
+export async function fetchLocationRequests(
+  status?: 'pending' | 'approved' | 'rejected'
+): Promise<LocationRequest[]> {
+  let query = supabase
+    .from('location_requests')
+    .select('*, profiles(display_name)')
+    .order('created_at', { ascending: false });
+  if (status) query = query.eq('status', status);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as LocationRequest[];
+}
+
+// Master-admin-only (enforced inside the RPC). Creates the real locations
+// row (owner = the original requester) and returns its id.
+export async function approveLocationRequest(requestId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('approve_location_request', {
+    p_request_id: requestId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// Master-admin-only (enforced inside the RPC).
+export async function rejectLocationRequest(requestId: string, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc('reject_location_request', {
+    p_request_id: requestId,
+    p_reason: reason || null,
+  });
+  if (error) throw error;
 }

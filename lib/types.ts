@@ -279,3 +279,20 @@ export interface FriendActivityEntry {
   checked_in_at: string;
   is_active: boolean;
 }
+
+// ---- Location requests (map "Add a location" -> admin approval queue) ----
+// See supabase/migrations/0020_location_requests.sql.
+export interface LocationRequest {
+  id: string;
+  submitted_by: string;
+  name: string;
+  description: string | null;
+  lat: number;
+  lng: number;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  profiles?: { display_name: string } | null;
+}
