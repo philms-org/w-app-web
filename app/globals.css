@@ -106,6 +106,38 @@
     color: var(--content);
   }
 
+  /* Super-light ambient light — behind everything, does not scroll.
+     Dark: a faint white bloom off the top edge + a cool lift off the
+     bottom. Light: both tokens are transparent, so these render nothing. */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    top: 0;
+    height: 30vh;
+    background: linear-gradient(180deg,
+      var(--bloom-top) 0%,
+      color-mix(in srgb, var(--bloom-top) 40%, transparent) 45%,
+      transparent 100%);
+  }
+  body::after {
+    bottom: 0;
+    height: 26vh;
+    background: linear-gradient(0deg, var(--lift-bottom) 0%, transparent 100%);
+    filter: blur(6px);
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
