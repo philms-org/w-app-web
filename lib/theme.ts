@@ -142,3 +142,9 @@ export const type = {
 
 // Readable text colour to sit on top of an `accent` fill.
 export const onAccent = 'var(--on-accent)';
+
+// localStorage key for the user's explicit theme choice. Lives here (a
+// plain module) so both the client `useTheme()` hook and the server
+// `ThemeScript` component can import it — importing a plain const across
+// the RSC boundary from a `'use client'` module resolves to `undefined`.
+export const STORAGE_KEY = 'w-app-theme';
