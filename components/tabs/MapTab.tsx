@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
-import { fetchVenues } from '@/lib/data';
+import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme } from '@/lib/theme';
@@ -48,6 +48,9 @@ export default function MapTab() {
   const [newLocationName, setNewLocationName] = useState('');
   const [newLocationDescription, setNewLocationDescription] = useState('');
   const [clickedLocation, setClickedLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestSent, setRequestSent] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   const categories = [
@@ -146,27 +149,23 @@ export default function MapTab() {
 
   const handleAddLocation = () => {
     if (!newLocationName.trim() || !clickedLocation) return;
-    
-    const newLocation = {
-      id: Date.now().toString(),
-      name: newLocationName.trim(),
-      description: newLocationDescription.trim() || 'Custom location',
-      latitude: clickedLocation.lat,
-      longitude: clickedLocation.lng,
-      radius: 50,
-      count: 1,
-      category: 'custom',
-      isHot: false,
-    };
 
-    // Add to current locations
-    setNearbyLocations([...nearbyLocations, newLocation]);
-    
-    // Reset form
-    setNewLocationName('');
-    setNewLocationDescription('');
-    setShowAddLocation(false);
-    setClickedLocation(null);
+    setSubmittingRequest(true);
+    setRequestError(null);
+    submitLocationRequest(
+      newLocationName.trim(),
+      newLocationDescription.trim(),
+      clickedLocation.lat,
+      clickedLocation.lng
+    )
+      .then(() => {
+        setRequestSent(true);
+      })
+      .catch((err) => {
+        console.error('Failed to submit location request:', err);
+        setRequestError("Couldn't send your request. Try again.");
+      })
+      .finally(() => setSubmittingRequest(false));
   };
 
   const handleCancelAddLocation = () => {
@@ -174,6 +173,8 @@ export default function MapTab() {
     setNewLocationDescription('');
     setShowAddLocation(false);
     setClickedLocation(null);
+    setRequestError(null);
+    setRequestSent(false);
   };
 
   return (
@@ -575,112 +576,178 @@ export default function MapTab() {
             padding: '24px',
             width: '100%',
             maxWidth: '400px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }}>
-            <h3 style={{
-              fontWeight: '600',
-              fontSize: '20px',
-              marginBottom: '16px',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Add New Location</h3>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px',
-                color: '#374151',
-                fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>
-                Location Name *
-              </label>
-              <input
-                type="text"
-                value={newLocationName}
-                onChange={(e) => setNewLocationName(e.target.value)}
-                placeholder="Enter location name"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px',
-                color: '#374151',
-                fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>
-                Description
-              </label>
-              <textarea
-                value={newLocationDescription}
-                onChange={(e) => setNewLocationDescription(e.target.value)}
-                placeholder="Enter location description"
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  resize: 'vertical',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            <div style={{
-              display: 'flex',
-              gap: '12px'
-            }}>
-              <button
-                onClick={handleCancelAddLocation}
-                style={{
-                  flex: 1,
-                  padding: '12px 24px',
-                  backgroundColor: '#F3F4F6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '8px',
+            {requestSent ? (
+              <>
+                <h3 style={{
                   fontWeight: '600',
-                  fontSize: '16px',
-                  cursor: 'pointer',
+                  fontSize: '20px',
+                  marginBottom: '12px',
                   fontFamily: 'Montserrat, system-ui, sans-serif'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddLocation}
-                disabled={!newLocationName.trim()}
-                style={{
-                  flex: 1,
-                  padding: '12px 24px',
-                  backgroundColor: newLocationName.trim() ? '#17BFD9' : '#D1D5DB',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                }}>Request sent</h3>
+                <p style={{
+                  color: '#6B7280',
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                  marginBottom: '20px',
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
+                }}>
+                  We&apos;ll message you once it&apos;s reviewed.
+                </p>
+                <button
+                  onClick={handleCancelAddLocation}
+                  style={{
+                    width: '100%',
+                    padding: '12px 24px',
+                    backgroundColor: '#17BFD9',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}
+                >
+                  Done
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 style={{
                   fontWeight: '600',
-                  fontSize: '16px',
-                  cursor: newLocationName.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '20px',
+                  marginBottom: '12px',
                   fontFamily: 'Montserrat, system-ui, sans-serif'
-                }}
-              >
-                Add Location
-              </button>
-            </div>
+                }}>Request a Location</h3>
+
+                <p style={{
+                  color: '#6B7280',
+                  fontSize: '13px',
+                  lineHeight: 1.5,
+                  marginBottom: '20px',
+                  fontFamily: 'Montserrat, system-ui, sans-serif'
+                }}>
+                  Before you request a venue: it should be a real place your group can
+                  physically check into, and you should have some connection to it — you
+                  work there, run events there, or can otherwise speak for it. This isn&apos;t
+                  a general points-of-interest map. Duplicate, joke, or spam requests will
+                  be rejected. Review is manual and may take a few days.
+                </p>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    marginBottom: '8px',
+                    color: '#374151',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}>
+                    Location Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
+                    placeholder="Enter location name"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontFamily: 'Montserrat, system-ui, sans-serif',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    marginBottom: '8px',
+                    color: '#374151',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={newLocationDescription}
+                    onChange={(e) => setNewLocationDescription(e.target.value)}
+                    placeholder="Enter location description"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontFamily: 'Montserrat, system-ui, sans-serif',
+                      resize: 'vertical',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {requestError && (
+                  <p style={{
+                    color: '#DC2626',
+                    fontSize: '13px',
+                    marginBottom: '16px',
+                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                  }}>
+                    {requestError}
+                  </p>
+                )}
+
+                <div style={{
+                  display: 'flex',
+                  gap: '12px'
+                }}>
+                  <button
+                    onClick={handleCancelAddLocation}
+                    style={{
+                      flex: 1,
+                      padding: '12px 24px',
+                      backgroundColor: '#F3F4F6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat, system-ui, sans-serif'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddLocation}
+                    disabled={!newLocationName.trim() || submittingRequest}
+                    style={{
+                      flex: 1,
+                      padding: '12px 24px',
+                      backgroundColor: newLocationName.trim() ? '#17BFD9' : '#D1D5DB',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      fontSize: '16px',
+                      cursor: newLocationName.trim() && !submittingRequest ? 'pointer' : 'not-allowed',
+                      fontFamily: 'Montserrat, system-ui, sans-serif'
+                    }}
+                  >
+                    {submittingRequest ? 'Sending…' : 'Send Request'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

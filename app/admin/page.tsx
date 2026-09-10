@@ -187,6 +187,25 @@ export default function AdminPage() {
         }}>Manage any venue&apos;s banners and verification tags, and govern who has organizer/admin access.</p>
       </div>
 
+      <div style={{ padding: '16px 20px 0' }}>
+        <Link
+          href="/admin/location-requests"
+          style={{
+            display: 'inline-block',
+            backgroundColor: theme.accent,
+            color: 'white',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            fontFamily: 'Montserrat, system-ui, sans-serif',
+          }}
+        >
+          Location Requests
+        </Link>
+      </div>
+
       <div style={{ padding: '20px' }}>
         {error && (
           <p style={{ color: theme.accent2, fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
