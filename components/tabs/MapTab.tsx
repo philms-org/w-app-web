@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { theme } from '@/lib/theme';
+import { theme, elevation } from '@/lib/theme';
 
 // Dynamically import the map to avoid SSR issues
 const WMap = dynamic(() => import('@/components/WMap'), {
@@ -13,7 +13,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
   loading: () => (
     <div style={{
       height: '100vh',
-      backgroundColor: '#E5E7EB',
+      backgroundColor: theme.bg,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center'
@@ -22,14 +22,14 @@ const WMap = dynamic(() => import('@/components/WMap'), {
         <div style={{
           width: '48px',
           height: '48px',
-          border: '4px solid #17BFD9',
+          border: `4px solid ${theme.accent}`,
           borderTop: '4px solid transparent',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           margin: '0 auto 16px'
         }}></div>
         <p style={{
-          color: '#919191',
+          color: theme.muted,
           fontSize: '16px',
           fontFamily: 'Montserrat, system-ui, sans-serif'
         }}>Loading Map...</p>
@@ -204,8 +204,8 @@ export default function MapTab() {
           <button
             onClick={requestLocation}
             style={{
-              backgroundColor: '#17BFD9',
-              color: 'white',
+              backgroundColor: theme.accent,
+              color: theme.onAccent,
               border: 'none',
               borderRadius: '9999px',
               padding: '8px 16px',
@@ -230,10 +230,10 @@ export default function MapTab() {
         paddingTop: 'max(16px, env(safe-area-inset-top))'
       }}>
         <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: theme.surface,
           backdropFilter: 'blur(8px)',
           padding: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          boxShadow: elevation.glass
         }}>
           {/* Search Bar */}
           <div style={{ position: 'relative', marginBottom: '12px' }}>
@@ -244,7 +244,7 @@ export default function MapTab() {
               transform: 'translateY(-50%)',
               width: '20px',
               height: '20px',
-              color: '#919191'
+              color: theme.muted
             }} />
             <input
               type="text"
@@ -257,7 +257,7 @@ export default function MapTab() {
                 paddingRight: searchQuery ? '48px' : '16px',
                 paddingTop: '12px',
                 paddingBottom: '12px',
-                backgroundColor: '#F3F3F3',
+                backgroundColor: theme.surface2,
                 borderRadius: '9999px',
                 border: 'none',
                 fontSize: '16px',
@@ -278,7 +278,7 @@ export default function MapTab() {
                   cursor: 'pointer'
                 }}
               >
-                <X style={{ width: '20px', height: '20px', color: '#919191' }} />
+                <X style={{ width: '20px', height: '20px', color: theme.muted }} />
               </button>
             )}
           </div>
@@ -304,8 +304,8 @@ export default function MapTab() {
                   borderRadius: '9999px',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s ease',
-                  backgroundColor: selectedCategory === category.id ? '#17BFD9' : '#F3F3F3',
-                  color: selectedCategory === category.id ? 'white' : '#919191',
+                  backgroundColor: selectedCategory === category.id ? theme.accent : theme.surface2,
+                  color: selectedCategory === category.id ? theme.onAccent : theme.muted,
                   border: 'none',
                   cursor: 'pointer',
                   fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -337,16 +337,16 @@ export default function MapTab() {
           position: 'absolute',
           bottom: '80px',
           right: '16px',
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '50%',
           padding: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+          boxShadow: elevation.glass,
           border: 'none',
           cursor: 'pointer',
           zIndex: 1000
         }}
       >
-        <Filter style={{ width: '24px', height: '24px', color: '#17BFD9' }} />
+        <Filter style={{ width: '24px', height: '24px', color: theme.accent }} />
       </button>
 
       {/* Add Location Button (explicit opt-in; tap the map after arming) */}
@@ -357,10 +357,10 @@ export default function MapTab() {
           position: 'absolute',
           bottom: '140px',
           right: '16px',
-          backgroundColor: addMode ? '#17BFD9' : 'white',
+          backgroundColor: addMode ? theme.accent : theme.surface,
           borderRadius: '50%',
           padding: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+          boxShadow: elevation.glass,
           border: 'none',
           cursor: 'pointer',
           zIndex: 1000,
@@ -368,7 +368,7 @@ export default function MapTab() {
           height: '48px',
           fontSize: '24px',
           lineHeight: 1,
-          color: addMode ? 'white' : '#17BFD9',
+          color: addMode ? theme.onAccent : theme.accent,
           fontWeight: 600,
           transform: addMode ? 'rotate(45deg)' : 'none',
           transition: 'all 0.2s ease'
@@ -399,10 +399,10 @@ export default function MapTab() {
           position: 'absolute',
           bottom: '80px',
           left: '16px',
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderRadius: '50%',
           padding: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+          boxShadow: elevation.glass,
           border: 'none',
           cursor: 'pointer',
           zIndex: 1000
@@ -432,7 +432,7 @@ export default function MapTab() {
           }
         }}
       >
-        <Navigation style={{ width: '24px', height: '24px', color: '#17BFD9' }} />
+        <Navigation style={{ width: '24px', height: '24px', color: theme.accent }} />
       </button>
 
       {/* Locations List */}
@@ -442,16 +442,16 @@ export default function MapTab() {
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: 'white',
+          backgroundColor: theme.surface,
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
-          boxShadow: '0 -10px 25px rgba(0, 0, 0, 0.1)',
+          boxShadow: elevation.glass,
           zIndex: 1100,
           animation: 'slideUp 0.3s ease-out'
         }}>
           <div style={{
             padding: '16px',
-            borderBottom: '1px solid #F3F3F3'
+            borderBottom: `1px solid ${theme.divider}`
           }}>
             <div style={{
               width: '48px',
@@ -466,7 +466,7 @@ export default function MapTab() {
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>Nearby Locations</h3>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               fontSize: '14px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>{filteredLocations.length} locations found</p>
@@ -483,11 +483,11 @@ export default function MapTab() {
                 onClick={() => handleLocationSelect(location)}
                 style={{
                   width: '100%',
-                  backgroundColor: 'white',
+                  backgroundColor: theme.surface,
                   borderRadius: '12px',
                   padding: '16px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #F3F3F3',
+                  boxShadow: elevation.glass,
+                  border: `1px solid ${theme.divider}`,
                   marginBottom: '12px',
                   cursor: 'pointer',
                   textAlign: 'left'
@@ -501,17 +501,17 @@ export default function MapTab() {
                       fontFamily: 'Montserrat, system-ui, sans-serif'
                     }}>{location.name}</h4>
                     <p style={{
-                      color: '#919191',
+                      color: theme.muted,
                       fontSize: '14px',
                       marginTop: '4px',
                       fontFamily: 'Montserrat, system-ui, sans-serif'
                     }}>{location.description}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Users style={{ width: '16px', height: '16px', color: '#17BFD9' }} />
+                        <Users style={{ width: '16px', height: '16px', color: theme.accent }} />
                         <span style={{
                           fontSize: '14px',
-                          color: '#17BFD9',
+                          color: theme.accent,
                           fontWeight: '500',
                           fontFamily: 'Montserrat, system-ui, sans-serif'
                         }}>
@@ -519,10 +519,10 @@ export default function MapTab() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <MapPin style={{ width: '16px', height: '16px', color: '#919191' }} />
+                        <MapPin style={{ width: '16px', height: '16px', color: theme.muted }} />
                         <span style={{
                           fontSize: '14px',
-                          color: '#919191',
+                          color: theme.muted,
                           fontFamily: 'Montserrat, system-ui, sans-serif'
                         }}>
                           {location.radius}m radius
@@ -534,6 +534,7 @@ export default function MapTab() {
                     <div style={{
                       width: '48px',
                       height: '48px',
+                      // TODO(P7): tokenize accent-tint badge (bg + count colour below)
                       backgroundColor: '#D0F2F7',
                       borderRadius: '50%',
                       display: 'flex',
@@ -571,14 +572,14 @@ export default function MapTab() {
           padding: '16px'
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: theme.surface,
             borderRadius: '16px',
             padding: '24px',
             width: '100%',
             maxWidth: '400px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: elevation.glass
           }}>
             {requestSent ? (
               <>
@@ -589,7 +590,7 @@ export default function MapTab() {
                   fontFamily: 'Montserrat, system-ui, sans-serif'
                 }}>Request sent</h3>
                 <p style={{
-                  color: '#6B7280',
+                  color: theme.muted,
                   fontSize: '14px',
                   lineHeight: 1.5,
                   marginBottom: '20px',
@@ -602,8 +603,8 @@ export default function MapTab() {
                   style={{
                     width: '100%',
                     padding: '12px 24px',
-                    backgroundColor: '#17BFD9',
-                    color: 'white',
+                    backgroundColor: theme.accent,
+                    color: theme.onAccent,
                     border: 'none',
                     borderRadius: '8px',
                     fontWeight: '600',
@@ -625,7 +626,7 @@ export default function MapTab() {
                 }}>Request a Location</h3>
 
                 <p style={{
-                  color: '#6B7280',
+                  color: theme.muted,
                   fontSize: '13px',
                   lineHeight: 1.5,
                   marginBottom: '20px',
@@ -644,7 +645,7 @@ export default function MapTab() {
                     fontSize: '14px',
                     fontWeight: '500',
                     marginBottom: '8px',
-                    color: '#374151',
+                    color: theme.muted,
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
                     Location Name *
@@ -657,7 +658,7 @@ export default function MapTab() {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #D1D5DB',
+                      border: `1px solid ${theme.divider}`,
                       borderRadius: '8px',
                       fontSize: '16px',
                       fontFamily: 'Montserrat, system-ui, sans-serif',
@@ -672,7 +673,7 @@ export default function MapTab() {
                     fontSize: '14px',
                     fontWeight: '500',
                     marginBottom: '8px',
-                    color: '#374151',
+                    color: theme.muted,
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
                     Description
@@ -685,7 +686,7 @@ export default function MapTab() {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #D1D5DB',
+                      border: `1px solid ${theme.divider}`,
                       borderRadius: '8px',
                       fontSize: '16px',
                       fontFamily: 'Montserrat, system-ui, sans-serif',
@@ -715,8 +716,8 @@ export default function MapTab() {
                     style={{
                       flex: 1,
                       padding: '12px 24px',
-                      backgroundColor: '#F3F4F6',
-                      color: '#374151',
+                      backgroundColor: theme.surface2,
+                      color: theme.muted,
                       border: 'none',
                       borderRadius: '8px',
                       fontWeight: '600',
@@ -733,8 +734,8 @@ export default function MapTab() {
                     style={{
                       flex: 1,
                       padding: '12px 24px',
-                      backgroundColor: newLocationName.trim() ? '#17BFD9' : '#D1D5DB',
-                      color: 'white',
+                      backgroundColor: newLocationName.trim() ? theme.accent : theme.divider, // TODO(P7): tokenize disabled-state fill
+                      color: theme.onAccent,
                       border: 'none',
                       borderRadius: '8px',
                       fontWeight: '600',

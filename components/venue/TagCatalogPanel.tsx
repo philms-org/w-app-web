@@ -106,7 +106,7 @@ export default function TagCatalogPanel(
           disabled={busy}
           style={{
             marginBottom: 16, padding: '10px 16px', borderRadius: radius.pill, border: 'none',
-            backgroundColor: theme.accent, color: '#0D0D0F', fontWeight: 700, cursor: 'pointer',
+            backgroundColor: theme.accent, color: theme.onAccent, fontWeight: 700, cursor: 'pointer',
             fontFamily: typeTokens.family, fontSize: 14,
           }}
         >
@@ -170,7 +170,7 @@ export default function TagCatalogPanel(
                 padding: '6px 12px', borderRadius: radius.pill, cursor: 'pointer',
                 border: `1px solid ${draft.iconKind === k ? theme.accent : theme.divider}`,
                 backgroundColor: draft.iconKind === k ? theme.accent : 'transparent',
-                color: draft.iconKind === k ? '#0D0D0F' : theme.text,
+                color: draft.iconKind === k ? theme.onAccent : theme.text,
                 fontFamily: typeTokens.family, fontSize: 13, fontWeight: 600,
               }}
             >
@@ -214,7 +214,7 @@ export default function TagCatalogPanel(
                     backgroundColor: on ? theme.accent : 'transparent',
                   }}
                 >
-                  <Icon style={{ width: 18, height: 18, color: on ? '#0D0D0F' : theme.text }} />
+                  <Icon style={{ width: 18, height: 18, color: on ? theme.onAccent : theme.text }} />
                 </button>
               );
             })}

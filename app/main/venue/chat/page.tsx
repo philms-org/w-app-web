@@ -334,7 +334,7 @@ function VenueChatPageInner() {
               disabled={modeSaving}
               style={{
                 backgroundColor: theme.accent,
-                color: '#0D0D0F',
+                color: theme.onAccent,
                 border: 'none',
                 borderRadius: '12px',
                 padding: '8px 16px',
@@ -360,7 +360,7 @@ function VenueChatPageInner() {
               disabled={creating}
               style={{
                 backgroundColor: theme.accent,
-                color: '#0D0D0F',
+                color: theme.onAccent,
                 border: 'none',
                 borderRadius: '12px',
                 padding: '12px 20px',
@@ -386,7 +386,7 @@ function VenueChatPageInner() {
                 style={{
                   width: '100%',
                   backgroundColor: theme.accent,
-                  color: '#0D0D0F',
+                  color: theme.onAccent,
                   border: 'none',
                   borderRadius: '12px',
                   padding: '14px 20px',
@@ -427,7 +427,7 @@ function VenueChatPageInner() {
                       disabled={busyId === 'request'}
                       style={{
                         backgroundColor: theme.accent,
-                        color: '#0D0D0F',
+                        color: theme.onAccent,
                         border: 'none',
                         borderRadius: '12px',
                         padding: '10px 20px',

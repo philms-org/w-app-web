@@ -481,7 +481,7 @@ function VenueCarouselPageInner() {
             justifyContent: 'center',
             gap: '8px',
             backgroundColor: theme.accent,
-            color: '#0D0D0F',
+            color: theme.onAccent,
             borderRadius: '12px',
             padding: '12px 20px',
             fontSize: '14px',
