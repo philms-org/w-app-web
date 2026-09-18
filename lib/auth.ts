@@ -26,6 +26,17 @@ export async function verifyOTP(phone: string, token: string) {
   return data;
 }
 
+// Background-only session bootstrap — never surfaced as app auth. Used by
+// LandingLocationGate so the landing page can read `locations` under its
+// existing `to authenticated` RLS before anyone has signed up. Callers must
+// check supabase.auth.getSession() first and only call this when there's no
+// session yet, so a real signed-in visitor's session is never replaced.
+export async function signInAnonymously() {
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+  return data;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import AuthedRedirect from '@/components/AuthedRedirect';
+import LandingLocationGate from '@/components/LandingLocationGate';
 import { theme } from '@/lib/theme';
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function HomePage() {
       }}
     >
       <AuthedRedirect />
+      <LandingLocationGate />
 
       <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
         <div

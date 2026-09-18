@@ -5,13 +5,11 @@ import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
-import { haversineMeters } from '@/lib/geo';
+import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinOff, MapPin, RefreshCw, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
-
-const DEFAULT_RADIUS_METERS = 50;
 
 export default function NearbyBanner() {
   const { currentLocation, locationDenied, setSelectedLocation } = useStore();
