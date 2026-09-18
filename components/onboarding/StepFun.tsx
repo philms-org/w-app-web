@@ -7,7 +7,6 @@ import type { OnboardingData } from './types';
 type Props = { data: OnboardingData; patch: (p: Partial<OnboardingData>) => void };
 
 const DRINKS = ['Yes', 'No', 'Sometimes'];
-const RELATIONSHIPS = ['Single', 'Taken', "It's complicated"];
 
 const labelStyle: React.CSSProperties = { fontSize: typeTokens.label.fontSize, fontWeight: 600, color: theme.text, marginBottom: 6, display: 'block' };
 
@@ -38,22 +37,6 @@ export default function StepFun({ data, patch }: Props) {
         onChange={(e) => patch({ fridayNight: e.target.value })}
         placeholder="Out dancing? Home with a book?"
       />
-
-      <div>
-        <span style={labelStyle}>Relationship status</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {RELATIONSHIPS.map((r) => (
-            <Chip
-              key={r}
-              selected={data.relationship === r}
-              onClick={() => patch({ relationship: data.relationship === r ? '' : r })}
-              style={{ flex: 1, padding: '12px', borderRadius: radius.control }}
-            >
-              {r}
-            </Chip>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

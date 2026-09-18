@@ -6,7 +6,7 @@ export const LOOKING_FOR_OPTIONS = {
       { id: 0, emoji: '🚫', label: 'None' },
       { id: 1, emoji: '🌎', label: 'Community' },
       { id: 2, emoji: '👩🏻‍🤝‍👩🏾', label: 'Close friends' },
-      { id: 3, emoji: '✈️', label: 'Travel' },
+      { id: 3, emoji: '✈️', label: 'Travelers' },
     ],
   },
   business: {
@@ -22,7 +22,7 @@ export const LOOKING_FOR_OPTIONS = {
     title: 'Love',
     options: [
       { id: 1, emoji: '❤️', label: 'Open' },
-      { id: 2, emoji: '🙅', label: 'Not interested' },
+      { id: 2, emoji: '🙅', label: 'Locked in' },
       { id: 3, emoji: '🔒', label: 'Taken' },
     ],
   },
