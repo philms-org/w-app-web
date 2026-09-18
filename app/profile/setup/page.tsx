@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { fetchProfile, upsertProfile } from '@/lib/data';
+import { fetchProfile, updateProfile } from '@/lib/data';
 import { ChevronLeft } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button } from '@/components/ui/primitives';
@@ -30,6 +30,7 @@ export default function ProfileSetupPage() {
   const [step, setStep] = useState(1); // 1-indexed
   const [data, setData] = useState<OnboardingData>(EMPTY_DATA);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
   // Pre-fill from the existing profile row (non-destructive re-entry).
   useEffect(() => {
@@ -61,8 +62,9 @@ export default function ProfileSetupPage() {
       return;
     }
     setIsSaving(true);
+    setError('');
     try {
-      await upsertProfile(dataToProfilePatch(user.id, data));
+      await updateProfile(dataToProfilePatch(user.id, data));
       setUser({
         ...user,
         socialisingId: data.socialisingId,
@@ -79,6 +81,7 @@ export default function ProfileSetupPage() {
       router.push('/main');
     } catch (err) {
       console.error('Onboarding save failed:', err);
+      setError(err instanceof Error ? err.message : 'Could not save your profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -111,6 +114,21 @@ export default function ProfileSetupPage() {
       </div>
 
       <div style={{ flex: 1, padding: '24px', paddingBottom: 96, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {error && (
+          <div
+            style={{
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: theme.accent2,
+              padding: '12px 16px',
+              borderRadius: '12px',
+              marginBottom: '16px',
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
         {step === 1 && <StepLookingFor data={data} patch={patch} />}
         {step === 2 && <StepLocation data={data} patch={patch} />}
         {step === 3 && <StepWork data={data} patch={patch} />}

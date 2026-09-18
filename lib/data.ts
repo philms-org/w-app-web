@@ -49,6 +49,17 @@ export async function upsertProfile(profile: Partial<Profile> & { id: string }):
   if (error) throw error;
 }
 
+// Use this instead of upsertProfile for a row that's already known to exist
+// (anything after registration). Postgres validates NOT NULL constraints
+// against the row upsert() would insert even when the conflict resolves to
+// an UPDATE, so a partial patch that omits a NOT NULL column like
+// display_name fails upsert() outright — update() has no such insert branch.
+export async function updateProfile(profile: Partial<Profile> & { id: string }): Promise<void> {
+  const { id, ...patch } = profile;
+  const { error } = await supabase.from('profiles').update(patch).eq('id', id);
+  if (error) throw error;
+}
+
 // ---- Venues ----
 
 export async function fetchVenues(): Promise<Venue[]> {
@@ -1762,7 +1773,7 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
 export async function setShareCheckinsWithFriends(value: boolean): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
-  await upsertProfile({ id: uid, share_checkins_with_friends: value });
+  await updateProfile({ id: uid, share_checkins_with_friends: value });
 }
 
 // ---- Location requests ----
