@@ -9,13 +9,16 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 //   components and Leaflet's injected styles.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com", // Next.js dev + hydration + Vercel Analytics; tighten with nonces post-launch
+  // https://challenges.cloudflare.com loads the Turnstile CAPTCHA widget script.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://challenges.cloudflare.com", // Next.js dev + hydration + Vercel Analytics; tighten with nonces post-launch
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://unpkg.com",
   "font-src 'self' data:",
   // Vercel Analytics beacons to same-origin /_vercel/insights ('self' covers it).
   // Sentry uploads events/traces to its *.ingest.*.sentry.io hosts.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321 https://*.sentry.io",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321 https://*.sentry.io https://challenges.cloudflare.com",
+  // Turnstile renders its challenge in an iframe from this origin.
+  "frame-src https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

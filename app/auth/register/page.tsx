@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
@@ -8,6 +8,8 @@ import { signUp } from '@/lib/auth';
 import { upsertProfile, uploadAvatar } from '@/lib/data';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Button, Input, Chip } from '@/components/ui/primitives';
+import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
+import type { TurnstileInstance } from '@marsidev/react-turnstile';
 import { Eye, EyeOff, ChevronLeft, Camera } from 'lucide-react';
 
 const GENDERS = [
@@ -37,6 +39,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countryCode, setCountryCode] = useState('+1');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaRef = useRef<TurnstileInstance>(undefined);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -74,6 +78,10 @@ export default function RegisterPage() {
       setError('Passwords do not match');
       return false;
     }
+    if (captchaEnabled && !captchaToken) {
+      setError('Please complete the verification challenge');
+      return false;
+    }
     return true;
   };
 
@@ -84,7 +92,7 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const { user: authUser, session } = await signUp(formData.email, formData.password);
+      const { user: authUser, session } = await signUp(formData.email, formData.password, captchaToken);
       if (!authUser) {
         setError('Registration failed');
         return;
@@ -125,6 +133,8 @@ export default function RegisterPage() {
       router.push('/profile/setup');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
+      captchaRef.current?.reset();
+      setCaptchaToken('');
     } finally {
       setIsLoading(false);
     }
@@ -322,6 +332,12 @@ export default function RegisterPage() {
               {showConfirmPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
             </button>
           </div>
+
+          {captchaEnabled && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <Captcha ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
+            </div>
+          )}
 
           <Button type="submit" fullWidth disabled={isLoading}>
             {isLoading ? 'Creating account…' : 'Create account'}

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { requestPasswordReset } from '@/lib/auth';
 import { Button, Input } from '@/components/ui/primitives';
+import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
+import type { TurnstileInstance } from '@marsidev/react-turnstile';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -14,6 +16,8 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaRef = useRef<TurnstileInstance>(undefined);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,15 +26,21 @@ export default function ForgotPasswordPage() {
       setError('Enter the email for your account');
       return;
     }
+    if (captchaEnabled && !captchaToken) {
+      setError('Please complete the verification challenge');
+      return;
+    }
     setIsLoading(true);
     try {
-      await requestPasswordReset(email.trim());
+      await requestPasswordReset(email.trim(), captchaToken);
       setSent(true);
     } catch {
       // Don't reveal whether an address is registered.
       setSent(true);
     } finally {
       setIsLoading(false);
+      captchaRef.current?.reset();
+      setCaptchaToken('');
     }
   };
 
@@ -73,6 +83,11 @@ export default function ForgotPasswordPage() {
               placeholder="Enter your email"
               autoComplete="email"
             />
+            {captchaEnabled && (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <Captcha ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
+              </div>
+            )}
             <Button type="submit" fullWidth disabled={isLoading}>
               {isLoading ? 'Sending…' : 'Send reset link'}
             </Button>

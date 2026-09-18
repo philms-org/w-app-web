@@ -3,8 +3,12 @@ import { supabase } from './supabase';
 // Mirrors WAPAuth.swift. Apple/Facebook sign-in are omitted here — they need
 // separate OAuth app configuration for web that hasn't been set up yet.
 
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+export async function signUp(email: string, password: string, captchaToken?: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: captchaToken ? { captchaToken } : undefined,
+  });
   if (error) throw error;
   return data;
 }
@@ -15,8 +19,13 @@ export async function signIn(email: string, password: string) {
   return data;
 }
 
-export async function signInWithPhone(phone: string) {
-  const { error } = await supabase.auth.signInWithOtp({ phone });
+// signInWithOtp is captcha-protected once CAPTCHA protection is enabled —
+// pass captchaToken once phone sign-in has UI wired up to collect one.
+export async function signInWithPhone(phone: string, captchaToken?: string) {
+  const { error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: captchaToken ? { captchaToken } : undefined,
+  });
   if (error) throw error;
 }
 
@@ -31,8 +40,10 @@ export async function verifyOTP(phone: string, token: string) {
 // existing `to authenticated` RLS before anyone has signed up. Callers must
 // check supabase.auth.getSession() first and only call this when there's no
 // session yet, so a real signed-in visitor's session is never replaced.
-export async function signInAnonymously() {
-  const { data, error } = await supabase.auth.signInAnonymously();
+export async function signInAnonymously(captchaToken?: string) {
+  const { data, error } = await supabase.auth.signInAnonymously(
+    captchaToken ? { options: { captchaToken } } : undefined
+  );
   if (error) throw error;
   return data;
 }
@@ -44,10 +55,10 @@ export async function signOut() {
 
 // Sends the Supabase recovery email. The link in it lands on /auth/reset,
 // where detectSessionInUrl establishes a short-lived recovery session.
-export async function requestPasswordReset(email: string) {
+export async function requestPasswordReset(email: string, captchaToken?: string) {
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/auth/reset` : undefined;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo, captchaToken });
   if (error) throw error;
 }
 

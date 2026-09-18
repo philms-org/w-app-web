@@ -12,6 +12,7 @@ import { theme, elevation } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPin } from 'lucide-react';
 import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
+import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
 
 const PREVIEW_MS = 2000;
 const ASKED_KEY = 'w_app_location_permission_asked';
@@ -31,11 +32,23 @@ export default function LandingLocationGate() {
   const [phase, setPhase] = useState<Phase>('idle');
   const [matchedVenue, setMatchedVenue] = useState<Venue | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Resolves silently in the background once 'asking' mounts, so a token is
+  // ready by the time the visitor clicks Allow — no added friction. Read via
+  // ref (not state) so handleAllow always sees the latest value at call time.
+  const captchaTokenRef = useRef('');
+
+  const [captchaMounted, setCaptchaMounted] = useState(false);
 
   useEffect(() => {
     if (!hasHydrated || isAuthenticated) return;
     const alreadyAsked = localStorage.getItem(ASKED_KEY);
-    if (!alreadyAsked) setPhase('asking');
+    if (!alreadyAsked) {
+      setPhase('asking');
+      // Mounted for the rest of this visit (outlives the 'asking' → 'idle'
+      // flip handleAllow does on click) so the ref already holds a token by
+      // the time handleAllow reads it.
+      setCaptchaMounted(true);
+    }
   }, [hasHydrated, isAuthenticated]);
 
   useEffect(() => () => {
@@ -71,7 +84,7 @@ export default function LandingLocationGate() {
 
     try {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) await signInAnonymously();
+      if (!data.session) await signInAnonymously(captchaTokenRef.current || undefined);
       const venues = await fetchVenues();
       const venue = findClosestVenueInRange(venues, currentLocation);
       if (!venue) return;
@@ -92,10 +105,24 @@ export default function LandingLocationGate() {
     setPhase('idle');
   };
 
-  if (phase === 'idle') return null;
+  const captchaWidget = captchaEnabled && captchaMounted ? (
+    <Captcha
+      size="invisible"
+      onVerify={(token) => {
+        captchaTokenRef.current = token;
+      }}
+      onExpire={() => {
+        captchaTokenRef.current = '';
+      }}
+    />
+  ) : null;
+
+  if (phase === 'idle') return captchaWidget;
 
   if (phase === 'previewing' && matchedVenue) {
     return (
+      <>
+      {captchaWidget}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         backgroundColor: 'rgba(0,0,0,0.6)',
@@ -159,12 +186,15 @@ export default function LandingLocationGate() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   // 'asking' — the same modal copy/behavior app/main/page.tsx used to show
   // post-signup, moved here so it runs before the signup wall instead.
   return (
+    <>
+    {captchaWidget}
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 9999,
@@ -235,5 +265,6 @@ export default function LandingLocationGate() {
         </p>
       </div>
     </div>
+    </>
   );
 }
