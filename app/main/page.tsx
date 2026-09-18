@@ -11,6 +11,7 @@ import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
 import HistoryTab from '@/components/tabs/HistoryTab';
+import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
 import { MapPin } from 'lucide-react';
 
@@ -85,11 +86,13 @@ export default function MainPage() {
       </div>
       
       {/* Tab bar */}
-      <TabBar 
-        activeTab={activeTab} 
+      <TabBar
+        activeTab={activeTab}
         onTabChange={setActiveTab}
         unreadCount={unreadCount}
       />
+
+      <ProfileSetupPrompt />
 
       {/* Location Permission Prompt */}
       {showLocationPrompt && (

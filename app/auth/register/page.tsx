@@ -130,7 +130,10 @@ export default function RegisterPage() {
         setupComplete: false,
       });
 
-      router.push('/profile/setup');
+      // Straight into the app — the 5-step wizard is no longer a forced
+      // gate; ProfileSetupPrompt (mounted on /main) nudges completion a few
+      // seconds after landing instead.
+      router.push('/main');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       captchaRef.current?.reset();
