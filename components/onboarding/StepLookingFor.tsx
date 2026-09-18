@@ -63,7 +63,7 @@ export default function StepLookingFor({ data, patch }: Props) {
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Heart style={{ width: 24, height: 24, color: theme.warm1 }} />
-          <h3 style={heading}>Love is always in the air. Save time by letting people know what&apos;s up.</h3>
+          <h3 style={heading}>Save time by letting people know what&apos;s up.</h3>
         </div>
         <div style={grid2}>
           {pickable(LOOKING_FOR_OPTIONS.love.options).map((o) => (
