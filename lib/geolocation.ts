@@ -1,5 +1,22 @@
 import { useStore } from '@/lib/store';
 
+// "Enable it in your browser settings" tells a blocked user THAT something
+// needs fixing but not HOW — the actual steps differ enough by platform
+// (no universal "reset this site's permission" API exists) that a vague
+// pointer just strands people. This gives the concrete path for their
+// platform instead.
+export function locationSettingsInstructions(): string {
+  if (typeof navigator === 'undefined') return 'Enable location for this site in your browser settings, then refresh.';
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    return 'Open Settings → Safari → Location, set it to "Ask" or "Allow", then come back and refresh this page.';
+  }
+  if (/Android/.test(ua)) {
+    return 'Tap the lock icon next to the address bar → Permissions → Location → Allow, then refresh this page.';
+  }
+  return 'Click the lock icon in your address bar → Site settings → Location → Allow, then refresh this page.';
+}
+
 // Same fallback center app/main/page.tsx's modal has always used when
 // geolocation is denied/unsupported — kept identical so behavior doesn't change.
 const FALLBACK_LOCATION = { lat: 40.7128, lng: -74.0060 };

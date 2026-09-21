@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { requestLocation } from '@/lib/geolocation';
+import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
 import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
 import { theme } from '@/lib/theme';
@@ -202,13 +202,18 @@ export default function NearbyBanner() {
         {headerRow}
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <MapPinOff style={{ width: '32px', height: '32px', color: theme.muted, margin: '0 auto 12px' }} />
-          <p style={{ color: theme.muted, fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          <p style={{ color: theme.muted, fontSize: '14px', marginBottom: locationPermissionBlocked ? '4px' : '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             {locationPermissionBlocked
-              ? "Location is blocked for this site in your browser settings — enable it there, then refresh."
+              ? 'Location is blocked for this site.'
               : locationDenied
               ? "Couldn't get your location. Try again or enter it manually."
               : 'Turn on location to see nearby venues.'}
           </p>
+          {locationPermissionBlocked && (
+            <p style={{ color: theme.muted, fontSize: '12px', marginBottom: '16px', lineHeight: 1.5, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              {locationSettingsInstructions()}
+            </p>
+          )}
           {!locationPermissionBlocked && (
             <button
               onClick={handleRefresh}
@@ -226,13 +231,17 @@ export default function NearbyBanner() {
           <div>
             <button
               onClick={() => setShowManualEntry((v) => !v)}
-              style={{
+              style={locationPermissionBlocked ? {
+                backgroundColor: theme.accent, color: theme.onAccent, border: 'none',
+                borderRadius: '12px', padding: '10px 24px', fontSize: '14px', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
+              } : {
                 background: 'none', border: 'none', color: theme.muted, fontSize: '12px',
                 textDecoration: 'underline', cursor: 'pointer',
                 fontFamily: 'Montserrat, system-ui, sans-serif',
               }}
             >
-              or enter it manually
+              {locationPermissionBlocked ? 'Pick your venue manually' : 'or enter it manually'}
             </button>
           </div>
           {showManualEntry && (

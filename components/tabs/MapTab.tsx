@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
-import { requestLocation } from '@/lib/geolocation';
+import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme, elevation } from '@/lib/theme';
@@ -175,7 +175,7 @@ export default function MapTab() {
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.4 }}>
             {locationPermissionBlocked
-              ? "Location is blocked for this site — enable it in your browser's site settings, then retry."
+              ? `Location is blocked for this site. ${locationSettingsInstructions()}`
               : 'Location is off — showing a default area, not where you are.'}
           </span>
           {!locationPermissionBlocked && (
