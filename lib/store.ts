@@ -56,6 +56,13 @@ interface AppState {
   // True when the user denied geolocation (or it's unsupported) and we're
   // showing a fallback map center instead of their real position.
   locationDenied: boolean;
+  // True specifically when the browser's geolocation permission is denied
+  // at the OS/browser level (navigator.geolocation error code 1). Retrying
+  // requestLocation() can never succeed in this state — only the user
+  // changing the site's permission in their browser settings can — so the
+  // UI needs to tell them that instead of offering a "try again" that can't
+  // work.
+  locationPermissionBlocked: boolean;
   selectedLocation: Location | null;
   nearbyLocations: Location[];
   inLocation: boolean;
@@ -82,6 +89,7 @@ interface AppState {
   setHasHydrated: (value: boolean) => void;
   setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
   setLocationDenied: (denied: boolean) => void;
+  setLocationPermissionBlocked: (blocked: boolean) => void;
   setSelectedLocation: (location: Location | null) => void;
   setNearbyLocations: (locations: Location[]) => void;
   setInLocation: (inLocation: boolean) => void;
@@ -101,6 +109,7 @@ export const useStore = create<AppState>()(
       isAuthenticated: false,
       currentLocation: null,
       locationDenied: false,
+      locationPermissionBlocked: false,
       selectedLocation: null,
       nearbyLocations: [],
       inLocation: false,
@@ -131,6 +140,7 @@ export const useStore = create<AppState>()(
       
       setCurrentLocation: (location) => set({ currentLocation: location }),
       setLocationDenied: (denied) => set({ locationDenied: denied }),
+      setLocationPermissionBlocked: (blocked) => set({ locationPermissionBlocked: blocked }),
       
       setSelectedLocation: (location) => set({ selectedLocation: location }),
       

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
+import { requestLocation } from '@/lib/geolocation';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme, elevation } from '@/lib/theme';
@@ -40,7 +41,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, locationDenied, setLocationDenied, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -63,37 +64,11 @@ export default function MapTab() {
     { id: 'custom', label: 'Custom', icon: '📌' },
   ];
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
-      setLocationDenied(true);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLocationDenied(false);
-      },
-      (error) => {
-        console.warn('Location error:', error.code, error.message);
-        // Flagged fallback — the banner below tells the user and offers retry.
-        setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
-        setLocationDenied(true);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    );
-  };
-
   useEffect(() => {
-    // Request location permission with high accuracy
-    requestLocation();
+    // Request location permission with high accuracy. 5-minute maximumAge:
+    // a mount-time fetch doesn't need to force a brand-new fix the way a
+    // manual retry does.
+    requestLocation(300000);
 
     // Load real venues from Supabase
     fetchVenues()
@@ -116,7 +91,7 @@ export default function MapTab() {
         );
       })
       .catch((err) => console.error('Failed to load venues:', err));
-  }, [setCurrentLocation, setNearbyLocations]);
+  }, [setNearbyLocations]);
 
   const filteredLocations = useMemo(() => nearbyLocations.filter(location => {
     const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,25 +174,29 @@ export default function MapTab() {
         }}>
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.4 }}>
-            Location is off — showing a default area, not where you are.
+            {locationPermissionBlocked
+              ? "Location is blocked for this site — enable it in your browser's site settings, then retry."
+              : 'Location is off — showing a default area, not where you are.'}
           </span>
-          <button
-            onClick={requestLocation}
-            style={{
-              backgroundColor: theme.accent,
-              color: theme.onAccent,
-              border: 'none',
-              borderRadius: '9999px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Turn on
-          </button>
+          {!locationPermissionBlocked && (
+            <button
+              onClick={() => requestLocation()}
+              style={{
+                backgroundColor: theme.accent,
+                color: theme.onAccent,
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Turn on
+            </button>
+          )}
         </div>
       )}
       {/* Header */}

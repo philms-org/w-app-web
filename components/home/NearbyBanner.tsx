@@ -12,7 +12,7 @@ import { MapPinOff, MapPin, RefreshCw, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
 
 export default function NearbyBanner() {
-  const { currentLocation, locationDenied, setSelectedLocation } = useStore();
+  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -203,20 +203,26 @@ export default function NearbyBanner() {
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <MapPinOff style={{ width: '32px', height: '32px', color: theme.muted, margin: '0 auto 12px' }} />
           <p style={{ color: theme.muted, fontSize: '14px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            {locationDenied ? "Couldn't get your location. Try again or enter it manually." : 'Turn on location to see nearby venues.'}
+            {locationPermissionBlocked
+              ? "Location is blocked for this site in your browser settings — enable it there, then refresh."
+              : locationDenied
+              ? "Couldn't get your location. Try again or enter it manually."
+              : 'Turn on location to see nearby venues.'}
           </p>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            style={{
-              backgroundColor: theme.accent, color: theme.onAccent, border: 'none',
-              borderRadius: '12px', padding: '10px 24px', fontSize: '14px', fontWeight: 700,
-              cursor: refreshing ? 'default' : 'pointer', marginBottom: '12px',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-            }}
-          >
-            {refreshing ? 'Enabling…' : 'Enable Location'}
-          </button>
+          {!locationPermissionBlocked && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              style={{
+                backgroundColor: theme.accent, color: theme.onAccent, border: 'none',
+                borderRadius: '12px', padding: '10px 24px', fontSize: '14px', fontWeight: 700,
+                cursor: refreshing ? 'default' : 'pointer', marginBottom: '12px',
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+              }}
+            >
+              {refreshing ? 'Enabling…' : 'Enable Location'}
+            </button>
+          )}
           <div>
             <button
               onClick={() => setShowManualEntry((v) => !v)}
