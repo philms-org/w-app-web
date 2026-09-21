@@ -248,6 +248,45 @@ users, `/auth/login` kept alive for existing accounts) was made by the
 founder in-session on 2026-09-15, confirmed against a click-through
 prototype before this spec was written.
 
+## Merge conflict with concurrent work (found 2026-09-18)
+
+While this branch sat uncommitted-to-`main` in `.worktrees/guest-first-onboarding`,
+a separate, smaller spec —
+`docs/superpowers/specs/2026-09-18-landing-location-preview-design.md` — shipped
+directly to `main` (commit `30c79a1`, on top of an unrelated sign-up bugfix,
+`2534b99`). That spec explicitly assumed no interaction with this one ("this
+spec does not build on it and does not require it," per its Background
+section), but a dry-run three-way merge (`git merge-tree`, no working-tree
+changes) between `origin/main` and this branch shows that assumption doesn't
+hold in practice:
+
+- **`app/page.tsx` / `components/AuthedRedirect.tsx` — real design collision,
+  not just adjacent edits.** `main`'s landing-location-preview spec mounts a
+  new `LandingLocationGate` *alongside* the existing `AuthedRedirect`
+  (§3 of that spec: "Mounted in `app/page.tsx` alongside (not replacing)
+  `AuthedRedirect`"). This spec's §2 above deletes `AuthedRedirect.tsx`
+  entirely and replaces it with `EnsureSession`, which unconditionally starts
+  a real anonymous session for *every* visitor rather than only when a
+  location-permission modal is being shown. Both branches solved "what
+  happens when a visitor lands on `/`" differently; merging requires an
+  actual product decision — e.g. does `EnsureSession` subsume
+  `LandingLocationGate`'s anonymous-session bootstrap and geofence-preview
+  behavior, does the preview become one of `EnsureSession`'s states, or do
+  they run side by side — not a mechanical conflict-marker resolution.
+- **`lib/auth.ts` — mostly mechanical.** Both branches independently added
+  `signInAnonymously()` with a different doc-comment directly above it,
+  producing a textual conflict on the same lines. This branch's two other new
+  functions in this file (`upgradeAnonymousUser`, `signInWithMagicLink`) don't
+  conflict with anything on `main` — they just need to survive the merge of
+  the surrounding lines.
+- **Clean, no action needed:** `lib/store.ts` (this branch's additive
+  `isAnonymous` field merges cleanly) and `supabase/config.toml` (both
+  branches flip the same local-dev flag the same way).
+
+Not resolved as part of this note — whoever picks this branch back up should
+decide the `AuthedRedirect`/`EnsureSession`/`LandingLocationGate` question
+above before merging, since it's a real architecture call, not busywork.
+
 ## Deferred / follow-up
 
 - **Founder go/no-go + manual dashboard toggle**: enabling anonymous
