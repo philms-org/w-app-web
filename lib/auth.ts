@@ -39,17 +39,37 @@ export async function verifyOTP(phone: string, token: string) {
   return data;
 }
 
-// Background-only session bootstrap — never surfaced as app auth. Used by
-// LandingLocationGate so the landing page can read `locations` under its
-// existing `to authenticated` RLS before anyone has signed up. Callers must
-// check supabase.auth.getSession() first and only call this when there's no
-// session yet, so a real signed-in visitor's session is never replaced.
+// Anonymous session — created on every fresh visit (see components/EnsureSession.tsx).
+// Supabase issues a real auth.uid() with role `authenticated` and an
+// `is_anonymous: true` JWT claim; every RLS policy in this repo that checks
+// `to authenticated` + `auth.uid()` already works for this session as-is.
 export async function signInAnonymously(captchaToken?: string) {
   const { data, error } = await supabase.auth.signInAnonymously(
     captchaToken ? { options: { captchaToken } } : undefined
   );
   if (error) throw error;
   return data;
+}
+
+// Upgrades the CURRENT (anonymous) session in place — same auth.uid(), no new
+// account. Throws if the email already belongs to a different, real account;
+// callers must catch that and fall back to signInWithMagicLink instead.
+export async function upgradeAnonymousUser(email: string, displayName: string) {
+  const { data, error } = await supabase.auth.updateUser({
+    email,
+    data: { display_name: displayName },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Passwordless return path — replaces password login for the new flow.
+// Existing password users can still use signIn() via /auth/login, untouched.
+export async function signInWithMagicLink(email: string) {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/main` : undefined;
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+  if (error) throw error;
 }
 
 export async function signOut() {
