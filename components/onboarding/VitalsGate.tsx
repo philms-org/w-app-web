@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { upgradeAnonymousUser, signInWithMagicLink } from '@/lib/auth';
 import { upsertProfile } from '@/lib/data';
@@ -44,6 +44,17 @@ export default function VitalsGate({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [linkSent, setLinkSent] = useState(false);
+
+  // Reset state when the sheet opens (but not on mount or when it closes).
+  useEffect(() => {
+    if (open) {
+      setMode('new');
+      setName('');
+      setEmail('');
+      setError('');
+      setLinkSent(false);
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -132,7 +143,7 @@ export default function VitalsGate({
               </Button>
             </form>
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <button type="button" onClick={() => setMode('returning')}
+              <button type="button" onClick={() => { setMode('returning'); setError(''); }}
                 style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}>
                 Already checked in before? Sign in
               </button>
@@ -165,7 +176,7 @@ export default function VitalsGate({
               </Button>
             </form>
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <button type="button" onClick={() => setMode('new')}
+              <button type="button" onClick={() => { setMode('new'); setError(''); }}
                 style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}>
                 New here? Get instant access
               </button>
