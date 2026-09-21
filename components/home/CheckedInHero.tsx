@@ -25,6 +25,7 @@ import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
+import VitalsGate from '@/components/onboarding/VitalsGate';
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
@@ -36,7 +37,7 @@ import { haversineMeters } from '@/lib/geo';
 // adds a real geofence gate in front of checkIn: only actually check in when
 // the user's live location is within the venue's radius.
 export default function CheckedInHero() {
-  const { selectedLocation, setSelectedLocation, currentLocation } = useStore();
+  const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
+  const [showVitalsGate, setShowVitalsGate] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -158,6 +160,12 @@ export default function CheckedInHero() {
   // non-idempotent checkIn() write two or more times per venue entry. Track
   // which location we've already attempted so it happens once; cleared on
   // check-out (handleBack) and when the location changes below.
+  //
+  // For an anonymous session, the geofence branch opens the vitals gate
+  // instead of checking in, and deliberately leaves checkInAttemptedFor
+  // unset. `user?.isAnonymous` is in this effect's deps, so once VitalsGate's
+  // onIdentified flips it to false the effect re-runs and this time takes
+  // the real checkIn() path.
   const checkInAttemptedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -169,13 +177,17 @@ export default function CheckedInHero() {
     setSelectedAttendeeId(null);
 
     if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
-      checkInAttemptedFor.current = selectedLocation.id;
-      checkIn(selectedLocation.id)
-        .then(() => setCheckedIn(true))
-        .catch((err) => {
-          checkInAttemptedFor.current = null;
-          console.error('Check-in failed:', err);
-        });
+      if (user?.isAnonymous) {
+        setShowVitalsGate(true);
+      } else {
+        checkInAttemptedFor.current = selectedLocation.id;
+        checkIn(selectedLocation.id)
+          .then(() => setCheckedIn(true))
+          .catch((err) => {
+            checkInAttemptedFor.current = null;
+            console.error('Check-in failed:', err);
+          });
+      }
     }
 
     loadPresence();
@@ -186,7 +198,7 @@ export default function CheckedInHero() {
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
 
-  }, [selectedLocation, withinGeofence, loadPresence]);
+  }, [selectedLocation, withinGeofence, loadPresence, user?.isAnonymous]);
 
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
@@ -560,6 +572,15 @@ export default function CheckedInHero() {
 
       {showOrganizerWelcome && (
         <OrganizerWelcomeModal onClose={() => setShowOrganizerWelcome(false)} />
+      )}
+
+      {showVitalsGate && (
+        <VitalsGate
+          open={showVitalsGate}
+          intent="checkin"
+          onClose={() => setShowVitalsGate(false)}
+          onIdentified={() => setShowVitalsGate(false)}
+        />
       )}
     </div>
   );
