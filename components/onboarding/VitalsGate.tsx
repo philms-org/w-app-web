@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { upgradeAnonymousUser, signInWithMagicLink } from '@/lib/auth';
 import { upsertProfile } from '@/lib/data';
-import { theme, radius, type as typeTokens, elevation } from '@/lib/theme';
+import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
 
 type Intent = 'checkin' | 'messages' | 'profile';
@@ -136,11 +136,13 @@ export default function VitalsGate({
         aria-labelledby="vitals-gate-heading"
         style={{
           width: '100%', maxWidth: 480,
-          background: theme.surface,
+          background: theme.glassFill,
+          backdropFilter: glassBlur,
+          WebkitBackdropFilter: glassBlur,
           borderTop: `1px solid ${theme.glassBorder}`,
           borderRadius: `${radius.sheet}px ${radius.sheet}px 0 0`,
           padding: '22px 22px calc(22px + env(safe-area-inset-bottom, 10px))',
-          boxShadow: elevation.sheet,
+          boxShadow: `${elevation.sheet}, inset 0 1px 0 ${theme.glassHighlight}`,
         }}
       >
         <div style={{ width: 36, height: 4, borderRadius: 3, background: theme.divider, margin: '0 auto 16px' }} />
@@ -161,14 +163,14 @@ export default function VitalsGate({
                 value={name} onChange={(e) => setName(e.target.value)} required />
               <Input label="Email" name="email" type="email" inputMode="email" autoComplete="email"
                 placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              {error && <p style={{ color: theme.accent2, fontSize: typeTokens.caption.fontSize, margin: 0 }}>{error}</p>}
+              {error && <p role="alert" style={{ color: theme.accent2, fontSize: typeTokens.caption.fontSize, margin: 0 }}>{error}</p>}
               <Button type="submit" fullWidth disabled={busy || !name.trim() || !isValidEmail(email)}>
                 {busy ? 'Saving…' : 'Continue'}
               </Button>
             </form>
-            <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <div style={{ textAlign: 'center', marginTop: 2 }}>
               <button type="button" onClick={() => { setMode('returning'); setError(''); }}
-                style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer', padding: '14px 8px', minHeight: 44 }}>
                 Already checked in before? Sign in
               </button>
             </div>
@@ -194,14 +196,14 @@ export default function VitalsGate({
             <form onSubmit={handleSendMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Input ref={firstFieldRef} label="Email" name="email" type="email" inputMode="email" autoComplete="email"
                 placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              {error && <p style={{ color: theme.accent2, fontSize: typeTokens.caption.fontSize, margin: 0 }}>{error}</p>}
+              {error && <p role="alert" style={{ color: theme.accent2, fontSize: typeTokens.caption.fontSize, margin: 0 }}>{error}</p>}
               <Button type="submit" fullWidth disabled={busy || !isValidEmail(email)}>
                 {busy ? 'Sending…' : 'Send magic link'}
               </Button>
             </form>
-            <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <div style={{ textAlign: 'center', marginTop: 2 }}>
               <button type="button" onClick={() => { setMode('new'); setError(''); }}
-                style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ background: 'none', border: 'none', color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer', padding: '14px 8px', minHeight: 44 }}>
                 New here? Get instant access
               </button>
             </div>
