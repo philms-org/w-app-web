@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
@@ -40,17 +40,53 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [countryCode, setCountryCode] = useState('+1');
   const [captchaToken, setCaptchaToken] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const captchaRef = useRef<TurnstileInstance>(undefined);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  // Taking the profile photo backgrounds the tab for the native camera UI;
+  // Turnstile's challenge can get orphaned while backgrounded and never
+  // recover, leaving captchaToken empty with no visible sign anything's
+  // wrong. Reset the widget when the tab is foregrounded again so it isn't
+  // silently stuck.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && captchaEnabled) {
+        captchaRef.current?.reset();
+        setCaptchaToken('');
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
+
+  // Scroll the error banner into view whenever it appears — it renders at
+  // the top of the form, so on a long scrolled-down page (e.g. right after
+  // the photo step) submitting silently looked like nothing happened.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [error]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    clearFieldError(name);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setProfileImage(file);
+      clearFieldError('photo');
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -58,28 +94,33 @@ export default function RegisterPage() {
   };
 
   const validateForm = () => {
-    if (
-      !formData.name || !formData.email || !formData.phone ||
-      !formData.password || !formData.confirmPassword ||
-      !formData.gender || !formData.birthDate
-    ) {
-      setError('Please fill in all fields');
-      return false;
-    }
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (captchaEnabled && !captchaToken) {
-      setError('Please complete the verification challenge');
+    const errors: Record<string, string> = {};
+
+    if (!formData.name) errors.name = 'Required';
+
+    if (!formData.email) errors.email = 'Required';
+    else if (!formData.email.includes('@')) errors.email = 'Enter a valid email address';
+
+    if (!formData.phone) errors.phone = 'Required';
+
+    if (!formData.gender) errors.gender = 'Required';
+
+    if (!formData.birthDate) errors.birthDate = 'Required';
+
+    if (!formData.password) errors.password = 'Required';
+    else if (formData.password.length < 6) errors.password = 'Must be at least 6 characters';
+
+    if (!formData.confirmPassword) errors.confirmPassword = 'Required';
+    else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
+
+    if (!profileImage) errors.photo = 'Required';
+
+    if (captchaEnabled && !captchaToken) errors.captcha = 'Please complete the verification challenge';
+
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      setError('Please fix the highlighted fields below');
       return false;
     }
     return true;
@@ -179,7 +220,7 @@ export default function RegisterPage() {
       </div>
 
       <div style={{ padding: '24px', paddingBottom: '80px', maxWidth: '480px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
           <label style={{ position: 'relative', cursor: 'pointer' }}>
             <div
               style={{
@@ -191,6 +232,7 @@ export default function RegisterPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                border: fieldErrors.photo ? `2px solid ${theme.accent2}` : '2px solid transparent',
               }}
             >
               {imagePreview ? (
@@ -218,10 +260,14 @@ export default function RegisterPage() {
             </div>
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
+          <span style={{ fontSize: typeTokens.label.fontSize, color: fieldErrors.photo ? theme.accent2 : theme.muted }}>
+            {fieldErrors.photo ? 'Profile photo required' : 'Profile photo (required)'}
+          </span>
         </div>
 
         {error && (
           <div
+            ref={errorRef}
             style={{
               backgroundColor: '#FEF2F2', // TODO(P7): tokenize error-banner bg
               border: '1px solid #FECACA',
@@ -237,9 +283,9 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input label="Full name" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter your full name" autoComplete="name" />
+          <Input label="Full name" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter your full name" autoComplete="name" invalid={!!fieldErrors.name} hint={fieldErrors.name} />
 
-          <Input label="Email" type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email" autoComplete="email" />
+          <Input label="Email" type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email" autoComplete="email" invalid={!!fieldErrors.email} hint={fieldErrors.email} />
 
           <div>
             <label style={{ display: 'block', fontSize: typeTokens.label.fontSize, fontWeight: 600, marginBottom: '6px', color: theme.text }}>
@@ -268,7 +314,7 @@ export default function RegisterPage() {
                 <option value="+81">+81</option>
               </select>
               <div style={{ flex: 1 }}>
-                <Input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone number" />
+                <Input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone number" invalid={!!fieldErrors.phone} hint={fieldErrors.phone} />
               </div>
             </div>
           </div>
@@ -282,13 +328,26 @@ export default function RegisterPage() {
                 <Chip
                   key={g.id}
                   selected={formData.gender === g.id}
-                  onClick={() => setFormData((prev) => ({ ...prev, gender: g.id }))}
-                  style={{ flex: 1, padding: '12px', borderRadius: radius.control }}
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, gender: g.id }));
+                    clearFieldError('gender');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: radius.control,
+                    border: fieldErrors.gender && formData.gender !== g.id ? `1px solid ${theme.accent2}` : undefined,
+                  }}
                 >
                   {g.label}
                 </Chip>
               ))}
             </div>
+            {fieldErrors.gender && (
+              <span style={{ display: 'block', marginTop: '6px', fontSize: typeTokens.caption.fontSize, color: theme.accent2 }}>
+                {fieldErrors.gender}
+              </span>
+            )}
           </div>
 
           <div>
@@ -301,6 +360,8 @@ export default function RegisterPage() {
               value={formData.birthDate}
               onChange={handleInputChange}
               max={new Date().toISOString().split('T')[0]}
+              invalid={!!fieldErrors.birthDate}
+              hint={fieldErrors.birthDate}
             />
           </div>
 
@@ -314,6 +375,8 @@ export default function RegisterPage() {
               placeholder="Create a password"
               autoComplete="new-password"
               style={{ paddingRight: '48px' }}
+              invalid={!!fieldErrors.password}
+              hint={fieldErrors.password}
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} style={iconBtn}>
               {showPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
@@ -330,6 +393,8 @@ export default function RegisterPage() {
               placeholder="Confirm your password"
               autoComplete="new-password"
               style={{ paddingRight: '48px' }}
+              invalid={!!fieldErrors.confirmPassword}
+              hint={fieldErrors.confirmPassword}
             />
             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} style={iconBtn}>
               {showConfirmPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
@@ -337,8 +402,25 @@ export default function RegisterPage() {
           </div>
 
           {captchaEnabled && (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Captcha ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  borderRadius: radius.control,
+                  border: fieldErrors.captcha ? `1px solid ${theme.accent2}` : '1px solid transparent',
+                }}
+              >
+                <Captcha
+                  ref={captchaRef}
+                  onVerify={(token) => {
+                    setCaptchaToken(token);
+                    clearFieldError('captcha');
+                  }}
+                  onExpire={() => setCaptchaToken('')}
+                />
+              </div>
+              {fieldErrors.captcha && (
+                <span style={{ fontSize: typeTokens.caption.fontSize, color: theme.accent2 }}>{fieldErrors.captcha}</span>
+              )}
             </div>
           )}
 
