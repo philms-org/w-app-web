@@ -65,6 +65,21 @@ export default function ProfileSetupPage() {
     setError('');
     try {
       await updateProfile(dataToProfilePatch(user.id, data));
+    } catch (err) {
+      console.error('Onboarding save failed:', err);
+      const message = err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+        ? err.message
+        : 'Could not save your profile. Please try again.';
+      setError(message);
+      setIsSaving(false);
+      return;
+    }
+
+    // The DB write is already committed at this point — a hiccup below
+    // (e.g. localStorage blocked/full, which zustand's persist throws
+    // synchronously from inside setUser) must not be reported as a failed
+    // save or strand the user on this screen.
+    try {
       setUser({
         ...user,
         socialisingId: data.socialisingId,
@@ -78,13 +93,10 @@ export default function ProfileSetupPage() {
         relationship: data.relationship.trim() || undefined,
         setupComplete: true,
       });
-      router.push('/main');
     } catch (err) {
-      console.error('Onboarding save failed:', err);
-      setError(err instanceof Error ? err.message : 'Could not save your profile. Please try again.');
-    } finally {
-      setIsSaving(false);
+      console.error('Local profile state update failed after successful save:', err);
     }
+    router.push('/main');
   };
 
   return (
