@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import {
   checkIn,
@@ -37,6 +38,7 @@ import { haversineMeters } from '@/lib/geo';
 // adds a real geofence gate in front of checkIn: only actually check in when
 // the user's live location is within the venue's radius.
 export default function CheckedInHero() {
+  const router = useRouter();
   const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -52,6 +54,14 @@ export default function CheckedInHero() {
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
   const [showVitalsGate, setShowVitalsGate] = useState(false);
+  // Separate from showVitalsGate (the check-in gate, Task 5): that gate's
+  // onIdentified only needs to close the sheet, because the auto-checkin
+  // effect below picks up the real checkIn() itself once user.isAnonymous
+  // flips (it's in that effect's deps). Venue Chat has no such retry
+  // mechanism — its onIdentified must actively navigate — so reusing one
+  // piece of state would require tracking "which gate opened this" just to
+  // decide what onIdentified should do. A second state is simpler.
+  const [showChatVitalsGate, setShowChatVitalsGate] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -302,22 +312,42 @@ export default function CheckedInHero() {
         )}
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <Link
-            href={`/main/venue/chat?locationId=${selectedLocation.id}`}
-            style={{
-              backgroundColor: theme.surface,
-              color: theme.text,
-              border: `1px solid ${theme.divider}`,
-              borderRadius: '9999px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              textDecoration: 'none',
-            }}
-          >
-            💬 Venue Chat
-          </Link>
+          {user?.isAnonymous ? (
+            <button
+              type="button"
+              onClick={() => setShowChatVitalsGate(true)}
+              style={{
+                backgroundColor: theme.surface,
+                color: theme.text,
+                border: `1px solid ${theme.divider}`,
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+                cursor: 'pointer',
+              }}
+            >
+              💬 Venue Chat
+            </button>
+          ) : (
+            <Link
+              href={`/main/venue/chat?locationId=${selectedLocation.id}`}
+              style={{
+                backgroundColor: theme.surface,
+                color: theme.text,
+                border: `1px solid ${theme.divider}`,
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+                textDecoration: 'none',
+              }}
+            >
+              💬 Venue Chat
+            </Link>
+          )}
           {canManage && (
             <>
               <Link
@@ -580,6 +610,18 @@ export default function CheckedInHero() {
           intent="checkin"
           onClose={() => setShowVitalsGate(false)}
           onIdentified={() => setShowVitalsGate(false)}
+        />
+      )}
+
+      {showChatVitalsGate && (
+        <VitalsGate
+          open={showChatVitalsGate}
+          intent="messages"
+          onClose={() => setShowChatVitalsGate(false)}
+          onIdentified={() => {
+            setShowChatVitalsGate(false);
+            router.push(`/main/venue/chat?locationId=${selectedLocation.id}`);
+          }}
         />
       )}
     </div>
