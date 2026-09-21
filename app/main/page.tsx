@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { fetchProfile } from '@/lib/data';
 import { requestLocation } from '@/lib/geolocation';
 import TabBar from '@/components/TabBar';
 import AppHeader from '@/components/AppHeader';
@@ -17,7 +19,7 @@ import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied, setUser, setToken } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
 
@@ -27,20 +29,75 @@ export default function MainPage() {
     // and can bounce a logged-in user back to login on a fresh page load.
     if (!hasHydrated) return;
 
-    // No session at all (e.g. a direct deep link before EnsureSession has run)
-    // — bootstrap one on the landing page rather than sending a first-time
-    // visitor to a login form they don't need.
-    if (!isAuthenticated) {
-      router.push('/');
-      return;
-    }
+    let cancelled = false;
 
-    // Show location prompt if not asked before and no current location
-    const hasAskedPermission = localStorage.getItem('w_app_location_permission_asked');
-    if (!hasAskedPermission && !currentLocation && !locationPermissionAsked) {
-      setShowLocationPrompt(true);
-    }
-  }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
+    (async () => {
+      // Magic-link returns land here (signInWithMagicLink redirects to
+      // `${origin}/main`) with no onAuthStateChange listener anywhere in the
+      // app to sync the real session Supabase's client just established
+      // (via detectSessionInUrl) into this Zustand store — every guard below
+      // reads the store, not supabase.auth directly. Reconcile before
+      // evaluating the redirect decision so neither failure mode below can
+      // slip through:
+      //   (a) same-browser tab: the store still holds a stale anonymous
+      //       identity from before the magic link was clicked.
+      //   (b) fresh browser/device: the store has no persisted state at all.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      const storeUser = useStore.getState().user;
+      if (session?.user && session.user.id !== storeUser?.id) {
+        let profile = null;
+        try {
+          profile = await fetchProfile(session.user.id);
+        } catch {
+          // No profiles row yet (e.g. a real user mid-onboarding) — proceed
+          // with what the auth session alone tells us.
+          profile = null;
+        }
+        if (cancelled) return;
+
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          name: profile?.display_name ?? session.user.email ?? '',
+          email: session.user.email ?? '',
+          phone: profile?.phone ?? '',
+          gender: '',
+          birth: '',
+          image: profile?.avatar_url ?? undefined,
+          city: profile?.city ?? undefined,
+          profession: profile?.profession ?? undefined,
+          isAnonymous: !!session.user.is_anonymous,
+          setupComplete: !!profile?.city,
+        });
+      }
+
+      if (cancelled) return;
+
+      // Evaluate the redirect decision against the freshest state — either
+      // what was just synced above, or the store as it already stood if
+      // there was nothing to reconcile (the common case).
+      if (!useStore.getState().isAuthenticated) {
+        // No session at all, real or anonymous (e.g. a direct deep link
+        // before EnsureSession has run) — bootstrap one on the landing page
+        // rather than sending a first-time visitor to a login form they
+        // don't need.
+        router.push('/');
+        return;
+      }
+
+      // Show location prompt if not asked before and no current location
+      const hasAskedPermission = localStorage.getItem('w_app_location_permission_asked');
+      if (!hasAskedPermission && !useStore.getState().currentLocation && !locationPermissionAsked) {
+        setShowLocationPrompt(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked, setUser, setToken]);
 
   const handleAllowLocation = () => {
     setLocationPermissionAsked(true);
