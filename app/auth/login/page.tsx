@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
@@ -8,6 +8,8 @@ import { signIn } from '@/lib/auth';
 import { fetchProfile } from '@/lib/data';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
+import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
+import type { TurnstileInstance } from '@marsidev/react-turnstile';
 import { Eye, EyeOff, ChevronLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -19,6 +21,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaRef = useRef<TurnstileInstance>(undefined);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +33,15 @@ export default function LoginPage() {
       return;
     }
 
+    if (captchaEnabled && !captchaToken) {
+      setError('Please complete the verification challenge');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { user: authUser, session } = await signIn(email, password);
+      const { user: authUser, session } = await signIn(email, password, captchaToken);
       if (!authUser || !session) {
         setError('Invalid email or password');
         return;
@@ -76,6 +85,8 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password');
+      captchaRef.current?.reset();
+      setCaptchaToken('');
     } finally {
       setIsLoading(false);
     }
@@ -170,6 +181,12 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
+
+          {captchaEnabled && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <Captcha ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
+            </div>
+          )}
 
           <Button type="submit" fullWidth disabled={isLoading}>
             {isLoading ? 'Signing in…' : 'Log in'}
