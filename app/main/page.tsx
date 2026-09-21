@@ -33,9 +33,14 @@ export default function MainPage() {
       return;
     }
 
-    // Show location prompt if not asked before and no current location
-    const hasAskedPermission = localStorage.getItem('w_app_location_permission_asked');
-    if (!hasAskedPermission && !currentLocation && !locationPermissionAsked) {
+    // Show the location prompt whenever we don't already have a location for
+    // this session. `currentLocation` isn't persisted across page loads (see
+    // lib/store.ts partialize), so this re-prompts on every fresh session —
+    // it used to also require `w_app_location_permission_asked` to be unset,
+    // but that flag is set permanently by the landing page's own location
+    // gate (components/LandingLocationGate.tsx) on the very first visit,
+    // which silently disabled this prompt for every session after that.
+    if (!currentLocation && !locationPermissionAsked) {
       setShowLocationPrompt(true);
     }
   }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
