@@ -27,9 +27,11 @@ export default function MainPage() {
     // and can bounce a logged-in user back to login on a fresh page load.
     if (!hasHydrated) return;
 
-    // Redirect to login if not authenticated
+    // No session at all (e.g. a direct deep link before EnsureSession has run)
+    // — bootstrap one on the landing page rather than sending a first-time
+    // visitor to a login form they don't need.
     if (!isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 
