@@ -15,16 +15,25 @@ interface InAppBrowserModalProps {
 // client-side signal available without a server-side HEAD-request proxy.
 const LOAD_TIMEOUT_MS = 2500;
 
+// Sites blocked via X-Frame-Options still fire the iframe's onLoad event
+// (the navigation completes, it just renders nothing) — LOAD_TIMEOUT_MS
+// alone misses that case. This hint appears regardless of load state, so a
+// silently blank embed is never a dead end.
+const HINT_DELAY_MS = 4000;
+
 export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalProps) {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  const [showHint, setShowHint] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     timeoutRef.current = setTimeout(() => {
       setStatus((current) => (current === 'loading' ? 'failed' : current));
     }, LOAD_TIMEOUT_MS);
+    const hintTimeout = setTimeout(() => setShowHint(true), HINT_DELAY_MS);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearTimeout(hintTimeout);
     };
   }, [url]);
 
@@ -141,6 +150,20 @@ export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalPro
               Open in new tab
             </button>
           </div>
+        )}
+
+        {status === 'loaded' && showHint && (
+          <button
+            onClick={openExternally}
+            style={{
+              position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+              padding: '8px 16px', borderRadius: '9999px', border: 'none',
+              backgroundColor: 'rgba(0,0,0,0.65)', color: 'white',
+              fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            Trouble loading? Open in new tab
+          </button>
         )}
       </div>
     </div>
