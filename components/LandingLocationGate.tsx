@@ -15,9 +15,10 @@ import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
 import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
 
 const PREVIEW_MS = 2000;
+const CONFIRM_MS = 1800;
 const ASKED_KEY = 'w_app_location_permission_asked';
 
-type Phase = 'idle' | 'asking' | 'previewing';
+type Phase = 'idle' | 'asking' | 'previewing' | 'confirmed';
 
 // Mounted on the public landing page ("/"), alongside <AuthedRedirect>.
 // Requests location before signup (moved from /main's post-signup prompt —
@@ -76,11 +77,20 @@ export default function LandingLocationGate() {
 
   const handleAllow = async () => {
     localStorage.setItem(ASKED_KEY, 'true');
-    setPhase('idle');
     await requestLocation();
 
     const { currentLocation, locationDenied } = useStore.getState();
-    if (locationDenied || !currentLocation) return;
+    if (locationDenied || !currentLocation) {
+      setPhase('idle');
+      return;
+    }
+
+    // Confirm the grant before anything else. Most visitors aren't standing
+    // inside an active venue's geofence, so without this, clicking Allow and
+    // granting the browser's real permission prompt produced zero visible
+    // change — indistinguishable from Allow silently failing.
+    setPhase('confirmed');
+    timerRef.current = setTimeout(() => setPhase('idle'), CONFIRM_MS);
 
     try {
       const { data } = await supabase.auth.getSession();
@@ -90,10 +100,13 @@ export default function LandingLocationGate() {
       if (!venue) return;
       setMatchedVenue(venue);
       setPhase('previewing');
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => proceedToVenue(venue), PREVIEW_MS);
     } catch (err) {
-      // Anonymous sign-ins not enabled on this environment yet, or a
-      // network failure — fail open, stay on the plain marketing page.
+      // Anonymous sign-ins not enabled on this environment yet, a captcha
+      // failure, or a network failure — fail open. The "confirmed" toast
+      // already told the user their location was captured; we just don't
+      // get to show them a matched venue.
       console.error('Landing location-activity check failed:', err);
     }
   };
@@ -118,6 +131,24 @@ export default function LandingLocationGate() {
   ) : null;
 
   if (phase === 'idle') return captchaWidget;
+
+  if (phase === 'confirmed') {
+    return (
+      <>
+      {captchaWidget}
+      <div style={{
+        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 9999, backgroundColor: theme.surface, color: theme.text,
+        borderRadius: 999, padding: '12px 20px', display: 'flex', alignItems: 'center',
+        gap: 8, boxShadow: elevation.glass, fontFamily: 'Montserrat, system-ui, sans-serif',
+        fontSize: 14, fontWeight: 600,
+      }}>
+        <MapPin style={{ width: 16, height: 16, color: theme.accent }} />
+        Location shared
+      </div>
+      </>
+    );
+  }
 
   if (phase === 'previewing' && matchedVenue) {
     return (
