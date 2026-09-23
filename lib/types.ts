@@ -28,6 +28,22 @@ export interface Profile {
   socialising_id?: number | null;
   networking_id?: number | null;
   is_master_admin?: boolean | null;
+  // Never rendered raw client-side — only ever shown as a computed age.
+  date_of_birth?: string | null;
+}
+
+// A short update posted by someone checked in at a venue (the "venue event
+// feed"). RLS scopes both insert and select to people currently checked in
+// at `location_id` — see supabase/migrations/0024_venue_event_feed.sql.
+export interface VenuePost {
+  id: string;
+  location_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: Profile | null;
+  like_count?: number;
+  liked_by_me?: boolean;
 }
 
 export interface Venue {
