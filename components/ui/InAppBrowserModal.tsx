@@ -9,38 +9,50 @@ interface InAppBrowserModalProps {
   onClose: () => void;
 }
 
-// How long we wait for the iframe to report a load before assuming the
-// target blocked embedding (X-Frame-Options / frame-ancestors). Blocked
-// frames don't reliably fire an error event, so a timeout is the only
-// client-side signal available without a server-side HEAD-request proxy.
-const LOAD_TIMEOUT_MS = 2500;
-
-// Sites blocked via X-Frame-Options still fire the iframe's onLoad event
-// (the navigation completes, it just renders nothing) — LOAD_TIMEOUT_MS
-// alone misses that case. This hint appears regardless of load state, so a
-// silently blank embed is never a dead end.
+// Blocked embeds (X-Frame-Options / frame-ancestors) are indistinguishable
+// from slow ones client-side: some fire onLoad and render blank, others never
+// fire it. So the iframe is never torn down on a timer — a slow page on venue
+// mobile data must still be allowed to finish. Instead, this hint appears
+// after a delay regardless of load state, so a blank embed is never a dead end.
 const HINT_DELAY_MS = 4000;
 
+const headerButtonStyle: React.CSSProperties = {
+  width: '44px', height: '44px', borderRadius: '9999px',
+  backgroundColor: 'rgba(0,0,0,0.35)', border: 'none', color: 'white',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+  flexShrink: 0,
+};
+
 export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalProps) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  const [loaded, setLoaded] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  // Callers pass an inline arrow; keep the latest one without re-running the
+  // mount-only dialog effect below on every parent render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    timeoutRef.current = setTimeout(() => {
-      setStatus((current) => (current === 'loading' ? 'failed' : current));
-    }, LOAD_TIMEOUT_MS);
+    setLoaded(false);
+    setShowHint(false);
     const hintTimeout = setTimeout(() => setShowHint(true), HINT_DELAY_MS);
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      clearTimeout(hintTimeout);
-    };
+    return () => clearTimeout(hintTimeout);
   }, [url]);
 
-  const handleLoad = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setStatus('loaded');
-  };
+  // Dialog behaviour: move focus in on open, Esc closes, focus returns to
+  // whatever opened the modal (the carousel's link button) on close.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, []);
 
   const openExternally = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -56,6 +68,9 @@ export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalPro
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Web page: ${hostname}`}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: theme.bg, zIndex: 200,
@@ -65,21 +80,14 @@ export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalPro
       <div
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: '12px', padding: '12px 16px',
+          gap: '12px',
+          padding: '8px 12px',
+          paddingTop: 'calc(8px + env(safe-area-inset-top))',
           borderBottom: `1px solid ${theme.divider}`,
           backgroundColor: theme.surface,
         }}
       >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          style={{
-            width: '32px', height: '32px', borderRadius: '9999px',
-            backgroundColor: 'rgba(0,0,0,0.35)', border: 'none', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
+        <button ref={closeButtonRef} onClick={onClose} aria-label="Close" style={headerButtonStyle}>
           <X style={{ width: '18px', height: '18px' }} />
         </button>
 
@@ -90,79 +98,47 @@ export default function InAppBrowserModal({ url, onClose }: InAppBrowserModalPro
           {hostname}
         </span>
 
-        <button
-          onClick={openExternally}
-          aria-label="Open in new tab"
-          style={{
-            width: '32px', height: '32px', borderRadius: '9999px',
-            backgroundColor: 'rgba(0,0,0,0.35)', border: 'none', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
+        <button onClick={openExternally} aria-label="Open in new tab" style={headerButtonStyle}>
           <ExternalLink style={{ width: '16px', height: '16px' }} />
         </button>
       </div>
 
       <div style={{ position: 'relative', flex: 1 }}>
-        {status !== 'failed' && (
-          <iframe
-            src={url}
-            onLoad={handleLoad}
-            title={hostname}
-            // No allow-top-navigation: an embedded page can run scripts and
-            // open popups like a normal site, but can't redirect the app's
-            // top-level window out from under the user.
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
-            style={{ width: '100%', height: '100%', border: 'none' }}
-          />
-        )}
+        <iframe
+          src={url}
+          onLoad={() => setLoaded(true)}
+          title={hostname}
+          // No allow-top-navigation: an embedded page can run scripts and
+          // open popups like a normal site, but can't redirect the app's
+          // top-level window out from under the user.
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+          style={{ width: '100%', height: '100%', border: 'none' }}
+        />
 
-        {status === 'loading' && (
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', backgroundColor: theme.bg, pointerEvents: 'none',
-          }}>
+        {!loaded && (
+          <div
+            role="status"
+            style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', backgroundColor: theme.bg, pointerEvents: 'none',
+            }}
+          >
             <span style={{ color: theme.muted, fontSize: '14px' }}>Loading…</span>
           </div>
         )}
 
-        {status === 'failed' && (
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '32px',
-            textAlign: 'center',
-          }}>
-            <span style={{ color: theme.text, fontSize: '16px', fontWeight: 600 }}>
-              This page can&apos;t be displayed here
-            </span>
-            <span style={{ color: theme.muted, fontSize: '14px' }}>
-              {hostname} doesn&apos;t allow embedding.
-            </span>
-            <button
-              onClick={openExternally}
-              style={{
-                padding: '10px 20px', borderRadius: '9999px', border: 'none',
-                backgroundColor: theme.accent, color: theme.onAccent ?? '#fff',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              Open in new tab
-            </button>
-          </div>
-        )}
-
-        {status === 'loaded' && showHint && (
+        {showHint && (
           <button
             onClick={openExternally}
             style={{
-              position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-              padding: '8px 16px', borderRadius: '9999px', border: 'none',
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+              bottom: 'calc(16px + env(safe-area-inset-bottom))',
+              minHeight: '44px', padding: '10px 18px', borderRadius: '9999px', border: 'none',
               backgroundColor: 'rgba(0,0,0,0.65)', color: 'white',
-              fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+              fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
-            Trouble loading? Open in new tab
+            {loaded ? 'Trouble loading? Open in new tab' : 'Taking a while? Open in new tab'}
           </button>
         )}
       </div>
