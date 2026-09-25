@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { fetchProfile, updateProfile } from '@/lib/data';
+import { getErrorMessage } from '@/lib/errors';
 import { ChevronLeft } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button } from '@/components/ui/primitives';
@@ -67,10 +68,7 @@ export default function ProfileSetupPage() {
       await updateProfile(dataToProfilePatch(user.id, data));
     } catch (err) {
       console.error('Onboarding save failed:', err);
-      const message = err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
-        ? err.message
-        : 'Could not save your profile. Please try again.';
-      setError(message);
+      setError(getErrorMessage(err, 'Could not save your profile. Please try again.'));
       setIsSaving(false);
       return;
     }
