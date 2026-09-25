@@ -1,9 +1,15 @@
 'use client';
 
 import { MapPin, MessageCircle } from 'lucide-react';
-import { theme, lightTheme } from '@/lib/theme';
+import { theme, darkTheme } from '@/lib/theme';
 
-// The tab bar keeps its dark `tabBarBg` even in the light theme (matches iOS).
+// The tab bar stays dark in both themes (matches iOS): `--tab-bar-bg` is
+// #000 in dark and ink #231E20 in light. Its foreground must therefore be
+// fixed light colours, not theme roles. It used to colour the active tab
+// with `theme.accent`, which is ink in light theme, so the active tab was
+// ink-on-ink (1.00:1). (lightTheme and darkTheme are the same var() map, so
+// neither import pins a theme; the background just reads --tab-bar-bg.)
+const ACTIVE = '#F5F5F7';
 const INACTIVE = 'rgba(255,255,255,.55)';
 
 interface TabBarProps {
@@ -25,7 +31,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: lightTheme.tabBarBg,
+      backgroundColor: darkTheme.tabBarBg,
       borderTop: '1px solid rgba(255, 255, 255, 0.08)',
       display: 'flex',
       justifyContent: 'space-around',
@@ -37,7 +43,7 @@ export default function TabBar({ activeTab, onTabChange, unreadCount = 0 }: TabB
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
-        const color = isActive ? theme.accent : INACTIVE;
+        const color = isActive ? ACTIVE : INACTIVE;
 
         return (
           <button
