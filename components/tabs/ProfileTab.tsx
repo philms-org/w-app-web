@@ -6,9 +6,10 @@ import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
 import {
   fetchProfile, setShareCheckinsWithFriends,
-  fetchBadges, fetchMyBadgeIds, recomputeMyBadges,
+  fetchMyRoleBadges,
 } from '@/lib/data';
-import type { Badge } from '@/lib/types';
+import type { RoleBadge } from '@/lib/types';
+import RolePass from '@/components/profile/RolePass';
 import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
@@ -22,7 +23,7 @@ export default function ProfileTab() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [shareCheckins, setShareCheckins] = useState(false);
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
-  const [earnedBadges, setEarnedBadges] = useState<Badge[]>([]);
+  const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -35,13 +36,8 @@ export default function ProfileTab() {
 
   useEffect(() => {
     let cancelled = false;
-    recomputeMyBadges().catch(() => {});
-    Promise.all([fetchBadges(), fetchMyBadgeIds()])
-      .then(([cat, ids]) => {
-        if (cancelled) return;
-        const set = new Set(ids);
-        setEarnedBadges(cat.filter((b) => set.has(b.id)));
-      })
+    fetchMyRoleBadges()
+      .then((b) => { if (!cancelled) setRoleBadges(b); })
       .catch((err) => console.error('Failed to load badges:', err));
     return () => { cancelled = true; };
   }, []);
@@ -286,24 +282,21 @@ export default function ProfileTab() {
             border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif',
           }}
         >
-          <h3 style={{ fontWeight: 600, marginBottom: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>Badges</h3>
-          {earnedBadges.length === 0 ? (
-            <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              No badges yet — check in and connect to earn them.
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+            <h3 style={{ fontWeight: 600, margin: 0, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Badges</h3>
+            {roleBadges.length > 0 && (
+              <span style={{ fontSize: '12px', color: theme.muted }}>
+                {roleBadges.length} {roleBadges.length === 1 ? 'role' : 'roles'}
+              </span>
+            )}
+          </div>
+          {roleBadges.length === 0 ? (
+            <p style={{ color: theme.muted, fontSize: '14px', margin: 0, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              No badges yet. Roles organizers approve you for at events (like Staff or Judge) show up here.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-              {earnedBadges.map((b) => (
-                <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '64px' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: theme.accent,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Award style={{ width: '20px', height: '20px', color: theme.onAccent }} />
-                  </div>
-                  <span style={{ fontSize: '10px', color: theme.muted, textAlign: 'center', lineHeight: 1.2 }}>{b.name}</span>
-                </div>
-              ))}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', margin: '0 -16px', padding: '4px 16px 8px', scrollbarWidth: 'none' }}>
+              {roleBadges.slice(0, 6).map((b) => <RolePass key={b.id} badge={b} variant="mini" ground={theme.surface} />)}
             </div>
           )}
         </button>
