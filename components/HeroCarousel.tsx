@@ -32,8 +32,12 @@ export default function HeroCarousel({ images, title, onBack, links }: HeroCarou
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage: hasImages ? `url(${images[index]})` : undefined,
-        background: hasImages ? undefined : `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
+        // Only ever set ONE of these keys. React writes '' for an undefined
+        // `background`, and clearing that shorthand also wipes the
+        // backgroundImage longhand — the photo silently never showed.
+        backgroundImage: hasImages
+          ? `url(${images[index]})`
+          : `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }} />
