@@ -31,6 +31,9 @@ import type {
   MyConnection,
   FriendActivityEntry,
   LocationRequest,
+  FeedComment,
+  FeedReport,
+  FeedReportReason,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -268,12 +271,92 @@ export async function fetchFeed(locationId: string): Promise<FeedItem[]> {
   return data ?? [];
 }
 
-export async function postToFeed(locationId: string, text: string): Promise<void> {
+// Posting is server-verified against the venue's geofence (post_to_feed RPC,
+// 0024) rather than trusting the caller's own "am I in range" check — lat/lng
+// come from navigator.geolocation at call time, not from cached state.
+export async function postToFeed(
+  locationId: string,
+  text: string,
+  lat: number,
+  lng: number
+): Promise<FeedItem> {
+  const { data, error } = await supabase.rpc('post_to_feed', {
+    p_location_id: locationId,
+    p_content: text,
+    p_lat: lat,
+    p_lng: lng,
+  });
+  if (error) throw error;
+  return data;
+}
+
+// ---- Feed Comments ----
+
+export async function fetchComments(feedPostId: string): Promise<FeedComment[]> {
+  const { data, error } = await supabase
+    .from('feed_comments')
+    .select('*, profiles(*)')
+    .eq('feed_post_id', feedPostId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function postComment(feedPostId: string, text: string): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) return;
   const { error } = await supabase
-    .from('feed_posts')
-    .insert({ location_id: locationId, user_id: uid, content: text });
+    .from('feed_comments')
+    .insert({ feed_post_id: feedPostId, user_id: uid, content: text });
+  if (error) throw error;
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  const { error } = await supabase.from('feed_comments').delete().eq('id', commentId);
+  if (error) throw error;
+}
+
+export async function deleteFeedPost(feedPostId: string): Promise<void> {
+  const { error } = await supabase.from('feed_posts').delete().eq('id', feedPostId);
+  if (error) throw error;
+}
+
+// ---- Feed Reports ----
+
+export async function reportFeedContent(
+  targetType: 'post' | 'comment',
+  targetId: string,
+  reason: FeedReportReason,
+  details?: string
+): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  const { error } = await supabase.from('feed_reports').insert({
+    target_type: targetType,
+    target_id: targetId,
+    reporter_id: uid,
+    reason,
+    details: details ?? null,
+  });
+  if (error) throw error;
+}
+
+// Reports visible to the caller via RLS: their own, or — since
+// is_venue_manager also matches master admin — every venue they manage plus
+// every venue at all if they're a master admin.
+export async function fetchFeedReports(status?: 'open' | 'resolved'): Promise<FeedReport[]> {
+  let query = supabase.from('feed_reports').select('*').order('created_at', { ascending: false });
+  if (status) query = query.eq('status', status);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function resolveFeedReport(reportId: string, status: 'open' | 'resolved'): Promise<void> {
+  const { error } = await supabase.rpc('resolve_feed_report', {
+    p_report_id: reportId,
+    p_status: status,
+  });
   if (error) throw error;
 }
 

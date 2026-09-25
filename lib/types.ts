@@ -62,6 +62,31 @@ export interface FeedItem {
   profiles?: Profile;
 }
 
+export interface FeedComment {
+  id: string;
+  feed_post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles?: Profile;
+}
+
+export type FeedReportTargetType = 'post' | 'comment';
+export type FeedReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+
+export interface FeedReport {
+  id: string;
+  target_type: FeedReportTargetType;
+  target_id: string;
+  reporter_id: string;
+  reason: FeedReportReason;
+  details?: string | null;
+  status: 'open' | 'resolved';
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+}
+
 export interface Presence {
   id: string;
   location_id: string;
