@@ -17,8 +17,11 @@ const csp = [
   // Vercel Analytics beacons to same-origin /_vercel/insights ('self' covers it).
   // Sentry uploads events/traces to its *.ingest.*.sentry.io hosts.
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321 https://*.sentry.io https://challenges.cloudflare.com",
-  // Turnstile renders its challenge in an iframe from this origin.
-  "frame-src https://challenges.cloudflare.com",
+  // Turnstile renders its challenge in an iframe from challenges.cloudflare.com.
+  // Any other https origin is allowed too, for the organizer-set carousel
+  // banner links opened via InAppBrowserModal — banner links are RBAC-gated
+  // to venue organizers (is_venue_manager), not arbitrary users.
+  "frame-src https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

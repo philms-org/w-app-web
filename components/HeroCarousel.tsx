@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { theme } from '@/lib/theme';
+import InAppBrowserModal from '@/components/ui/InAppBrowserModal';
 
 interface HeroCarouselProps {
   images: string[];
@@ -13,17 +14,21 @@ interface HeroCarouselProps {
 
 export default function HeroCarousel({ images, title, onBack, links }: HeroCarouselProps) {
   const [index, setIndex] = useState(0);
+  const [browserUrl, setBrowserUrl] = useState<string | null>(null);
   const hasImages = images.length > 0;
   const currentLink = links?.[index] ?? null;
 
   const goPrev = () => setIndex((i) => (i === 0 ? images.length - 1 : i - 1));
   const goNext = () => setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
   const openLink = () => {
-    if (currentLink) window.open(currentLink, '_blank', 'noopener,noreferrer');
+    if (currentLink) setBrowserUrl(currentLink);
   };
 
   return (
     <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
+      {browserUrl && (
+        <InAppBrowserModal url={browserUrl} onClose={() => setBrowserUrl(null)} />
+      )}
       <div style={{
         position: 'absolute',
         inset: 0,
