@@ -5,10 +5,11 @@ import { fetchLastVisited, fetchFeed, fetchAttendeeHistory } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
-import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
+import { ChevronRight, Clock } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
+import FeedPostCard from '@/components/shared/FeedPostCard';
 
 interface DayGroup {
   dateLabel: string;
@@ -16,7 +17,6 @@ interface DayGroup {
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-const timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
 
 function groupByDay(items: FeedItem[]): DayGroup[] {
   const order: string[] = [];
@@ -150,52 +150,7 @@ export default function HistoryTab() {
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>{group.dateLabel}</h3>
             {group.items.map((item) => (
-              <div key={item.id} style={{
-                backgroundColor: theme.pill,
-                borderRadius: '10px',
-                padding: '12px 14px',
-                marginBottom: '8px',
-                display: 'flex',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  flexShrink: 0,
-                  backgroundColor: '#F3F3F3',
-                  borderRadius: '9999px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <User style={{ width: '16px', height: '16px', color: '#919191' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{
-                      color: theme.text,
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      fontFamily: 'Montserrat, system-ui, sans-serif'
-                    }}>{item.profiles?.display_name ?? 'Someone'}</span>
-                    {item.profiles?.is_verified && (
-                      <BadgeCheck style={{ width: '14px', height: '14px', color: theme.accent }} />
-                    )}
-                  </div>
-                  <p style={{
-                    color: theme.text,
-                    fontSize: '15px',
-                    marginTop: '2px',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}>{item.content}</p>
-                  <p style={{
-                    color: '#919191',
-                    fontSize: '11px',
-                    marginTop: '6px',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}>{timeFormatter.format(new Date(item.created_at))}</p>
-                </div>
-              </div>
+              <FeedPostCard key={item.id} item={item} />
             ))}
           </div>
         ))}
