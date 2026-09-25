@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 import { fetchProfile } from '@/lib/data';
 import { requestLocation } from '@/lib/geolocation';
 import TabBar from '@/components/TabBar';
@@ -42,7 +43,16 @@ export default function MainPage() {
       //   (a) same-browser tab: the store still holds a stale anonymous
       //       identity from before the magic link was clicked.
       //   (b) fresh browser/device: the store has no persisted state at all.
-      const { data: { session } } = await supabase.auth.getSession();
+      // getSession() can reject (storage access blocked in a private window,
+      // a corrupt persisted session, a failed token refresh). Treat that as
+      // "nothing to reconcile" and fall through to the store-based guard
+      // below instead of leaving an unhandled rejection and a blank page.
+      let session: Session | null = null;
+      try {
+        ({ data: { session } } = await supabase.auth.getSession());
+      } catch (err) {
+        console.error('Failed to read auth session on /main:', err);
+      }
       if (cancelled) return;
 
       const storeUser = useStore.getState().user;
