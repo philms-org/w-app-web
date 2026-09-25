@@ -38,10 +38,24 @@ import type {
 
 // ---- Profile ----
 
+// Other people are read through the `profiles_public` view (migration 0026):
+// display fields only, city gated by city_visible, age instead of birth date.
+// The base `profiles` table is readable only by its owner (and master
+// admins). Embeds alias the view back to `profiles` so result shapes match.
+const PUBLIC_PROFILE = 'profiles_public';
+
+// Full row. Only works for your own id (or any id for a master admin); for
+// anyone else use fetchPublicProfile.
 export async function fetchProfile(id: string): Promise<Profile> {
   const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
   if (error) throw error;
   return data;
+}
+
+export async function fetchPublicProfile(id: string): Promise<Profile> {
+  const { data, error } = await supabase.from(PUBLIC_PROFILE).select().eq('id', id).single();
+  if (error) throw error;
+  return data as Profile;
 }
 
 export async function upsertProfile(profile: Partial<Profile> & { id: string }): Promise<void> {
@@ -121,7 +135,7 @@ export async function fetchMyVenues(): Promise<Venue[]> {
 export async function fetchLocationManagers(locationId: string): Promise<LocationManager[]> {
   const { data, error } = await supabase
     .from('location_managers')
-    .select('*, profiles!location_managers_user_id_fkey(*)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId);
   if (error) throw error;
   return data ?? [];
@@ -260,7 +274,7 @@ export async function fetchLastVisited(limit = 50): Promise<Venue[]> {
 export async function fetchFeed(locationId: string): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('feed_posts')
-    .select('*, profiles(*)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -282,7 +296,7 @@ export async function postToFeed(locationId: string, text: string): Promise<void
 export async function fetchPresence(locationId: string): Promise<Presence[]> {
   const { data, error } = await supabase
     .from('location_checkins')
-    .select('*, profiles(*)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
     .is('checked_out_at', null);
   if (error) throw error;
@@ -642,7 +656,7 @@ export async function hasFeatureAccess(featureName: string): Promise<boolean> {
 export async function fetchAttendeeHistory(locationId: string): Promise<Profile[]> {
   const { data: rows, error } = await supabase
     .from('location_checkins')
-    .select('profiles(*)')
+    .select(`profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
     .eq('mode', 'live');
   if (error) throw error;
@@ -704,7 +718,7 @@ export async function setAttendeeHistoryOptOut(locationId: string, hidden: boole
 export async function fetchVenueMembers(locationId: string): Promise<VenueMember[]> {
   const { data: rows, error } = await supabase
     .from('location_checkins')
-    .select('user_id, checked_in_at, profiles(*)')
+    .select(`user_id, checked_in_at, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
     .eq('mode', 'live')
     .order('checked_in_at', { ascending: true });
@@ -839,7 +853,7 @@ export async function fetchVenueTitleRoster(
 ): Promise<{ type: VerificationTagType; people: Profile[] }[]> {
   const { data, error } = await supabase
     .from('verification_tags')
-    .select('type_id, user_id, verification_tag_types(*), profiles!verification_tags_user_id_fkey(*)')
+    .select(`type_id, user_id, verification_tag_types(*), profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
     .not('type_id', 'is', null);
   if (error) throw error;
@@ -1044,7 +1058,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
     if (!conv.is_group) {
       const { data: others, error: othersError } = await supabase
         .from('conversation_participants')
-        .select('user_id, profiles(*)')
+        .select(`user_id, profiles:${PUBLIC_PROFILE}!user_id(*)`)
         .eq('conversation_id', conversationId)
         .neq('user_id', uid)
         .limit(1);
@@ -1068,7 +1082,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 export async function fetchMessages(conversationId: string): Promise<Message[]> {
   const { data, error } = await supabase
     .from('messages')
-    .select('*, profiles(*)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!sender_id(*)`)
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -1161,7 +1175,7 @@ export async function respondToConversationRequest(conversationId: string, accep
 export async function fetchGroupMembers(conversationId: string): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('conversation_participants')
-    .select('user_id, profiles(*)')
+    .select(`user_id, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('conversation_id', conversationId);
   if (error) throw error;
   return (data ?? []).map((r: any) => r.profiles).filter(Boolean);
@@ -1316,7 +1330,7 @@ export async function fetchMyParticipation(
 export async function fetchChatParticipants(conversationId: string): Promise<ChatParticipant[]> {
   const { data, error } = await supabase
     .from('conversation_participants')
-    .select('conversation_id, user_id, role, status, profiles(*)')
+    .select(`conversation_id, user_id, role, status, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('conversation_id', conversationId);
   if (error) throw error;
   return ((data ?? []) as unknown as ChatParticipant[]).sort((a, b) => {
@@ -1365,7 +1379,7 @@ export async function fetchMyJoinRequests(conversationId: string): Promise<JoinR
 export async function fetchPendingJoinRequests(conversationId: string): Promise<JoinRequest[]> {
   const { data, error } = await supabase
     .from('join_requests')
-    .select('*, profiles(*)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('conversation_id', conversationId)
     .eq('status', 'pending')
     .order('created_at', { ascending: true });
@@ -1397,14 +1411,30 @@ export async function denyJoinRequest(requestId: string): Promise<void> {
 export async function fetchAllProfiles(): Promise<Profile[]> {
   const uid = await getCurrentUserId();
   if (!uid) return [];
-  // SECURITY: never select * here — this list is readable by any authenticated
-  // user, so it must not carry emails/phones or other PII. Name search only.
+  // Public directory (name search for pickers) — the view carries no PII.
   const { data, error } = await supabase
-    .from('profiles')
+    .from(PUBLIC_PROFILE)
     .select('id, display_name, avatar_url, affiliation')
     .neq('id', uid)
     .order('display_name', { ascending: true })
     .limit(200);
+  if (error) throw error;
+  return (data ?? []) as Profile[];
+}
+
+// Staff admin console only. Reads the base table, which RLS opens to master
+// admins (profiles_select_master_admin, migration 0026); anyone else gets
+// just their own row back. Carries email + is_master_admin for the
+// "grant master admin" search and list.
+export async function fetchAllProfilesForAdmin(): Promise<Profile[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, affiliation, email, is_master_admin')
+    .neq('id', uid)
+    .order('display_name', { ascending: true })
+    .limit(500);
   if (error) throw error;
   return (data ?? []) as Profile[];
 }
@@ -1653,7 +1683,7 @@ export async function fetchMyConnections(): Promise<MyConnection[]> {
   }
 
   const { data: profs, error: profErr } = await supabase
-    .from('profiles')
+    .from(PUBLIC_PROFILE)
     .select('id, display_name, avatar_url')
     .in('id', friendIds);
   if (profErr) throw profErr;
@@ -1710,7 +1740,7 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
   // Restrict to friends who opted in BEFORE reading any check-in.
   // `Profile` uses display_name — there is no `name` column on profiles.
   const { data: sharers, error: sharerError } = await supabase
-    .from('profiles')
+    .from(PUBLIC_PROFILE)
     .select('id, display_name, avatar_url')
     .in('id', friendIds)
     .eq('share_checkins_with_friends', true);
@@ -1805,7 +1835,7 @@ export async function fetchLocationRequests(
 ): Promise<LocationRequest[]> {
   let query = supabase
     .from('location_requests')
-    .select('*, profiles(display_name)')
+    .select(`*, profiles:${PUBLIC_PROFILE}!submitted_by(display_name)`)
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
