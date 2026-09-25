@@ -9,6 +9,7 @@ import type { Profile, VenuePost } from '@/lib/types';
 import VenueFeedRow from './VenueFeedRow';
 import VenueFeedComposer from './VenueFeedComposer';
 import VenueFeedFilters, { type FeedFilter } from './VenueFeedFilters';
+import AddPhotoPrompt, { shouldShowPhotoPrompt } from './AddPhotoPrompt';
 
 const REQUIRED_CONNECTIONS = 3;
 const TEMP_PREFIX = 'temp-';
@@ -39,6 +40,7 @@ export default function VenueFeed({
   const [connectionCount, setConnectionCount] = useState<number | null>(null);
   const [posts, setPosts] = useState<VenuePost[]>([]);
   const [filter, setFilter] = useState<FeedFilter>('all');
+  const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
 
   // Realtime handlers are bound once per channel; read the latest props
   // through refs instead of resubscribing whenever presence changes.
@@ -218,6 +220,7 @@ export default function VenueFeed({
           ? prev.filter((p) => p.id !== tempId) // realtime echo already swapped in
           : prev.map((p) => (p.id === tempId ? { ...p, id: saved.id, created_at: saved.created_at } : p)),
       );
+      if (shouldShowPhotoPrompt(myAvatarUrl)) setShowPhotoPrompt(true);
     } catch (err) {
       setPosts((prev) => prev.filter((p) => p.id !== tempId));
       throw err;
@@ -274,6 +277,7 @@ export default function VenueFeed({
         ))
       )}
       <VenueFeedComposer avatarUrl={myAvatarUrl} onSubmit={handlePost} />
+      {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>
   );
 }
