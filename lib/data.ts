@@ -1862,13 +1862,31 @@ export async function fetchVenuePosts(locationId: string, limit = 50): Promise<V
   }));
 }
 
-export async function createVenuePost(locationId: string, body: string): Promise<void> {
+// Returns the inserted row so the feed can swap its optimistic copy for the
+// real id (and recognise the realtime INSERT echo of its own post).
+export async function createVenuePost(locationId: string, body: string): Promise<VenuePost> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('venue_posts')
-    .insert({ location_id: locationId, author_id: uid, body: body.trim() });
+    .insert({ location_id: locationId, author_id: uid, body: body.trim() })
+    .select('id, location_id, author_id, body, created_at')
+    .single();
   if (error) throw error;
+  return data as VenuePost;
+}
+
+// Author-only (RLS venue_posts_delete_own, migration 0025). RLS makes a
+// non-author delete a silent no-op, so ask for the deleted row back and treat
+// "nothing deleted" as a failure instead of pretending it worked.
+export async function deleteVenuePost(postId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .delete()
+    .eq('id', postId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Post not deleted');
 }
 
 // Toggles the current user's like on a post. Reads state first rather than

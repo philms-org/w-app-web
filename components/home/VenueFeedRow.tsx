@@ -1,6 +1,7 @@
 'use client';
 
-import { BadgeCheck, Heart, Reply } from 'lucide-react';
+import { useState } from 'react';
+import { BadgeCheck, Heart, Reply, Trash2 } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Profile, VenuePost } from '@/lib/types';
 
@@ -26,22 +27,51 @@ function lookingForIcons(p: Profile): string {
   return icons.join(' ');
 }
 
+// 44 x 44 hit box around a 16px icon (WCAG 2.5.5 / iOS HIG).
+const iconButton: React.CSSProperties = {
+  background: 'none', border: 'none', padding: 0, minWidth: 44, minHeight: 44, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit',
+};
+
 export default function VenueFeedRow({
   profile,
   post,
+  isMine,
   onReply,
   onToggleLike,
+  onDelete,
 }: {
   profile: Profile;
   post?: VenuePost;
+  isMine?: boolean;
   onReply: (profile: Profile) => void;
   onToggleLike?: (postId: string) => void;
+  onDelete?: (postId: string) => Promise<void>;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const pending = !!post?.id.startsWith('temp-');
+
+  const confirmDelete = async () => {
+    if (!post || !onDelete) return;
+    setDeleting(true);
+    setDeleteError(false);
+    try {
+      await onDelete(post.id);
+    } catch {
+      setDeleteError(true);
+      setConfirmingDelete(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const age = computeAge(profile.date_of_birth);
   const meta = [age != null ? `Age ${age}` : null, profile.city, profile.nationality].filter(Boolean);
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: `1px solid ${theme.divider}` }}>
+    <div style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: `1px solid ${theme.divider}`, fontFamily: typeTokens.family }}>
       <div style={{ width: 44, height: 44, borderRadius: 999, overflow: 'hidden', flexShrink: 0, background: theme.pill, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {profile.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- matches existing avatar convention (ProfileTab, ConnectSheet)
@@ -71,31 +101,59 @@ export default function VenueFeedRow({
             <p style={{ margin: '4px 0 0', color: theme.text, fontSize: typeTokens.body.fontSize, wordBreak: 'break-word' }}>
               {post.body}
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <button
-                type="button"
-                onClick={() => onReply(profile)}
-                aria-label={`Reply to ${profile.display_name ?? 'this post'}`}
-                style={{ background: 'none', border: 'none', padding: 10, margin: -10, cursor: 'pointer', color: theme.accent, display: 'flex' }}
-              >
-                <Reply size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleLike?.(post.id)}
-                aria-label={post.liked_by_me ? 'Unlike' : 'Like'}
-                style={{ background: 'none', border: 'none', padding: 10, margin: -10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: post.liked_by_me ? theme.accent2 : theme.muted }}
-              >
-                <Heart size={16} fill={post.liked_by_me ? theme.accent2 : 'none'} />
-                {!!post.like_count && <span style={{ fontSize: 12, fontWeight: 700 }}>{post.like_count}</span>}
-              </button>
-            </div>
+            {confirmingDelete ? (
+              <div role="group" aria-label="Delete this post?" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: typeTokens.caption.fontSize, color: theme.text, marginRight: 4 }}>Delete this post?</span>
+                <button type="button" onClick={confirmDelete} disabled={deleting} style={{ ...iconButton, padding: '0 10px', color: theme.accent2, fontWeight: 700, fontSize: typeTokens.caption.fontSize }}>
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+                <button type="button" onClick={() => setConfirmingDelete(false)} disabled={deleting} style={{ ...iconButton, padding: '0 10px', color: theme.muted, fontWeight: 600, fontSize: typeTokens.caption.fontSize }}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 -8px -14px', opacity: pending ? 0.6 : 1 }}>
+                <button
+                  type="button"
+                  onClick={() => onReply(profile)}
+                  aria-label={`Reply to ${profile.display_name ?? 'this post'}`}
+                  style={{ ...iconButton, color: theme.accent }}
+                >
+                  <Reply size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleLike?.(post.id)}
+                  disabled={pending}
+                  aria-label={post.liked_by_me ? 'Unlike' : 'Like'}
+                  style={{ ...iconButton, color: post.liked_by_me ? theme.accent2 : theme.muted }}
+                >
+                  <Heart size={16} fill={post.liked_by_me ? theme.accent2 : 'none'} />
+                  {!!post.like_count && <span style={{ fontSize: 12, fontWeight: 700 }}>{post.like_count}</span>}
+                </button>
+                {isMine && onDelete && !pending && (
+                  <button
+                    type="button"
+                    onClick={() => { setDeleteError(false); setConfirmingDelete(true); }}
+                    aria-label="Delete your post"
+                    style={{ ...iconButton, color: theme.muted, marginLeft: 'auto' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            )}
+            {deleteError && (
+              <p role="alert" style={{ margin: '8px 0 0', color: theme.accent2, fontSize: typeTokens.caption.fontSize }}>
+                Couldn&apos;t delete that post. Try again.
+              </p>
+            )}
           </>
         ) : (
           <button
             type="button"
             onClick={() => onReply(profile)}
-            style={{ background: 'none', border: 'none', padding: 0, marginTop: 2, color: theme.muted, fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', padding: 0, minHeight: 44, margin: '-8px 0 -12px', color: theme.muted, fontFamily: 'inherit', fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}
           >
             Say hi
           </button>
