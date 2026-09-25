@@ -13,6 +13,7 @@ import type {
   VerificationTagType,
   TagIconKind,
   Banner,
+  VenueAnnouncement,
   LocationManager,
   VenueMember,
   JoinRequest,
@@ -960,6 +961,63 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
 }
 
 // ---- Banners ----
+
+// ---- Venue announcements (migration 0029) ----
+// RLS returns only active, unexpired rows to everyone; venue managers also
+// get inactive/expired ones (manage page history).
+
+export async function fetchCurrentAnnouncement(locationId: string): Promise<VenueAnnouncement | null> {
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .select()
+    .eq('location_id', locationId)
+    .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as VenueAnnouncement | undefined) ?? null;
+}
+
+export async function fetchAnnouncements(locationId: string): Promise<VenueAnnouncement[]> {
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .select()
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as VenueAnnouncement[];
+}
+
+export async function createAnnouncement(
+  locationId: string,
+  body: string,
+  expiresAt: string | null,
+): Promise<VenueAnnouncement> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .insert({ location_id: locationId, body: body.trim(), expires_at: expiresAt, created_by: uid })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VenueAnnouncement;
+}
+
+export async function updateAnnouncement(
+  id: string,
+  fields: Partial<Pick<VenueAnnouncement, 'is_active' | 'expires_at'>>,
+): Promise<void> {
+  const { error } = await supabase.from('venue_announcements').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  const { error } = await supabase.from('venue_announcements').delete().eq('id', id);
+  if (error) throw error;
+}
 
 export async function fetchBanners(locationId: string, activeOnly = true): Promise<Banner[]> {
   let query = supabase.from('banners').select().eq('location_id', locationId);

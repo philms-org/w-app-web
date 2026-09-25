@@ -11,6 +11,7 @@ import HistoryPanel from '@/components/home/HistoryPanel';
 import RewardsPanel from '@/components/home/RewardsPanel';
 import ConnectSheet from '@/components/home/ConnectSheet';
 import FriendsActivityFeed from '@/components/home/FriendsActivityFeed';
+import AnnouncementBanner from '@/components/home/AnnouncementBanner';
 
 type PanelId = 'history' | 'rewards' | 'connect';
 
@@ -49,6 +50,9 @@ export default function HomeTab() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: '24px' }}>
+      {selectedLocation && (
+        <AnnouncementBanner locationId={selectedLocation.id} venueName={selectedLocation.name} />
+      )}
       {selectedLocation ? <CheckedInHero /> : <NearbyBanner />}
 
       <QuickAccessRow items={quickAccessItems} activeId={activePanel} />

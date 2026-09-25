@@ -189,6 +189,18 @@ export interface VenueMember {
   tags: VerificationTag[];
 }
 
+// Organizer-authored announcement shown at the top of checked-in Home
+// (migration 0029). Writable by venue managers only.
+export interface VenueAnnouncement {
+  id: string;
+  location_id: string;
+  body: string;
+  is_active: boolean;
+  expires_at: string | null;
+  created_by: string;
+  created_at: string;
+}
+
 export interface Banner {
   id: string;
   location_id: string;

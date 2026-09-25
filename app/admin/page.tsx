@@ -422,9 +422,12 @@ export default function AdminPage() {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: '12px' }}>
                       <Link href={`/main/venue/carousel?locationId=${venue.id}`} style={linkButtonStyle}>
                         Manage Carousel
+                      </Link>
+                      <Link href={`/main/venue/announcements?locationId=${venue.id}`} style={linkButtonStyle}>
+                        Announcements
                       </Link>
                       <Link href={`/admin/venue/${venue.id}/tags`} style={linkButtonStyle}>
                         Manage Titles
