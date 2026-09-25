@@ -30,6 +30,8 @@ export interface Profile {
   is_master_admin?: boolean | null;
   // Never rendered raw client-side — only ever shown as a computed age.
   date_of_birth?: string | null;
+  // Computed by the profiles_public view (migration 0026, PR #7).
+  age?: number | null;
 }
 
 // A short update posted by someone checked in at a venue (the "venue event

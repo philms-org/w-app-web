@@ -67,7 +67,9 @@ export default function VenueFeedRow({
     }
   };
 
-  const age = computeAge(profile.date_of_birth);
+  // profiles_public (PR #7, migration 0026) returns a computed `age` and never
+  // the birth date; fall back to computing it for rows that still carry one.
+  const age = profile.age ?? computeAge(profile.date_of_birth);
   const meta = [age != null ? `Age ${age}` : null, profile.city, profile.nationality].filter(Boolean);
 
   return (
