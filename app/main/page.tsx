@@ -82,11 +82,12 @@ export default function MainPage() {
   }
 
   return (
-    <div className="min-h-screen bg-w-back-gray">
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
       {activeTab === 'home' && <AppHeader />}
 
       {/* Main content */}
-      <div className="pb-16">
+      {/* Clears the fixed 64px TabBar (+ the home indicator on notched phones). */}
+      <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {renderTab()}
       </div>
       
