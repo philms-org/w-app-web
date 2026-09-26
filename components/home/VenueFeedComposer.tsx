@@ -1,16 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { theme, radius, type as typeTokens } from '@/lib/theme';
+import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
 
 // `onSubmit` owns the optimistic insert (see VenueFeed.handlePost). The input
 // clears straight away and gets the text back if posting fails.
+// `docked`: pinned to the bottom of the screen, just above the tab bar, so
+// there is always somewhere to say something while you're at the venue.
 export default function VenueFeedComposer({
   avatarUrl,
   onSubmit,
+  docked = false,
+  placeholder = "What's up?",
 }: {
   avatarUrl?: string | null;
   onSubmit: (body: string) => Promise<void>;
+  docked?: boolean;
+  placeholder?: string;
 }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -38,7 +44,15 @@ export default function VenueFeedComposer({
   };
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ padding: '10px 0 2px' }}>
+    <form
+      onSubmit={(e) => { e.preventDefault(); submit(); }}
+      style={docked ? {
+        position: 'fixed', left: 0, right: 0, bottom: 'calc(64px + env(safe-area-inset-bottom))', zIndex: 45,
+        padding: '10px 12px', background: 'color-mix(in srgb, var(--surface) 78%, transparent)',
+        borderTop: `1px solid ${theme.glassBorder}`, boxShadow: elevation.glass,
+        backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur, fontFamily: typeTokens.family,
+      } : { padding: '10px 0 2px' }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <div style={{ width: 32, height: 32, borderRadius: 999, overflow: 'hidden', flexShrink: 0, background: theme.pill }}>
           {avatarUrl && (
@@ -49,7 +63,7 @@ export default function VenueFeedComposer({
         <input
           value={text}
           onChange={(e) => { setText(e.target.value); if (error) setError(null); }}
-          placeholder="What's up?"
+          placeholder={placeholder}
           maxLength={280}
           aria-label="Post an update"
           style={{

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { BadgeCheck, Flag, Heart, MessageSquare, Reply, Trash2 } from 'lucide-react';
+import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, Reply, Trash2 } from 'lucide-react';
 import { reportVenueContent } from '@/lib/data';
 import PostComments from './PostComments';
 import InlineReport from './InlineReport';
@@ -115,6 +115,14 @@ export default function VenueFeedRow({
 
         {post ? (
           <>
+            {post.is_announcement && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, padding: '2px 8px', borderRadius: 999,
+                background: theme.accent, color: theme.onAccent, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+              }}>
+                <Megaphone size={11} aria-hidden /> Announcement
+              </span>
+            )}
             <p style={{ margin: '4px 0 0', color: theme.text, fontSize: typeTokens.body.fontSize, wordBreak: 'break-word' }}>
               {post.body}
             </p>

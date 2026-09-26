@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { LockedOverlay } from '@/components/ui/primitives';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { getFreshPosition } from '@/lib/geolocation';
-import { createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchVenuePosts, toggleLike } from '@/lib/data';
+import { canAnnounceAt, createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchVenuePosts, toggleLike } from '@/lib/data';
 import type { Profile, VenuePost } from '@/lib/types';
 import VenueFeedRow from './VenueFeedRow';
 import VenueFeedComposer from './VenueFeedComposer';
@@ -55,6 +55,16 @@ export default function VenueFeed({
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
   const { canManage: canModerate } = useIsOrganizer(locationId);
+  const [canAnnounce, setCanAnnounce] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCanAnnounce(false);
+    canAnnounceAt(locationId)
+      .then((v) => { if (!cancelled) setCanAnnounce(v); })
+      .catch(() => { /* treat as a regular poster */ });
+    return () => { cancelled = true; };
+  }, [locationId]);
 
   // Realtime handlers are bound once per channel; read the latest props
   // through refs instead of resubscribing whenever presence changes.
@@ -307,7 +317,12 @@ export default function VenueFeed({
           />
         ))
       )}
-      <VenueFeedComposer avatarUrl={myAvatarUrl} onSubmit={handlePost} />
+      <VenueFeedComposer
+        docked
+        avatarUrl={myAvatarUrl}
+        onSubmit={handlePost}
+        placeholder={canAnnounce ? 'Post an announcement…' : 'Say something to the room…'}
+      />
       {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>
   );

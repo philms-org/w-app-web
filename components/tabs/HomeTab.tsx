@@ -12,6 +12,7 @@ import RewardsPanel from '@/components/home/RewardsPanel';
 import ConnectSheet from '@/components/home/ConnectSheet';
 import FriendsActivityFeed from '@/components/home/FriendsActivityFeed';
 import ConnectionsPosts from '@/components/home/ConnectionsPosts';
+import AnnouncementPill from '@/components/home/AnnouncementPill';
 
 type PanelId = 'history' | 'rewards' | 'connect';
 
@@ -49,7 +50,9 @@ export default function HomeTab() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: '24px' }}>
+    // Checked in: leave room for the docked composer above the tab bar.
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: selectedLocation ? 'calc(88px + env(safe-area-inset-bottom))' : '24px' }}>
+      {selectedLocation && <AnnouncementPill locationId={selectedLocation.id} venueName={selectedLocation.name} />}
       {selectedLocation ? <CheckedInHero /> : <NearbyBanner />}
 
       <QuickAccessRow items={quickAccessItems} activeId={activePanel} />

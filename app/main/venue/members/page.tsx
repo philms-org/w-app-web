@@ -3,9 +3,10 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Users } from 'lucide-react';
+import { ChevronLeft, Megaphone, Users } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
-import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier } from '@/lib/data';
+import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier, fetchVenueAnnouncerIds, setVenueAnnouncer } from '@/lib/data';
+import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, VenueMember, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
@@ -46,7 +47,40 @@ function VenueMembersPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
-  const { canManage } = useIsOrganizer(venue?.id);
+  const { canManage, isMasterAdmin } = useIsOrganizer(venue?.id);
+  const { user } = useStore();
+  // Governance: only the venue's primary owner or a master admin can grant the
+  // announcer role (RLS, migration 0031). Announcers' feed posts become
+  // announcements.
+  const canGovern = isMasterAdmin || (!!user && venue?.owner_id === user.id);
+  const [announcerIds, setAnnouncerIds] = useState<Set<string>>(new Set());
+  const [announcerBusy, setAnnouncerBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!venue) return;
+    fetchVenueAnnouncerIds(venue.id)
+      .then(setAnnouncerIds)
+      .catch((err) => console.error('Failed to load announcers:', err));
+  }, [venue]);
+
+  const toggleAnnouncer = async (userId: string) => {
+    if (!venue) return;
+    const on = !announcerIds.has(userId);
+    setAnnouncerBusy(userId);
+    try {
+      await setVenueAnnouncer(venue.id, userId, on);
+      setAnnouncerIds((prev) => {
+        const next = new Set(prev);
+        if (on) next.add(userId); else next.delete(userId);
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to update announcer:', err);
+      setError("Couldn't update the announcer role. Try again.");
+    } finally {
+      setAnnouncerBusy(null);
+    }
+  };
 
   useEffect(() => {
     if (paramLocationId) {
@@ -243,6 +277,31 @@ function VenueMembersPageInner() {
                   <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
                     First visit {formatDate(m.firstCheckinAt)} · Last visit {formatDate(m.lastCheckinAt)}
                   </p>
+                  {canGovern ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleAnnouncer(m.profile.id)}
+                      disabled={announcerBusy === m.profile.id}
+                      aria-pressed={announcerIds.has(m.profile.id)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, marginTop: 6, padding: '0 12px',
+                        borderRadius: 999, cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 12, fontWeight: 700,
+                        background: announcerIds.has(m.profile.id) ? theme.accent : 'transparent',
+                        color: announcerIds.has(m.profile.id) ? theme.onAccent : theme.text,
+                        border: announcerIds.has(m.profile.id) ? 'none' : `1px solid ${theme.divider}`,
+                      }}
+                    >
+                      <Megaphone size={13} aria-hidden />
+                      {announcerIds.has(m.profile.id) ? 'Announcer' : 'Make announcer'}
+                    </button>
+                  ) : announcerIds.has(m.profile.id) ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, padding: '2px 10px', borderRadius: 999,
+                      background: theme.surface2, color: theme.text, fontSize: 11, fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif',
+                    }}>
+                      <Megaphone size={11} aria-hidden /> Announcer
+                    </span>
+                  ) : null}
                   {(m.tags.length > 0 || highestEarnedTier(tierRewards, m.checkinCount)) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                       {(() => {
