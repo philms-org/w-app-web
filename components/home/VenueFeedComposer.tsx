@@ -27,7 +27,11 @@ export default function VenueFeedComposer({
     } catch (err) {
       console.error('Failed to post to venue feed:', err);
       setText(body);
-      setError("Couldn't post that. Check your connection and try again.");
+      setError(
+        err instanceof Error && err.name === 'FeedPostError'
+          ? err.message
+          : "Couldn't post that. Check your connection and try again.",
+      );
     } finally {
       setBusy(false);
     }

@@ -11,6 +11,7 @@ import HistoryPanel from '@/components/home/HistoryPanel';
 import RewardsPanel from '@/components/home/RewardsPanel';
 import ConnectSheet from '@/components/home/ConnectSheet';
 import FriendsActivityFeed from '@/components/home/FriendsActivityFeed';
+import ConnectionsPosts from '@/components/home/ConnectionsPosts';
 
 type PanelId = 'history' | 'rewards' | 'connect';
 
@@ -56,6 +57,7 @@ export default function HomeTab() {
       {activePanel === 'history' && <HistoryPanel />}
       {activePanel === 'rewards' && <RewardsPanel />}
       {activePanel === 'connect' && <ConnectSheet />}
+      {activePanel === null && <ConnectionsPosts excludeLocationId={selectedLocation?.id} />}
       {activePanel === null && <FriendsActivityFeed />}
     </div>
   );
