@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, Megaphone } from 'lucide-react';
 import { fetchVenueAnnouncements } from '@/lib/data';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
-import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
+import { theme, radius, type as typeTokens } from '@/lib/theme';
 import type { VenuePost } from '@/lib/types';
 
 const SEEN_KEY = (locationId: string) => `w_app_announcements_seen:${locationId}`;
@@ -17,15 +17,15 @@ function timeAgo(iso: string): string {
   return h < 24 ? `${h}h ago` : new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-const glass: React.CSSProperties = {
-  background: theme.glassFill,
+// Page-1 mockup: the pinned organizer post at the top of "Who's here" is a
+// pink/purple gradient row. Built from --accent-2 so it follows the theme.
+const pinned: React.CSSProperties = {
+  background: 'linear-gradient(100deg, color-mix(in srgb, var(--accent-2) 55%, var(--surface)), color-mix(in srgb, var(--accent-2) 18%, var(--surface)))',
   border: `1px solid ${theme.glassBorder}`,
-  boxShadow: `${elevation.glass}, inset 0 1px 0 ${theme.glassHighlight}`,
-  backdropFilter: glassBlur,
-  WebkitBackdropFilter: glassBlur,
+  boxShadow: `inset 0 1px 0 ${theme.glassHighlight}`,
 };
 
-// Announcements pill, pinned to the top of checked-in Home. Every feed post
+// Announcements pill, pinned to the top of the checked-in feed card. Every feed post
 // by a venue manager or announcer is an announcement (migration 0031).
 // Collapsed: the newest one in a single line. Tap: a panel you scroll up and
 // down through all of them. Live, and marks a "new" dot until opened.
@@ -63,15 +63,15 @@ export default function AnnouncementPill({ locationId, venueName }: { locationId
   if (!latest) return null;
 
   return (
-    <section aria-label={`Announcements from ${venueName}`} style={{ margin: '12px 16px 0', fontFamily: typeTokens.family }}>
+    <section aria-label={`Announcements from ${venueName}`} style={{ marginBottom: 12, fontFamily: typeTokens.family }}>
       <button
         type="button"
         onClick={toggle}
         aria-expanded={open}
         aria-controls="announcement-list"
         style={{
-          ...glass,
-          width: '100%', minHeight: 52, borderRadius: open ? `${radius.sheet}px ${radius.sheet}px 0 0` : radius.pill,
+          ...pinned,
+          width: '100%', minHeight: 56, borderRadius: open ? `${radius.control}px ${radius.control}px 0 0` : radius.control,
           display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px 8px 8px',
           color: theme.text, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
           transition: 'border-radius .2s ease',
@@ -92,18 +92,18 @@ export default function AnnouncementPill({ locationId, venueName }: { locationId
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
+            display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.text, opacity: 0.85,
           }}>
-            Announcements{items.length > 1 ? ` · ${items.length}` : ''}
+            {venueName} · Announcements{items.length > 1 ? ` · ${items.length}` : ''}
           </span>
           <span style={{
             display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: open ? 'normal' : 'nowrap',
           }}>
-            {open ? `From the ${venueName} team` : latest.body}
+            {open ? 'All announcements' : `“${latest.body}”`}
           </span>
         </span>
-        <ChevronDown size={18} aria-hidden style={{ flexShrink: 0, color: theme.muted, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s ease' }} />
+        <ChevronDown size={18} aria-hidden style={{ flexShrink: 0, color: theme.text, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s ease' }} />
       </button>
 
       {open && (
@@ -111,8 +111,8 @@ export default function AnnouncementPill({ locationId, venueName }: { locationId
           id="announcement-list"
           role="list"
           style={{
-            ...glass,
-            borderTop: 'none', borderRadius: `0 0 ${radius.sheet}px ${radius.sheet}px`,
+            background: theme.surface2, border: `1px solid ${theme.glassBorder}`,
+            borderTop: 'none', borderRadius: `0 0 ${radius.control}px ${radius.control}px`,
             maxHeight: 'min(52vh, 360px)', overflowY: 'auto', overscrollBehavior: 'contain',
             scrollSnapType: 'y proximity', padding: '4px 14px 10px',
           }}

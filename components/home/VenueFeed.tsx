@@ -321,7 +321,7 @@ export default function VenueFeed({
         docked
         avatarUrl={myAvatarUrl}
         onSubmit={handlePost}
-        placeholder={canAnnounce ? 'Post an announcement…' : 'Say something to the room…'}
+        placeholder={canAnnounce ? 'Post an announcement…' : "What's up?"}
       />
       {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>
