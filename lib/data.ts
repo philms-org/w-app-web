@@ -35,6 +35,7 @@ import type {
   VenuePostComment,
   VenueReport,
   VenueReportReason,
+  RoleBadge,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -914,6 +915,55 @@ export async function fetchVenueTitleRoster(
       people: g.people.sort((a, b) =>
         (a.display_name ?? '').localeCompare(b.display_name ?? '')),
     }));
+}
+
+// The current user's badges: every role (verification tag) an organizer has
+// approved them for, newest first, with the venue or event it was for.
+// verification_tags is readable by any signed-in user (0001), so this only
+// filters to our own rows. Venue names come from a second query rather than
+// an embed so this doesn't depend on a verification_tags -> locations FK.
+export async function fetchMyRoleBadges(): Promise<RoleBadge[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data: tags, error } = await supabase
+    .from('verification_tags')
+    .select('id, location_id, tag, icon, assigned_at, verification_tag_types(*)')
+    .eq('user_id', uid)
+    .order('assigned_at', { ascending: false });
+  if (error) throw error;
+
+  type Row = {
+    id: string; location_id: string; tag: string; icon: string | null; assigned_at: string;
+    verification_tag_types: VerificationTagType | null;
+  };
+  const rows = (tags ?? []) as unknown as Row[];
+  if (rows.length === 0) return [];
+
+  const ids = Array.from(new Set(rows.map((r) => r.location_id)));
+  const { data: venues, error: venueError } = await supabase
+    .from('locations')
+    .select('id, name, is_event, event_date')
+    .in('id', ids);
+  if (venueError) throw venueError;
+  const byId = new Map(
+    ((venues ?? []) as Pick<Venue, 'id' | 'name' | 'is_event' | 'event_date'>[]).map((v) => [v.id, v]),
+  );
+
+  return rows.map((r) => {
+    const type = r.verification_tag_types;
+    const venue = byId.get(r.location_id);
+    return {
+      id: r.id,
+      label: type?.label ?? r.tag,
+      iconKind: type?.icon_kind ?? 'legacy',
+      icon: type?.icon ?? r.icon ?? null,
+      venueId: r.location_id,
+      venueName: venue?.name ?? 'A W venue',
+      isEvent: !!venue?.is_event,
+      eventDate: venue?.event_date ?? null,
+      assignedAt: r.assigned_at,
+    };
+  });
 }
 
 export async function removeVerificationTag(tagId: string): Promise<void> {

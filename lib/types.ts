@@ -222,6 +222,21 @@ export interface VerificationTag {
   profiles?: Profile;
 }
 
+// A role an organizer approved someone for at a venue or event (a granted
+// verification tag, e.g. "Staff", "Head Judge", "Musician"). These are what
+// the app shows as a person's badges.
+export interface RoleBadge {
+  id: string;
+  label: string;
+  iconKind: TagIconKind | 'legacy';
+  icon: string | null;
+  venueId: string;
+  venueName: string;
+  isEvent: boolean;
+  eventDate: string | null;
+  assignedAt: string;
+}
+
 export interface LocationManager {
   id: string;
   location_id: string;
