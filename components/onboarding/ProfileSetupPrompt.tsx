@@ -21,12 +21,20 @@ export default function ProfileSetupPrompt() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (user?.setupComplete !== false) return;
+    // Anonymous guests always start with setupComplete: false (see
+    // EnsureSession.tsx) but have no `profiles` row yet until VitalsGate
+    // identifies them. /profile/setup's handleFinish calls updateProfile
+    // (a bare UPDATE ... WHERE id = uid), which matches zero rows for a
+    // guest with no row — the wizard would silently discard everything.
+    // Suppress this prompt for anonymous sessions; once VitalsGate has
+    // identified them (upsertProfile ran, so a real row exists) and
+    // setupComplete is still false, it's safe for this prompt to fire.
+    if (user?.isAnonymous || user?.setupComplete !== false) return;
     const timer = setTimeout(() => setVisible(true), DELAY_MS);
     return () => clearTimeout(timer);
-  }, [user?.setupComplete]);
+  }, [user?.isAnonymous, user?.setupComplete]);
 
-  if (!visible || dismissed || user?.setupComplete !== false) return null;
+  if (!visible || dismissed || user?.isAnonymous || user?.setupComplete !== false) return null;
 
   return (
     <div style={{

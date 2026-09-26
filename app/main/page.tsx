@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
+import { fetchProfile } from '@/lib/data';
 import { requestLocation } from '@/lib/geolocation';
 import TabBar from '@/components/TabBar';
 import AppHeader from '@/components/AppHeader';
@@ -17,7 +20,7 @@ import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied, setUser, setToken } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
 
@@ -27,23 +30,88 @@ export default function MainPage() {
     // and can bounce a logged-in user back to login on a fresh page load.
     if (!hasHydrated) return;
 
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
+    let cancelled = false;
 
-    // Show the location prompt whenever we don't already have a location for
-    // this session. `currentLocation` isn't persisted across page loads (see
-    // lib/store.ts partialize), so this re-prompts on every fresh session —
-    // it used to also require `w_app_location_permission_asked` to be unset,
-    // but that flag is set permanently by the landing page's own location
-    // gate (components/LandingLocationGate.tsx) on the very first visit,
-    // which silently disabled this prompt for every session after that.
-    if (!currentLocation && !locationPermissionAsked) {
-      setShowLocationPrompt(true);
-    }
-  }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
+    (async () => {
+      // Magic-link returns land here (signInWithMagicLink redirects to
+      // `${origin}/main`) with no onAuthStateChange listener anywhere in the
+      // app to sync the real session Supabase's client just established
+      // (via detectSessionInUrl) into this Zustand store — every guard below
+      // reads the store, not supabase.auth directly. Reconcile before
+      // evaluating the redirect decision so neither failure mode below can
+      // slip through:
+      //   (a) same-browser tab: the store still holds a stale anonymous
+      //       identity from before the magic link was clicked.
+      //   (b) fresh browser/device: the store has no persisted state at all.
+      // getSession() can reject (storage access blocked in a private window,
+      // a corrupt persisted session, a failed token refresh). Treat that as
+      // "nothing to reconcile" and fall through to the store-based guard
+      // below instead of leaving an unhandled rejection and a blank page.
+      let session: Session | null = null;
+      try {
+        ({ data: { session } } = await supabase.auth.getSession());
+      } catch (err) {
+        console.error('Failed to read auth session on /main:', err);
+      }
+      if (cancelled) return;
+
+      const storeUser = useStore.getState().user;
+      if (session?.user && session.user.id !== storeUser?.id) {
+        let profile = null;
+        try {
+          profile = await fetchProfile(session.user.id);
+        } catch {
+          // No profiles row yet (e.g. a real user mid-onboarding) — proceed
+          // with what the auth session alone tells us.
+          profile = null;
+        }
+        if (cancelled) return;
+
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          name: profile?.display_name ?? session.user.email ?? '',
+          email: session.user.email ?? '',
+          phone: profile?.phone ?? '',
+          gender: '',
+          birth: '',
+          image: profile?.avatar_url ?? undefined,
+          city: profile?.city ?? undefined,
+          profession: profile?.profession ?? undefined,
+          isAnonymous: !!session.user.is_anonymous,
+          setupComplete: !!profile?.city,
+        });
+      }
+
+      if (cancelled) return;
+
+      // Evaluate the redirect decision against the freshest state — either
+      // what was just synced above, or the store as it already stood if
+      // there was nothing to reconcile (the common case).
+      if (!useStore.getState().isAuthenticated) {
+        // No session at all, real or anonymous (e.g. a direct deep link
+        // before EnsureSession has run) — bootstrap one on the landing page
+        // rather than sending a first-time visitor to a login form they
+        // don't need.
+        router.push('/');
+        return;
+      }
+
+      // Show the location prompt whenever we don't already have a location for
+      // this session. `currentLocation` isn't persisted across page loads (see
+      // lib/store.ts partialize), so this re-prompts on every fresh session —
+      // it used to also require `w_app_location_permission_asked` to be unset,
+      // but that flag is set permanently on the very first visit, which
+      // silently disabled this prompt for every session after that.
+      if (!useStore.getState().currentLocation && !locationPermissionAsked) {
+        setShowLocationPrompt(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked, setUser, setToken]);
 
   const handleAllowLocation = () => {
     setLocationPermissionAsked(true);

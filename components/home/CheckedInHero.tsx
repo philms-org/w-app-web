@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import {
   checkIn,
@@ -25,6 +26,7 @@ import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
+import VitalsGate from '@/components/onboarding/VitalsGate';
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
@@ -36,7 +38,8 @@ import { haversineMeters } from '@/lib/geo';
 // adds a real geofence gate in front of checkIn: only actually check in when
 // the user's live location is within the venue's radius.
 export default function CheckedInHero() {
-  const { selectedLocation, setSelectedLocation, currentLocation } = useStore();
+  const router = useRouter();
+  const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
@@ -50,6 +53,15 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
+  const [showVitalsGate, setShowVitalsGate] = useState(false);
+  // Separate from showVitalsGate (the check-in gate, Task 5): that gate's
+  // onIdentified only needs to close the sheet, because the auto-checkin
+  // effect below picks up the real checkIn() itself once user.isAnonymous
+  // flips (it's in that effect's deps). Venue Chat has no such retry
+  // mechanism — its onIdentified must actively navigate — so reusing one
+  // piece of state would require tracking "which gate opened this" just to
+  // decide what onIdentified should do. A second state is simpler.
+  const [showChatVitalsGate, setShowChatVitalsGate] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -158,6 +170,12 @@ export default function CheckedInHero() {
   // non-idempotent checkIn() write two or more times per venue entry. Track
   // which location we've already attempted so it happens once; cleared on
   // check-out (handleBack) and when the location changes below.
+  //
+  // For an anonymous session, the geofence branch opens the vitals gate
+  // instead of checking in, and deliberately leaves checkInAttemptedFor
+  // unset. `user?.isAnonymous` is in this effect's deps, so once VitalsGate's
+  // onIdentified flips it to false the effect re-runs and this time takes
+  // the real checkIn() path.
   const checkInAttemptedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -169,13 +187,17 @@ export default function CheckedInHero() {
     setSelectedAttendeeId(null);
 
     if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
-      checkInAttemptedFor.current = selectedLocation.id;
-      checkIn(selectedLocation.id)
-        .then(() => setCheckedIn(true))
-        .catch((err) => {
-          checkInAttemptedFor.current = null;
-          console.error('Check-in failed:', err);
-        });
+      if (user?.isAnonymous) {
+        setShowVitalsGate(true);
+      } else {
+        checkInAttemptedFor.current = selectedLocation.id;
+        checkIn(selectedLocation.id)
+          .then(() => setCheckedIn(true))
+          .catch((err) => {
+            checkInAttemptedFor.current = null;
+            console.error('Check-in failed:', err);
+          });
+      }
     }
 
     loadPresence();
@@ -186,7 +208,7 @@ export default function CheckedInHero() {
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
 
-  }, [selectedLocation, withinGeofence, loadPresence]);
+  }, [selectedLocation, withinGeofence, loadPresence, user?.isAnonymous]);
 
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
@@ -290,22 +312,42 @@ export default function CheckedInHero() {
         )}
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <Link
-            href={`/main/venue/chat?locationId=${selectedLocation.id}`}
-            style={{
-              backgroundColor: theme.surface,
-              color: theme.text,
-              border: `1px solid ${theme.divider}`,
-              borderRadius: '9999px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              textDecoration: 'none',
-            }}
-          >
-            💬 Venue Chat
-          </Link>
+          {user?.isAnonymous ? (
+            <button
+              type="button"
+              onClick={() => setShowChatVitalsGate(true)}
+              style={{
+                backgroundColor: theme.surface,
+                color: theme.text,
+                border: `1px solid ${theme.divider}`,
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+                cursor: 'pointer',
+              }}
+            >
+              💬 Venue Chat
+            </button>
+          ) : (
+            <Link
+              href={`/main/venue/chat?locationId=${selectedLocation.id}`}
+              style={{
+                backgroundColor: theme.surface,
+                color: theme.text,
+                border: `1px solid ${theme.divider}`,
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+                textDecoration: 'none',
+              }}
+            >
+              💬 Venue Chat
+            </Link>
+          )}
           {canManage && (
             <>
               <Link
@@ -560,6 +602,27 @@ export default function CheckedInHero() {
 
       {showOrganizerWelcome && (
         <OrganizerWelcomeModal onClose={() => setShowOrganizerWelcome(false)} />
+      )}
+
+      {showVitalsGate && (
+        <VitalsGate
+          open={showVitalsGate}
+          intent="checkin"
+          onClose={() => setShowVitalsGate(false)}
+          onIdentified={() => setShowVitalsGate(false)}
+        />
+      )}
+
+      {showChatVitalsGate && (
+        <VitalsGate
+          open={showChatVitalsGate}
+          intent="messages"
+          onClose={() => setShowChatVitalsGate(false)}
+          onIdentified={() => {
+            setShowChatVitalsGate(false);
+            router.push(`/main/venue/chat?locationId=${selectedLocation.id}`);
+          }}
+        />
       )}
     </div>
   );

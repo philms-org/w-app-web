@@ -21,7 +21,11 @@ const GENDERS = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setUser, setToken } = useStore();
+  const { user, setUser, setToken } = useStore();
+  // Founder decision (2026-09-25): guests (anonymous sessions) may register
+  // without a photo; they're asked for one later, on their first feed post.
+  // Everyone else still needs one, as before.
+  const photoRequired = !user?.isAnonymous;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -114,7 +118,7 @@ export default function RegisterPage() {
     if (!formData.confirmPassword) errors.confirmPassword = 'Required';
     else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
 
-    if (!profileImage) errors.photo = 'Required';
+    if (photoRequired && !profileImage) errors.photo = 'Required';
 
     if (captchaEnabled && !captchaToken) errors.captcha = 'Please complete the verification challenge';
 
@@ -262,7 +266,7 @@ export default function RegisterPage() {
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <span style={{ fontSize: typeTokens.label.fontSize, color: fieldErrors.photo ? theme.accent2 : theme.muted }}>
-            {fieldErrors.photo ? 'Profile photo required' : 'Profile photo (required)'}
+            {fieldErrors.photo ? 'Profile photo required' : photoRequired ? 'Profile photo (required)' : 'Profile photo (optional, you can add it later)'}
           </span>
         </div>
 
