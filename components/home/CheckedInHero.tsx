@@ -326,6 +326,22 @@ export default function CheckedInHero() {
                 Members
               </Link>
               <Link
+                href={`/main/venue/reports?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Reports
+              </Link>
+              <Link
                 href={`/main/venue/rewards?locationId=${selectedLocation.id}`}
                 style={{
                   backgroundColor: theme.surface,
@@ -515,6 +531,7 @@ export default function CheckedInHero() {
             myUserId={user?.id}
             myAvatarUrl={user?.image}
             onReply={(profile) => setSelectedAttendeeId(profile.id)}
+            checkedIn={checkedIn}
           />
 
           {selectedAttendee && (

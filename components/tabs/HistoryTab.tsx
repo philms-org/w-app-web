@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLastVisited, fetchFeed, fetchAttendeeHistory } from '@/lib/data';
+import { fetchLastVisited, fetchVenueHistory, fetchAttendeeHistory } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
@@ -52,7 +52,7 @@ export default function HistoryTab() {
   useEffect(() => {
     if (!selectedVenue) return;
     setDetailLoading(true);
-    fetchFeed(selectedVenue.id)
+    fetchVenueHistory(selectedVenue.id)
       .then((feed) => setGroups(groupByDay(feed)))
       .catch((err) => console.error('Failed to load venue history:', err))
       .finally(() => setDetailLoading(false));

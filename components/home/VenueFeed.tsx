@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { LockedOverlay } from '@/components/ui/primitives';
+import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
+import { getFreshPosition } from '@/lib/geolocation';
 import { createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchVenuePosts, toggleLike } from '@/lib/data';
 import type { Profile, VenuePost } from '@/lib/types';
 import VenueFeedRow from './VenueFeedRow';
@@ -12,6 +14,14 @@ import VenueFeedFilters, { type FeedFilter } from './VenueFeedFilters';
 import AddPhotoPrompt, { shouldShowPhotoPrompt } from './AddPhotoPrompt';
 
 const REQUIRED_CONNECTIONS = 3;
+
+// A post refusal the composer can show as-is (not a generic network error).
+export class FeedPostError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FeedPostError';
+  }
+}
 const TEMP_PREFIX = 'temp-';
 
 function matchesFilter(profile: Profile, filter: FeedFilter): boolean {
@@ -30,17 +40,21 @@ export default function VenueFeed({
   myUserId,
   myAvatarUrl,
   onReply,
+  checkedIn = true,
 }: {
   locationId: string;
   presenceProfiles: Profile[];
   myUserId?: string;
   myAvatarUrl?: string | null;
   onReply: (profile: Profile) => void;
+  /** Actually checked in (inside the geofence); only then can you comment. */
+  checkedIn?: boolean;
 }) {
   const [connectionCount, setConnectionCount] = useState<number | null>(null);
   const [posts, setPosts] = useState<VenuePost[]>([]);
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
+  const { canManage: canModerate } = useIsOrganizer(locationId);
 
   // Realtime handlers are bound once per channel; read the latest props
   // through refs instead of resubscribing whenever presence changes.
@@ -214,7 +228,21 @@ export default function VenueFeed({
       ...prev,
     ]);
     try {
-      const saved = await createVenuePost(locationId, body);
+      let pos: { lat: number; lng: number };
+      try {
+        pos = await getFreshPosition();
+      } catch {
+        throw new FeedPostError("Couldn't get your location. Allow location access to post here.");
+      }
+      let saved: VenuePost;
+      try {
+        saved = await createVenuePost(locationId, body, pos.lat, pos.lng);
+      } catch (err) {
+        const msg = (err as { message?: string })?.message ?? '';
+        if (/geofence/.test(msg)) throw new FeedPostError("You need to be at the venue to post. Move closer and try again.");
+        if (/not checked in/.test(msg)) throw new FeedPostError('Check in at this venue to post.');
+        throw err;
+      }
       setPosts((prev) =>
         prev.some((p) => p.id === saved.id)
           ? prev.filter((p) => p.id !== tempId) // realtime echo already swapped in
@@ -273,6 +301,9 @@ export default function VenueFeed({
             onReply={onReply}
             onToggleLike={handleToggleLike}
             onDelete={handleDelete}
+            myUserId={myUserId}
+            canComment={checkedIn}
+            canModerate={canModerate}
           />
         ))
       )}
