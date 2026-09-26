@@ -28,6 +28,9 @@ export interface Profile {
   socialising_id?: number | null;
   networking_id?: number | null;
   is_master_admin?: boolean | null;
+  // Computed by the profiles_public view (migration 0026); the birth date
+  // itself is never exposed for other people.
+  age?: number | null;
 }
 
 export interface Venue {
