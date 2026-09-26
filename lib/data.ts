@@ -31,6 +31,7 @@ import type {
   MyConnection,
   FriendActivityEntry,
   LocationRequest,
+  VenuePost,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -1860,4 +1861,90 @@ export async function rejectLocationRequest(requestId: string, reason?: string):
     p_reason: reason || null,
   });
   if (error) throw error;
+}
+
+// ---- Venue event feed ----
+// RLS on venue_posts/post_likes already scopes both insert and select to
+// people currently checked in at this location_id — see
+// supabase/migrations/0024_venue_event_feed.sql. No client-side filtering
+// of who can see what is needed beyond that.
+
+export async function fetchVenuePosts(locationId: string, limit = 50): Promise<VenuePost[]> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .select(`id, location_id, author_id, body, created_at, author:${PUBLIC_PROFILE}!author_id(*), post_likes(user_id)`)
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  type Row = VenuePost & { post_likes: { user_id: string }[] | null };
+  return ((data ?? []) as unknown as Row[]).map((row) => ({
+    id: row.id,
+    location_id: row.location_id,
+    author_id: row.author_id,
+    body: row.body,
+    created_at: row.created_at,
+    author: row.author,
+    like_count: row.post_likes?.length ?? 0,
+    liked_by_me: !!uid && !!row.post_likes?.some((l) => l.user_id === uid),
+  }));
+}
+
+// Returns the inserted row so the feed can swap its optimistic copy for the
+// real id (and recognise the realtime INSERT echo of its own post).
+export async function createVenuePost(locationId: string, body: string): Promise<VenuePost> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .insert({ location_id: locationId, author_id: uid, body: body.trim() })
+    .select('id, location_id, author_id, body, created_at')
+    .single();
+  if (error) throw error;
+  return data as VenuePost;
+}
+
+// Author-only (RLS venue_posts_delete_own, migration 0025). RLS makes a
+// non-author delete a silent no-op, so ask for the deleted row back and treat
+// "nothing deleted" as a failure instead of pretending it worked.
+export async function deleteVenuePost(postId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .delete()
+    .eq('id', postId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Post not deleted');
+}
+
+// Toggles the current user's like on a post. Reads state first rather than
+// relying on unique-violation as the "already liked" signal — this repo's
+// existing checkIn() pattern uses that trick because inserts there aren't
+// paired with a delete path; here the caller needs the resulting boolean to
+// update its own UI, so a read-then-write is the more direct fit.
+export async function toggleLike(postId: string): Promise<boolean> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data: existing, error: existingError } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('post_id', postId)
+    .eq('user_id', uid)
+    .limit(1);
+  if (existingError) throw existingError;
+
+  if (existing && existing.length > 0) {
+    const { error } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', uid);
+    if (error) throw error;
+    return false;
+  }
+  const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: uid });
+  if (error) throw error;
+  return true;
 }
