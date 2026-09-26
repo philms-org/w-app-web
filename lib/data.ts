@@ -1873,7 +1873,7 @@ export async function fetchVenuePosts(locationId: string, limit = 50): Promise<V
   const uid = await getCurrentUserId();
   const { data, error } = await supabase
     .from('venue_posts')
-    .select('id, location_id, author_id, body, created_at, author:profiles(*), post_likes(user_id)')
+    .select(`id, location_id, author_id, body, created_at, author:${PUBLIC_PROFILE}!author_id(*), post_likes(user_id)`)
     .eq('location_id', locationId)
     .order('created_at', { ascending: false })
     .limit(limit);
