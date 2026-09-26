@@ -28,9 +28,10 @@ export interface Profile {
   socialising_id?: number | null;
   networking_id?: number | null;
   is_master_admin?: boolean | null;
-  // Never rendered raw client-side — only ever shown as a computed age.
+  // Your own row only (written at signup); never exposed for other people.
   date_of_birth?: string | null;
-  // Computed by the profiles_public view (migration 0026, PR #7).
+  // Computed by the profiles_public view (migration 0026); the birth date
+  // itself is never exposed for other people.
   age?: number | null;
 }
 
