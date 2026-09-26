@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
-import { upgradeAnonymousUser, signInWithMagicLink } from '@/lib/auth';
+import { upgradeGuestAccount, GuestUpgradeError, signInWithMagicLink } from '@/lib/auth';
 import { upsertProfile } from '@/lib/data';
 import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
@@ -86,16 +86,18 @@ export default function VitalsGate({
     setBusy(true);
     setError('');
     try {
-      await upgradeAnonymousUser(email.trim(), name.trim());
+      await upgradeGuestAccount(email.trim(), name.trim());
       if (user) {
         await upsertProfile({ id: user.id, display_name: name.trim(), email: email.trim() });
         setUser({ ...user, name: name.trim(), email: email.trim(), isAnonymous: false });
       }
       onIdentified();
     } catch (err) {
-      if (isEmailTakenError(err)) {
+      if (isEmailTakenError(err) || (err instanceof GuestUpgradeError && err.code === 'email_exists')) {
         setMode('returning');
         setError('');
+      } else if (err instanceof GuestUpgradeError && err.code === 'rate_limited') {
+        setError('Too many tries. Wait a minute and try again.');
       } else {
         setError("Couldn't save that — try again.");
       }
