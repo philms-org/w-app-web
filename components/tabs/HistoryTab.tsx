@@ -86,7 +86,7 @@ export default function HistoryTab() {
 
         <div style={{ padding: '16px 24px 24px' }}>
         {selectedVenue.address && (
-          <p style={{ color: '#919191', fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+          <p style={{ color: theme.muted, fontSize: '13px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             {selectedVenue.address}
           </p>
         )}
@@ -94,7 +94,7 @@ export default function HistoryTab() {
         {attendees.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
             <p style={{
-              color: '#919191',
+              color: theme.muted,
               fontSize: '11px',
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -130,7 +130,7 @@ export default function HistoryTab() {
 
         {!detailLoading && groups.length === 0 && (
           <p style={{
-            color: '#919191',
+            color: theme.muted,
             fontSize: '14px',
             textAlign: 'center',
             marginTop: '40px',
@@ -168,7 +168,7 @@ export default function HistoryTab() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <User style={{ width: '16px', height: '16px', color: '#919191' }} />
+                  <User style={{ width: '16px', height: '16px', color: theme.muted }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -189,7 +189,7 @@ export default function HistoryTab() {
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>{item.content}</p>
                   <p style={{
-                    color: '#919191',
+                    color: theme.muted,
                     fontSize: '11px',
                     marginTop: '6px',
                     fontFamily: 'Montserrat, system-ui, sans-serif'
@@ -259,10 +259,10 @@ export default function HistoryTab() {
             <div style={{ textAlign: 'left' }}>
               <div style={{ color: theme.text, fontSize: '16px', fontWeight: 600 }}>{venue.name}</div>
               {venue.address && (
-                <div style={{ color: '#919191', fontSize: '13px', marginTop: '2px' }}>{venue.address}</div>
+                <div style={{ color: theme.muted, fontSize: '13px', marginTop: '2px' }}>{venue.address}</div>
               )}
             </div>
-            <ChevronRight style={{ width: '18px', height: '18px', color: '#919191', flexShrink: 0 }} />
+            <ChevronRight style={{ width: '18px', height: '18px', color: theme.muted, flexShrink: 0 }} />
           </button>
         ))}
       </div>

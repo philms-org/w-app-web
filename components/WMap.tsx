@@ -123,11 +123,11 @@ export default function WMap({
       marker.bindPopup(`
         <div style="font-family: Montserrat, system-ui, sans-serif; min-width: 200px;">
           <h3 style="font-weight: 600; margin-bottom: 4px; color: #231E20;">${location.name}</h3>
-          <p style="color: #919191; font-size: 14px; margin-bottom: 8px;">${location.description}</p>
+          <p style="color: #6B6B70; font-size: 14px; margin-bottom: 8px;">${location.description}</p>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
             <span style="color: #17BFD9; font-weight: 600;">${location.count} ${location.count === 1 ? 'person' : 'people'}</span>
-            <span style="color: #919191;">•</span>
-            <span style="color: #919191;">${location.radius}m radius</span>
+            <span style="color: #6B6B70;">•</span>
+            <span style="color: #6B6B70;">${location.radius}m radius</span>
           </div>
           <button
             onclick="window.wSelectLocation('${location.id}')"
