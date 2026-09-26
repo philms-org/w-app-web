@@ -49,7 +49,8 @@ export default function HomeTab() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: '24px' }}>
+    // Checked in: leave room for the docked composer above the tab bar.
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: selectedLocation ? 'calc(88px + env(safe-area-inset-bottom))' : '24px' }}>
       {selectedLocation ? <CheckedInHero /> : <NearbyBanner />}
 
       <QuickAccessRow items={quickAccessItems} activeId={activePanel} />

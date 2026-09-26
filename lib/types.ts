@@ -48,6 +48,9 @@ export interface VenuePost {
   like_count?: number;
   liked_by_me?: boolean;
   comment_count?: number;
+  // Posted by a venue manager or announcer: also shown in the announcements
+  // pill (set by the server, migration 0031).
+  is_announcement?: boolean;
   // Set on posts fetched outside a venue view (connections' posts on Home).
   venue_name?: string | null;
 }

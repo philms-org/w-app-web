@@ -22,6 +22,7 @@ import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import VenueFeed from '@/components/home/VenueFeed';
+import AnnouncementPill from '@/components/home/AnnouncementPill';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
@@ -524,6 +525,10 @@ export default function CheckedInHero() {
               )}
             </div>
           )}
+
+          {/* Pinned above the feed and outside its lock: everyone checked in
+              sees announcements, even before unlocking who's here. */}
+          <AnnouncementPill locationId={selectedLocation.id} venueName={selectedLocation.name} />
 
           <VenueFeed
             locationId={selectedLocation.id}

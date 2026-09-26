@@ -1907,7 +1907,7 @@ export async function fetchVenuePosts(locationId: string, limit = 50): Promise<V
 }
 
 const POST_SELECT =
-  `id, location_id, author_id, body, created_at, author:${PUBLIC_PROFILE}!author_id(*), post_likes(user_id), venue_post_comments(count)`;
+  `id, location_id, author_id, body, created_at, is_announcement, author:${PUBLIC_PROFILE}!author_id(*), post_likes(user_id), venue_post_comments(count)`;
 
 type PostRow = VenuePost & {
   post_likes: { user_id: string }[] | null;
@@ -1925,7 +1925,56 @@ function mapPostRows(data: unknown, uid: string | null): VenuePost[] {
     like_count: row.post_likes?.length ?? 0,
     liked_by_me: !!uid && !!row.post_likes?.some((l) => l.user_id === uid),
     comment_count: row.venue_post_comments?.[0]?.count ?? 0,
+    is_announcement: !!row.is_announcement,
   }));
+}
+
+// ---- Announcements (migration 0031) ----
+// Announcements are feed posts by a venue manager or announcer. Newest first.
+export async function fetchVenueAnnouncements(locationId: string, limit = 50): Promise<VenuePost[]> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .select(POST_SELECT)
+    .eq('location_id', locationId)
+    .eq('is_announcement', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return mapPostRows(data, uid);
+}
+
+// Whether the current user's posts at this venue become announcements.
+export async function canAnnounceAt(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_announce', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+export async function fetchVenueAnnouncerIds(locationId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('venue_announcers')
+    .select('user_id')
+    .eq('location_id', locationId);
+  if (error) throw error;
+  return new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+}
+
+// Venue owner or master admin only (RLS). Idempotent both ways.
+export async function setVenueAnnouncer(locationId: string, userId: string, on: boolean): Promise<void> {
+  if (on) {
+    const { error } = await supabase
+      .from('venue_announcers')
+      .upsert({ location_id: locationId, user_id: userId }, { onConflict: 'location_id,user_id', ignoreDuplicates: true });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('venue_announcers')
+      .delete()
+      .eq('location_id', locationId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
 }
 
 // Recent posts by my connections, from any venue, for Home. RLS
