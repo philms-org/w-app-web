@@ -159,6 +159,7 @@ export default function RegisterPage() {
         email: formData.email,
         phone: countryCode + formData.phone,
         avatar_url: avatarUrl ?? null,
+        date_of_birth: formData.birthDate || null,
       });
 
       if (session) setToken(session.access_token);

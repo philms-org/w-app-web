@@ -31,6 +31,10 @@ import type {
   MyConnection,
   FriendActivityEntry,
   LocationRequest,
+  VenuePost,
+  VenuePostComment,
+  VenueReport,
+  VenueReportReason,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -280,6 +284,28 @@ export async function fetchFeed(locationId: string): Promise<FeedItem[]> {
     .limit(100);
   if (error) throw error;
   return data ?? [];
+}
+
+// History for one venue: its venue-feed posts (readable after you leave, RLS
+// 0030) merged with any older feed_posts, newest first, in the FeedItem shape
+// HistoryTab/HistoryPanel already render.
+export async function fetchVenueHistory(locationId: string): Promise<FeedItem[]> {
+  const [venuePosts, legacy] = await Promise.all([
+    fetchVenuePosts(locationId, 200),
+    fetchFeed(locationId).catch((err) => {
+      console.error('Failed to load older feed posts:', err);
+      return [] as FeedItem[];
+    }),
+  ]);
+  const mapped: FeedItem[] = venuePosts.map((p) => ({
+    id: p.id,
+    location_id: p.location_id,
+    user_id: p.author_id,
+    content: p.body,
+    created_at: p.created_at,
+    profiles: p.author ?? undefined,
+  }));
+  return [...mapped, ...legacy].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export async function postToFeed(locationId: string, text: string): Promise<void> {
@@ -1859,5 +1885,277 @@ export async function rejectLocationRequest(requestId: string, reason?: string):
     p_request_id: requestId,
     p_reason: reason || null,
   });
+  if (error) throw error;
+}
+
+// ---- Venue event feed ----
+// RLS on venue_posts/post_likes already scopes both insert and select to
+// people currently checked in at this location_id — see
+// supabase/migrations/0024_venue_event_feed.sql. No client-side filtering
+// of who can see what is needed beyond that.
+
+export async function fetchVenuePosts(locationId: string, limit = 50): Promise<VenuePost[]> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .select(POST_SELECT)
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return mapPostRows(data, uid);
+}
+
+const POST_SELECT =
+  `id, location_id, author_id, body, created_at, is_announcement, author:${PUBLIC_PROFILE}!author_id(*), post_likes(user_id), venue_post_comments(count)`;
+
+type PostRow = VenuePost & {
+  post_likes: { user_id: string }[] | null;
+  venue_post_comments: { count: number }[] | null;
+};
+
+function mapPostRows(data: unknown, uid: string | null): VenuePost[] {
+  return ((data ?? []) as PostRow[]).map((row) => ({
+    id: row.id,
+    location_id: row.location_id,
+    author_id: row.author_id,
+    body: row.body,
+    created_at: row.created_at,
+    author: row.author,
+    like_count: row.post_likes?.length ?? 0,
+    liked_by_me: !!uid && !!row.post_likes?.some((l) => l.user_id === uid),
+    comment_count: row.venue_post_comments?.[0]?.count ?? 0,
+    is_announcement: !!row.is_announcement,
+  }));
+}
+
+// ---- Announcements (migration 0031) ----
+// Announcements are feed posts by a venue manager or announcer. Newest first.
+export async function fetchVenueAnnouncements(locationId: string, limit = 50): Promise<VenuePost[]> {
+  const uid = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .select(POST_SELECT)
+    .eq('location_id', locationId)
+    .eq('is_announcement', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return mapPostRows(data, uid);
+}
+
+// Whether the current user's posts at this venue become announcements.
+export async function canAnnounceAt(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_announce', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+export async function fetchVenueAnnouncerIds(locationId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('venue_announcers')
+    .select('user_id')
+    .eq('location_id', locationId);
+  if (error) throw error;
+  return new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+}
+
+// Venue owner or master admin only (RLS). Idempotent both ways.
+export async function setVenueAnnouncer(locationId: string, userId: string, on: boolean): Promise<void> {
+  if (on) {
+    const { error } = await supabase
+      .from('venue_announcers')
+      .upsert({ location_id: locationId, user_id: userId }, { onConflict: 'location_id,user_id', ignoreDuplicates: true });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('venue_announcers')
+      .delete()
+      .eq('location_id', locationId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+}
+
+// Recent posts by my connections, from any venue, for Home. RLS
+// (venue_posts_select_connections, 0030) only returns authors who have
+// "Share check-ins with connections" on.
+export async function fetchConnectionsPosts(limit = 20): Promise<VenuePost[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data: friends, error: friendError } = await supabase
+    .from('friendships')
+    .select('friend_id')
+    .eq('user_id', uid);
+  if (friendError) throw friendError;
+  const friendIds = (friends ?? []).map((f: { friend_id: string }) => f.friend_id);
+  if (friendIds.length === 0) return [];
+
+  const since = new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .select(POST_SELECT)
+    .in('author_id', friendIds)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const posts = mapPostRows(data, uid);
+  if (posts.length === 0) return posts;
+
+  const venueIds = Array.from(new Set(posts.map((p) => p.location_id)));
+  const { data: venues } = await supabase.from('locations').select('id, name').in('id', venueIds);
+  const names = new Map(((venues ?? []) as { id: string; name: string }[]).map((v) => [v.id, v.name]));
+  return posts.map((p) => ({ ...p, venue_name: names.get(p.location_id) ?? null }));
+}
+
+// Returns the inserted row so the feed can swap its optimistic copy for the
+// real id (and recognise the realtime INSERT echo of its own post).
+// Goes through create_venue_post() (0030), which re-checks on the server that
+// the caller is checked in AND within the venue's radius at (lat, lng).
+export async function createVenuePost(
+  locationId: string,
+  body: string,
+  lat: number,
+  lng: number,
+): Promise<VenuePost> {
+  const { data, error } = await supabase.rpc('create_venue_post', {
+    p_location_id: locationId,
+    p_body: body.trim(),
+    p_lat: lat,
+    p_lng: lng,
+  });
+  if (error) throw error;
+  return data as VenuePost;
+}
+
+// Author or venue manager (RLS 0025 / 0030). RLS makes anyone else's delete a
+// silent no-op, so ask for the deleted row back and treat
+// "nothing deleted" as a failure instead of pretending it worked.
+export async function deleteVenuePost(postId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('venue_posts')
+    .delete()
+    .eq('id', postId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Post not deleted');
+}
+
+// Toggles the current user's like on a post. Reads state first rather than
+// relying on unique-violation as the "already liked" signal — this repo's
+// existing checkIn() pattern uses that trick because inserts there aren't
+// paired with a delete path; here the caller needs the resulting boolean to
+// update its own UI, so a read-then-write is the more direct fit.
+export async function toggleLike(postId: string): Promise<boolean> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data: existing, error: existingError } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('post_id', postId)
+    .eq('user_id', uid)
+    .limit(1);
+  if (existingError) throw existingError;
+
+  if (existing && existing.length > 0) {
+    const { error } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', uid);
+    if (error) throw error;
+    return false;
+  }
+  const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: uid });
+  if (error) throw error;
+  return true;
+}
+
+// ---- Venue post comments & reports (migration 0030) ----
+
+export async function fetchPostComments(postId: string): Promise<VenuePostComment[]> {
+  const { data, error } = await supabase
+    .from('venue_post_comments')
+    .select(`id, post_id, author_id, body, created_at, author:${PUBLIC_PROFILE}!author_id(*)`)
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as VenuePostComment[];
+}
+
+// Only works while checked in at the post's venue (RLS).
+export async function createPostComment(postId: string, body: string): Promise<VenuePostComment> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('venue_post_comments')
+    .insert({ post_id: postId, author_id: uid, body: body.trim() })
+    .select(`id, post_id, author_id, body, created_at, author:${PUBLIC_PROFILE}!author_id(*)`)
+    .single();
+  if (error) throw error;
+  return data as unknown as VenuePostComment;
+}
+
+// Author or venue manager. Treats an RLS no-op as a failure.
+export async function deletePostComment(commentId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('venue_post_comments')
+    .delete()
+    .eq('id', commentId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Comment not deleted');
+}
+
+// Reporting the same thing twice is a no-op on the server.
+export async function reportVenueContent(
+  targetType: 'post' | 'comment',
+  targetId: string,
+  reason: VenueReportReason,
+  details?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('report_venue_content', {
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_reason: reason,
+    p_details: details ?? null,
+  });
+  if (error) throw error;
+}
+
+// Venue managers only (RLS). Attaches the reported text so the organizer can
+// judge it without opening the feed; null once the content is gone.
+export async function fetchVenueReports(locationId: string, status: 'open' | 'resolved' = 'open'): Promise<VenueReport[]> {
+  const { data, error } = await supabase
+    .from('venue_post_reports')
+    .select('id, location_id, target_type, target_id, reporter_id, reason, details, status, created_at')
+    .eq('location_id', locationId)
+    .eq('status', status)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const reports = (data ?? []) as VenueReport[];
+
+  const postIds = reports.filter((r) => r.target_type === 'post').map((r) => r.target_id);
+  const commentIds = reports.filter((r) => r.target_type === 'comment').map((r) => r.target_id);
+  const [posts, comments] = await Promise.all([
+    postIds.length
+      ? supabase.from('venue_posts').select(`id, body, author:${PUBLIC_PROFILE}!author_id(display_name)`).in('id', postIds)
+      : Promise.resolve({ data: [] }),
+    commentIds.length
+      ? supabase.from('venue_post_comments').select(`id, body, author:${PUBLIC_PROFILE}!author_id(display_name)`).in('id', commentIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  type T = { id: string; body: string; author: { display_name: string | null } | null };
+  const byId = new Map<string, T>();
+  for (const t of [...((posts.data ?? []) as unknown as T[]), ...((comments.data ?? []) as unknown as T[])]) byId.set(t.id, t);
+  return reports.map((r) => {
+    const t = byId.get(r.target_id);
+    return { ...r, target_body: t?.body ?? null, target_author: t?.author?.display_name ?? null };
+  });
+}
+
+export async function resolveVenueReport(reportId: string): Promise<void> {
+  const { error } = await supabase.rpc('resolve_venue_report', { p_report_id: reportId });
   if (error) throw error;
 }

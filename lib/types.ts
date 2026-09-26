@@ -28,9 +28,61 @@ export interface Profile {
   socialising_id?: number | null;
   networking_id?: number | null;
   is_master_admin?: boolean | null;
+  // Your own row only (written at signup); never exposed for other people.
+  date_of_birth?: string | null;
   // Computed by the profiles_public view (migration 0026); the birth date
   // itself is never exposed for other people.
   age?: number | null;
+}
+
+// A short update posted by someone checked in at a venue (the "venue event
+// feed"). RLS scopes both insert and select to people currently checked in
+// at `location_id` — see supabase/migrations/0024_venue_event_feed.sql.
+export interface VenuePost {
+  id: string;
+  location_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: Profile | null;
+  like_count?: number;
+  liked_by_me?: boolean;
+  comment_count?: number;
+  // Posted by a venue manager or announcer: also shown in the announcements
+  // pill (set by the server, migration 0031).
+  is_announcement?: boolean;
+  // Set on posts fetched outside a venue view (connections' posts on Home).
+  venue_name?: string | null;
+}
+
+// A comment on a venue post (migration 0030). Readable by anyone who has
+// visited the venue; writable only while checked in there.
+export interface VenuePostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: Profile | null;
+}
+
+export type VenueReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+
+// A report on a venue post or comment, as a venue manager sees it on the
+// Reports page. `target_body` / `target_author` are filled in client-side
+// (null once the reported content has been deleted).
+export interface VenueReport {
+  id: string;
+  location_id: string;
+  target_type: 'post' | 'comment';
+  target_id: string;
+  reporter_id: string;
+  reason: VenueReportReason;
+  details: string | null;
+  status: 'open' | 'resolved';
+  created_at: string;
+  target_body?: string | null;
+  target_author?: string | null;
 }
 
 export interface Venue {

@@ -22,7 +22,8 @@ import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
-import AttendeeStrip from '@/components/shared/AttendeeStrip';
+import VenueFeed from '@/components/home/VenueFeed';
+import AnnouncementPill from '@/components/home/AnnouncementPill';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
@@ -33,7 +34,8 @@ import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters } from '@/lib/geo';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
-// banner) plus a "Connections" card built from AttendeeStrip. Carries the
+// banner) plus a "Connections" card built from VenueFeed (posts + presence,
+// see docs/superpowers/specs/2026-09-23-venue-event-feed-design.md). Carries the
 // real checkIn/checkOut/fetchPresence calls forward from MainFeedTab, but
 // adds a real geofence gate in front of checkIn: only actually check in when
 // the user's live location is within the venue's radius.
@@ -367,6 +369,22 @@ export default function CheckedInHero() {
                 Members
               </Link>
               <Link
+                href={`/main/venue/reports?locationId=${selectedLocation.id}`}
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.divider}`,
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'Montserrat, system-ui, sans-serif',
+                  textDecoration: 'none',
+                }}
+              >
+                Reports
+              </Link>
+              <Link
                 href={`/main/venue/rewards?locationId=${selectedLocation.id}`}
                 style={{
                   backgroundColor: theme.surface,
@@ -550,18 +568,18 @@ export default function CheckedInHero() {
             </div>
           )}
 
-          {presenceProfiles.length === 0 ? (
-            <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              No one to connect with here yet
-            </p>
-          ) : (
-            <AttendeeStrip
-              attendees={presenceProfiles}
-              selectedId={selectedAttendeeId}
-              onSelect={setSelectedAttendeeId}
-              tagsByUserId={tagsByUserId}
-            />
-          )}
+          {/* Pinned above the feed and outside its lock: everyone checked in
+              sees announcements, even before unlocking who's here. */}
+          <AnnouncementPill locationId={selectedLocation.id} venueName={selectedLocation.name} />
+
+          <VenueFeed
+            locationId={selectedLocation.id}
+            presenceProfiles={presenceProfiles}
+            myUserId={user?.id}
+            myAvatarUrl={user?.image}
+            onReply={(profile) => setSelectedAttendeeId(profile.id)}
+            checkedIn={checkedIn}
+          />
 
           {selectedAttendee && (
             <div style={{ marginTop: '14px' }}>
