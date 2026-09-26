@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchVenues, fetchProfile, fetchAllProfiles, setMasterAdmin, assignVenueOwner, createVenue } from '@/lib/data';
+import { fetchVenues, fetchPublicProfile, fetchAllProfilesForAdmin, setMasterAdmin, assignVenueOwner, createVenue } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import PersonPicker from '@/components/shared/PersonPicker';
 import type { Venue, Profile } from '@/lib/types';
@@ -59,13 +59,13 @@ export default function AdminPage() {
 
   const load = () => {
     setLoading(true);
-    Promise.all([fetchVenues(), fetchAllProfiles()])
+    Promise.all([fetchVenues(), fetchAllProfilesForAdmin()])
       .then(async ([venues, profiles]) => {
         const withOrganizers = await Promise.all(
           venues.map(async (venue) => {
             if (!venue.owner_id) return { venue, organizer: null };
             try {
-              const organizer = await fetchProfile(venue.owner_id);
+              const organizer = await fetchPublicProfile(venue.owner_id);
               return { venue, organizer };
             } catch (err) {
               console.error(`Failed to load organizer for venue ${venue.id}:`, err);
