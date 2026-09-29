@@ -38,8 +38,11 @@ import type {
 
 // ---- Profile ----
 
+// Reads from profiles_public (supabase/migrations/0024_profiles_pii_lockdown.sql)
+// — email/phone/is_master_admin only come back non-null when `id` is the
+// caller's own id. Writes still go through the real `profiles` table below.
 export async function fetchProfile(id: string): Promise<Profile> {
-  const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
+  const { data, error } = await supabase.from('profiles_public').select().eq('id', id).single();
   if (error) throw error;
   return data;
 }
@@ -1397,10 +1400,10 @@ export async function denyJoinRequest(requestId: string): Promise<void> {
 export async function fetchAllProfiles(): Promise<Profile[]> {
   const uid = await getCurrentUserId();
   if (!uid) return [];
-  // SECURITY: never select * here — this list is readable by any authenticated
-  // user, so it must not carry emails/phones or other PII. Name search only.
+  // profiles_public (0024_profiles_pii_lockdown.sql) already excludes PII —
+  // kept the explicit column list too, belt and suspenders.
   const { data, error } = await supabase
-    .from('profiles')
+    .from('profiles_public')
     .select('id, display_name, avatar_url, affiliation')
     .neq('id', uid)
     .order('display_name', { ascending: true })
@@ -1653,7 +1656,7 @@ export async function fetchMyConnections(): Promise<MyConnection[]> {
   }
 
   const { data: profs, error: profErr } = await supabase
-    .from('profiles')
+    .from('profiles_public')
     .select('id, display_name, avatar_url')
     .in('id', friendIds);
   if (profErr) throw profErr;
@@ -1710,7 +1713,7 @@ export async function fetchFriendsActivity(limit = 20): Promise<FriendActivityEn
   // Restrict to friends who opted in BEFORE reading any check-in.
   // `Profile` uses display_name — there is no `name` column on profiles.
   const { data: sharers, error: sharerError } = await supabase
-    .from('profiles')
+    .from('profiles_public')
     .select('id, display_name, avatar_url')
     .in('id', friendIds)
     .eq('share_checkins_with_friends', true);
