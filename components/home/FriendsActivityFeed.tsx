@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { theme } from '@/lib/theme';
-import { Users, Lock } from 'lucide-react';
 import FeedBlurBackdrop from '@/components/shared/FeedBlurBackdrop';
-import { FeedRow } from '@/components/ui/primitives';
+import { FeedRow, LockedOverlay } from '@/components/ui/primitives';
 import { fetchMyConnectionCount, fetchFriendsActivity } from '@/lib/data';
 import type { FriendActivityEntry } from '@/lib/types';
 
@@ -40,41 +39,13 @@ export default function FriendsActivityFeed() {
 
   if (!unlocked) {
     return (
-      <div style={{
-        position: 'relative', borderRadius: '16px', overflow: 'hidden',
-        margin: '0 20px 20px', backgroundColor: theme.surface,
-        border: `1px solid ${theme.divider}`, minHeight: '180px',
-      }}>
-        <FeedBlurBackdrop />
-        <div style={{
-          position: 'relative',
-          background: `linear-gradient(180deg, transparent 0%, ${theme.bg} 85%)`,
-          padding: '24px 20px', textAlign: 'center',
-        }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '9999px',
-            backgroundColor: theme.premium1, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px',
-          }}>
-            <Lock style={{ width: '22px', height: '22px', color: 'white' }} />
-          </div>
-          <h3 style={{
-            color: theme.text, fontSize: '16px', fontWeight: 700, marginBottom: '6px',
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-          }}>
-            Add friends to see where they&apos;ve been
-          </h3>
-          {count !== null && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              marginTop: '10px', color: theme.muted, fontSize: '12px',
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-            }}>
-              <Users style={{ width: '14px', height: '14px' }} />
-              {count} / {REQUIRED_CONNECTIONS} connections
-            </div>
-          )}
-        </div>
+      <div style={{ margin: '0 20px 20px' }}>
+        <LockedOverlay
+          title="Add friends to see where they've been"
+          body={count !== null ? `${count} / ${REQUIRED_CONNECTIONS} connections` : 'Set up friends to unlock this feed'}
+        >
+          <FeedBlurBackdrop />
+        </LockedOverlay>
       </div>
     );
   }

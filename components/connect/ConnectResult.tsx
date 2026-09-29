@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { theme } from '@/lib/theme';
 import { getCurrentUserId } from '@/lib/auth';
-import { fetchConnection, fetchProfile, fetchContactMethods, recordContactMethodChoice } from '@/lib/data';
+import { fetchConnection, fetchPublicProfile, fetchContactMethods, recordContactMethodChoice } from '@/lib/data';
 import type { ContactMethod } from '@/lib/types';
 import ContactGrid from '@/components/connect/ContactGrid';
 import { Check } from 'lucide-react';
@@ -29,7 +29,7 @@ export default function ConnectResult({ connectionId }: { connectionId: string }
         // the chooser below would be a silent no-op if a scannee ever saw it.
         const otherId = conn.scanner_id === uid ? conn.scannee_id : conn.scanner_id;
         const [profile, contactMethods] = await Promise.all([
-          fetchProfile(otherId),
+          fetchPublicProfile(otherId),
           fetchContactMethods(otherId),
         ]);
         if (cancelled) return;

@@ -52,6 +52,37 @@ export async function signInAnonymously(captchaToken?: string) {
   return data;
 }
 
+// Guest -> real account, via the server so the "email already exists" check
+// is rate limited per IP (app/api/auth/upgrade-guest/route.ts). Same
+// auth.uid(); refreshes the local session afterwards so the new email shows
+// up in the JWT. Throws an Error whose `code` is 'email_exists',
+// 'rate_limited' (with `retryAfter` seconds), or 'upgrade_failed'.
+export class GuestUpgradeError extends Error {
+  constructor(public code: 'email_exists' | 'rate_limited' | 'upgrade_failed', public retryAfter?: number) {
+    super(code);
+    this.name = 'GuestUpgradeError';
+  }
+}
+
+export async function upgradeGuestAccount(email: string, displayName: string) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new GuestUpgradeError('upgrade_failed');
+
+  const res = await fetch('/api/auth/upgrade-guest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, displayName }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string; retryAfter?: number };
+    if (body.error === 'email_exists') throw new GuestUpgradeError('email_exists');
+    if (res.status === 429) throw new GuestUpgradeError('rate_limited', body.retryAfter);
+    throw new GuestUpgradeError('upgrade_failed');
+  }
+  await supabase.auth.refreshSession();
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
