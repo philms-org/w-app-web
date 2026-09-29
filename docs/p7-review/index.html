@@ -1,0 +1,696 @@
+<title>W App P7 Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F3F4F6; --panel:#FFFFFF; --panel-2:#ECEDF0; --ink:#1B191A; --muted:#5C5C63; --line:rgba(20,20,25,.12);
+  --chip:#E6E7EB; --pass:#1E8E4A; --warn:#9A5B00; --fail:#C4241F; --pass-bg:rgba(30,142,74,.12); --warn-bg:rgba(154,91,0,.12); --fail-bg:rgba(196,36,31,.10);
+  --focus:#1B191A;
+  --sans:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0A0A0C; --panel:#141417; --panel-2:#1C1C20; --ink:#F2F2F4; --muted:#A3A3AB; --line:rgba(255,255,255,.10);
+    --chip:#232327; --pass:#4FD67F; --warn:#F3B56D; --fail:#FF6B63; --pass-bg:rgba(79,214,127,.12); --warn-bg:rgba(243,181,109,.12); --fail-bg:rgba(255,107,99,.12);
+    --focus:#F2F2F4;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0A0A0C; --panel:#141417; --panel-2:#1C1C20; --ink:#F2F2F4; --muted:#A3A3AB; --line:rgba(255,255,255,.10);
+  --chip:#232327; --pass:#4FD67F; --warn:#F3B56D; --fail:#FF6B63; --pass-bg:rgba(79,214,127,.12); --warn-bg:rgba(243,181,109,.12); --fail-bg:rgba(255,107,99,.12);
+  --focus:#F2F2F4;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 80px}
+h1,h2,h3{text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:24px;font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0}
+.lede{max-width:68ch;color:var(--muted);font-size:16px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+
+header.top{display:grid;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted);font-size:13px}
+.meta b{color:var(--ink);font-weight:600}
+
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin-inline:-20px;padding:10px 20px}
+.toc-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.toc-row::-webkit-scrollbar{display:none}
+.toc a{flex:none;text-decoration:none;font-size:13px;font-weight:600;padding:8px 12px;border-radius:999px;background:var(--chip);white-space:nowrap}
+.toc a:hover{background:var(--panel-2)}
+
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:18px}
+.seg{display:inline-flex;background:var(--chip);border-radius:999px;padding:3px}
+.seg button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:999px;cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.hint{font-size:13px;color:var(--muted)}
+
+section.block{padding-top:44px;display:grid;gap:18px}
+.callout{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:grid;gap:10px}
+.callout ul{margin:0;padding-left:18px;display:grid;gap:8px}
+
+.screen{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:18px;scroll-margin-top:70px}
+.screen-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
+.route{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start}
+.col{display:grid;gap:10px;justify-items:center}
+.col-label{justify-self:stretch;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.shot{width:360px;max-width:100%;border-radius:28px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.shot img{display:block;width:100%;height:auto}
+.clip{max-height:1500px;overflow:auto}
+.notes{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.notes li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:baseline;font-size:14px}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.t-bug{background:var(--fail-bg);color:var(--fail)}
+.t-contrast{background:var(--warn-bg);color:var(--warn)}
+.t-target{background:var(--warn-bg);color:var(--warn)}
+.t-p7{background:var(--chip);color:var(--ink)}
+.t-keep{background:var(--pass-bg);color:var(--pass)}
+.pattern{width:360px;max-width:100%;border:1px dashed var(--line);border-radius:24px;padding:22px;display:grid;gap:8px;color:var(--muted);font-size:14px}
+.pattern b{color:var(--ink)}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--panel-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1px solid var(--line)}
+.fail{color:var(--fail);font-weight:700}.pass{color:var(--pass);font-weight:700}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.list{margin:0;padding-left:18px;display:grid;gap:8px}
+
+.check{display:grid;gap:18px}
+.check fieldset{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 18px 16px;margin:0}
+.check legend{font-weight:700;font-size:15px;padding:0 6px}
+.check label{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.check label:last-child{border-bottom:0}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--ink)}
+.progress{font-size:13px;color:var(--muted)}
+
+/* ======================= P7 phone mockups (always the dark app theme) === */
+.ph{
+  --surface:#0C0C0E; --raised:#1A1A1D; --content:#F5F5F7; --muted:rgba(245,245,247,.58); --accent:#EDEDF0; --on-accent:#0C0C0E;
+  --react:#FF5A52; --danger:#F2559F; --glass:rgba(255,255,255,.05); --glass-b:rgba(255,255,255,.12); --glass-h:rgba(255,255,255,.14);
+  --depth:0 6px 22px rgba(0,0,0,.32); --blur:blur(20px) saturate(1.08); --success:#3ECF6B;
+  position:relative;width:360px;max-width:100%;border-radius:28px;overflow:hidden;background:var(--surface);color:var(--content);
+  font-family:var(--sans);font-size:14px;line-height:1.4;border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 40px rgba(0,0,0,.35);isolation:isolate;text-align:left
+}
+.ph::before{content:"";position:absolute;inset:0 0 auto 0;height:240px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.024) 45%,transparent);pointer-events:none;z-index:0}
+.ph::after{content:"";position:absolute;inset:auto 0 0 0;height:200px;background:linear-gradient(0deg,rgba(200,212,228,.05),transparent);pointer-events:none;z-index:0}
+.ph > *{position:relative;z-index:1}
+.ph svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ph .body{padding:12px 16px 92px;display:grid;gap:16px}
+.ph .bar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px}
+.ph .bar h4{font-size:17px;font-weight:700;margin:0}
+.ph .gl{background:var(--glass);border:1px solid var(--glass-b);box-shadow:var(--depth),inset 0 1px 0 var(--glass-h);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:16px}
+.ph .gib{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;color:var(--content);background:var(--glass);border:1px solid var(--glass-b);box-shadow:var(--depth),inset 0 1px 0 var(--glass-h);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);flex:none}
+.ph .gib.round{border-radius:999px}
+.ph .sh{text-align:center}
+.ph .sh span{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;border-bottom:1.5px solid rgba(255,255,255,.32);padding-bottom:3px}
+.ph .muted{color:var(--muted)}
+.ph .cap{font-size:12.5px;color:var(--muted)}
+.ph .chips{display:flex;gap:8px;overflow:hidden;flex-wrap:nowrap;mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.ph .chips.wrap{flex-wrap:wrap;mask-image:none;overflow:visible}
+.ph .chip{flex:none;height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 14px;border-radius:999px;font-weight:600;font-size:13px;background:var(--glass);border:1px solid var(--glass-b);color:var(--content)}
+.ph .chip.on{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.ph .chip svg{width:15px;height:15px}
+.ph .btn{height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px;background:var(--accent);color:var(--on-accent)}
+.ph .btn.sec{background:var(--glass);color:var(--content);border:1px solid var(--glass-b)}
+.ph .av{width:44px;height:44px;border-radius:999px;flex:none;display:grid;place-items:end center;overflow:hidden;font-weight:700;font-size:11px;color:rgba(255,255,255,.8);padding-bottom:3px}
+.ph .av.sm{width:36px;height:36px}
+.ph .av.lg{width:88px;height:88px;font-size:18px;padding-bottom:8px}
+.ph .a1{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#B5838D,#3B2B30 80%)}
+.ph .a2{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#5E8B7E,#1F2F2A 80%)}
+.ph .a3{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#9B6A6C,#352425 80%)}
+.ph .a4{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#6D7B8D,#23282F 80%)}
+.ph .a5{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#A07855,#35271C 80%)}
+.ph .a6{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.22) 0 22%,transparent 23%),radial-gradient(circle at 35% 30%,#6B5B95,#2E2A3B 80%)}
+.ph .a7{background:radial-gradient(circle at 35% 30%,#4A6F8A,#1E2B36 80%);place-items:center;padding:0;font-size:15px}
+.ph .photo{position:relative;height:210px;border-radius:20px;overflow:hidden;background:
+  radial-gradient(circle at 12% 30%,rgba(255,170,190,.55) 0 5%,transparent 9%),
+  radial-gradient(circle at 30% 18%,rgba(255,200,170,.45) 0 6%,transparent 11%),
+  radial-gradient(circle at 55% 35%,rgba(255,150,180,.5) 0 4%,transparent 8%),
+  radial-gradient(circle at 76% 22%,rgba(255,210,160,.5) 0 5%,transparent 10%),
+  radial-gradient(circle at 88% 48%,rgba(255,160,200,.4) 0 6%,transparent 11%),
+  radial-gradient(circle at 42% 60%,rgba(255,190,150,.35) 0 7%,transparent 12%),
+  linear-gradient(180deg,#6E2C48,#2A1220 70%,#140A10)}
+.ph .photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 35%,rgba(8,8,10,.85))}
+.ph .photo > *{position:absolute;z-index:1}
+.ph .row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.ph .row:last-child{border-bottom:0}
+.ph .name{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ph .lf{display:inline-flex;gap:4px}
+.ph .lf i{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;border:1px solid var(--glass-b);color:var(--muted)}
+.ph .post{margin-top:4px;font-size:14px;line-height:1.45}
+.ph .acts{display:flex;align-items:center;gap:4px;margin:2px 0 -8px -12px}
+.ph .act{min-width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-weight:800;font-size:13px}
+.ph .act.react{color:var(--react)}
+.ph .tabbar{position:absolute;left:12px;right:12px;bottom:12px;height:64px;display:flex;justify-content:space-around;align-items:center;border-radius:22px;background:rgba(12,12,14,.66);border:1px solid var(--glass-b);box-shadow:var(--depth),inset 0 1px 0 var(--glass-h);backdrop-filter:blur(24px) saturate(1.1);-webkit-backdrop-filter:blur(24px) saturate(1.1);z-index:5}
+.ph .tab{display:grid;justify-items:center;gap:2px;font-size:10.5px;font-weight:600;color:rgba(245,245,247,.55);min-width:64px;min-height:48px;align-content:center}
+.ph .tab.on{color:var(--content)}
+.ph .tab .dot{position:absolute;margin:-4px 0 0 18px;min-width:16px;height:16px;border-radius:999px;background:var(--content);color:var(--on-accent);font-size:10px;font-weight:800;display:grid;place-items:center;padding:0 4px}
+.ph .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.ph .tile{display:grid;justify-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.ph .tile .gib{width:100%;height:auto;aspect-ratio:1.35;border-radius:18px}
+.ph .tile .gib svg{width:24px;height:24px}
+.ph .kv{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:14px 6px}
+.ph .kv b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.ph .list > div{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.ph .list > div:last-child{border-bottom:0}
+.ph .list .grow{flex:1;min-width:0}
+.ph .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .input{height:48px;border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 14px;background:rgba(255,255,255,.04);border:1px solid var(--glass-b);color:var(--muted)}
+.ph .unread{width:8px;height:8px;border-radius:999px;background:var(--content);flex:none}
+.ph .seg2{display:grid;grid-template-columns:1fr 1fr;background:rgba(255,255,255,.05);border:1px solid var(--glass-b);border-radius:12px;padding:3px}
+.ph .seg2 span{height:40px;display:grid;place-items:center;border-radius:9px;font-weight:600;font-size:13px;color:var(--muted)}
+.ph .seg2 span.on{background:var(--accent);color:var(--on-accent)}
+.ph .num{font-variant-numeric:tabular-nums;font-weight:800;color:#B9B9C0}
+.ph .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph .grid4 > span{display:grid;justify-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
+.ph .grid4 .gib{width:100%;height:48px;border-radius:12px}
+.ph .danger{color:var(--danger)}
+.ph .badge{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--content);color:var(--on-accent);font-size:11.5px;font-weight:800;display:grid;place-items:center}
+.ph .wm{width:34px;height:24px;fill:currentColor;stroke:none}
+.ph .tt{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--glass-b);font-size:11.5px;font-weight:600}
+.ph .tt svg{width:13px;height:13px}
+@media (prefers-reduced-motion: no-preference){ .toc a,.seg button{transition:background .15s ease} }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-chevl" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M16 12h1"/><path d="M12 21v-1"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M11.5 2.3a.53.53 0 0 1 .95 0l2.31 4.68a2.1 2.1 0 0 0 1.6 1.16l5.16.76a.53.53 0 0 1 .3.9l-3.74 3.64a2.1 2.1 0 0 0-.6 1.87l.88 5.14a.53.53 0 0 1-.77.56l-4.62-2.43a2.1 2.1 0 0 0-1.97 0L6.4 21.01a.53.53 0 0 1-.77-.56l.88-5.14a2.1 2.1 0 0 0-.6-1.87L2.16 9.8a.53.53 0 0 1 .3-.9l5.16-.76a2.1 2.1 0 0 0 1.6-1.16z"/></symbol>
+    <symbol id="i-verified" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.13 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/></symbol>
+    <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.42l8.7 8.7a2.43 2.43 0 0 0 3.42 0l6.58-6.58a2.43 2.43 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Founder review · P7 whole-app glass restyle</span>
+    <h1>The logged-in app, today and after P7</h1>
+    <p class="lede">These are the screens you can only reach when signed in, checked in, or as an organizer. The left column is the real app today, rendered from the actual components with mock data (a fictional venue, Velvet Room, with seven people checked in). The right column is the proposed P7 re-skin: frosted glass panels, glass icon buttons, no cyan, and the top bloom kept to the page edge. Tap the light/dark switch to see today's light theme too.</p>
+    <div class="meta">
+      <span><b>Captured</b> 25 Sep 2026 from <code>main</code> + PR #3 (venue feed)</span>
+      <span><b>Viewport</b> 390 × 844, 2×</span>
+      <span><b>Checked by script</b> WCAG contrast + 44px touch targets on every screen</span>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Theme for today's screenshots">
+        <button type="button" id="th-dark" aria-pressed="true">Today in dark</button>
+        <button type="button" id="th-light" aria-pressed="false">Today in light</button>
+      </div>
+      <span class="hint">P7 proposals are shown in dark, the default theme.</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Sections">
+    <div class="toc-row">
+      <a href="#fix-first">Fix first</a>
+      <a href="#home">Home</a><a href="#history">History</a><a href="#messages">Messages</a><a href="#profile">Profile</a>
+      <a href="#venue-chat">Venue chat</a><a href="#venue-members">Members</a><a href="#venue-more">Other venue pages</a>
+      <a href="#admin">Admin</a><a href="#recs">Recommendations</a><a href="#contrast">Contrast</a><a href="#targets">Touch targets</a><a href="#literals">TODO(P7)</a><a href="#checklist">Your checklist</a>
+    </div>
+  </nav>
+
+  <section class="block" id="fix-first">
+    <span class="eyebrow">Found while capturing</span>
+    <h2>Fix these before (or with) P7</h2>
+    <div class="callout">
+      <ul>
+        <li><b>Tailwind isn't doing anything.</b> <code>app/globals.css</code> uses the v3 <code>@tailwind base/components/utilities</code> lines, but the project runs Tailwind v4, which ignores them. The compiled CSS has no utility classes and no base reset. Effects you can see in the screenshots: text without an inline font falls back to Times (the PR #3 feed rows), buttons without an inline colour render black text (the Profile menu reads at 1.21:1), and <code>pb-16</code> never applies, so the bottom of every tab sits under the tab bar. Smallest fix: add explicit base rules (<code>body{font-family:var(--font-montserrat)}</code>, <code>button,input,textarea,select{font:inherit;color:inherit}</code>) and a real bottom inset, then decide separately whether to switch on v4's full reset with <code>@import "tailwindcss"</code>.</li>
+        <li><b>Venue banner photos never show.</b> <code>components/HeroCarousel.tsx</code> set both <code>backgroundImage</code> and <code>background: undefined</code>; React 19 writes the empty shorthand and wipes the photo, so Home and Manage Banners show a black hero. <b>Fixed in this PR</b> (one style key instead of two), verified in the capture harness.</li>
+        <li><b>Members shows icon names as words.</b> On Members, a title's lucide icon prints as text: "star Regular".</li>
+        <li><b>Light theme hides the active tab.</b> The tab bar uses <code>lightTheme.tabBarBg</code> and <code>theme.accent</code>, but <code>lightTheme === darkTheme</code> (both are the same <code>var()</code> map), so in light both resolve to ink <code>#231E20</code>: the active "Home" measures 1.00:1.</li>
+        <li><b>Rows run off the right edge at 390px:</b> Messages (time and preview are clipped), the Admin venue card's action links, and the PR #3 feed composer's Post button and filter chips.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block" aria-label="Screens" id="screens"></section>
+
+  <section class="block" id="recs">
+    <span class="eyebrow">Recommendations</span>
+    <h2>What to change and what to keep</h2>
+    <div class="two">
+      <div class="callout">
+        <h3>Change</h3>
+        <ul class="list">
+          <li>Put every card, list group and sheet on the <code>GlassPanel</code> / <code>Card</code> primitives (glass fill, 1px glass border, top rim, black depth shadow). Today most screens use flat <code>surfaceRaised</code> blocks.</li>
+          <li>Make every icon-only control a <code>GlowIconButton</code> at 44 × 44 or larger: back, profile, carousel arrows, approve/deny, reorder, delete.</li>
+          <li>Replace the History pink-to-orange gradient panel with glass rows on the dark ground. The gradient is the loudest thing in the app and isn't part of P1.</li>
+          <li>Remove the teal tints (ProfileTab "Looking for", Complete Profile, MapTab badge, Messages empty state, OrganizerWelcomeModal) and use neutral glass with the <code>accent</code> fill for selected state.</li>
+          <li>Use <code>SectionHeader</code> (uppercase, tracked, 1.5px rule) for section titles such as WHO'S HERE, TITLES AT THIS VENUE, JOIN REQUESTS.</li>
+          <li>On Home, collapse the six organizer pills into one "Manage venue" glass row, and move History · Rewards · Connect up to sit under the hero as glass tiles. Guests see the venue and the feed sooner.</li>
+          <li>Show likes as a number that turns red when you've liked it, with no heart and no glow, as the P1 spec says. The PR #3 row uses a pink heart today.</li>
+          <li>Frost the tab bar (glass over the content) and float it 12px off the edges.</li>
+          <li>Keep bloom to the one top-edge band already on <code>body</code>. Don't add bloom behind cards or buttons.</li>
+          <li>Swap the admin venue card's five text links for a 4-column grid of 48px icon tiles with labels.</li>
+          <li>Venue join mode: a two-option segmented control (Request / Auto) instead of a "Switch to…" button.</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>Keep</h3>
+        <ul class="list">
+          <li>The token system (<code>app/globals.css</code> + <code>lib/theme.ts</code>): it already carries the glass roles, so P7 is mostly applying them.</li>
+          <li>The neutral near-white primary button. It reads as the one clear action on each screen.</li>
+          <li>The Report page structure. Its uppercase card titles and big numerals already match the P1 look; it only needs glass cards.</li>
+          <li>Green only for the "Active" state and online dots, with dark text on it (9.56:1).</li>
+          <li>The locked "Unlock who's here" overlay from P1 (blur + padlock + two lines).</li>
+          <li>Montserrat and the P1 type scale.</li>
+          <li>Real photos as the only colour source on Home: the venue banner and avatars carry the mood, the chrome stays monochrome.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="contrast">
+    <span class="eyebrow">WCAG AA · 4.5:1 for text under 18.66px bold / 24px</span>
+    <h2>Contrast problems</h2>
+    <p class="lede">Measured from the live DOM on every captured screen, plus the token pairs themselves. Dark theme is mostly fine; light theme's muted grey fails almost everywhere.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Where</th><th>Pair</th><th>Ratio</th><th>Proposal</th></tr></thead>
+        <tbody>
+          <tr><td>Profile menu labels, Badges heading (dark)</td><td><span class="sw" style="background:#000"></span>UA black on <code>#1A1A1D</code></td><td class="num fail">1.21</td><td>Base rule <code>button{color:inherit}</code> (see Fix first)</td></tr>
+          <tr><td>Profile Logout (dark)</td><td><span class="sw" style="background:#D52600"></span><code>#D52600</code> literal on raised</td><td class="num fail">3.40</td><td>Use <code>accent2</code> (destructive) at the lighter value below</td></tr>
+          <tr><td>Like count, admin "Remove", delete icons (dark)</td><td><span class="sw" style="background:#EC2C91"></span><code>accent2 #EC2C91</code> on raised, 12px</td><td class="num fail">4.41</td><td>Dark <code>--accent-2: #F2559F</code> → 5.44</td></tr>
+          <tr><td><code>ReactionCount</code> when reacted (dark)</td><td><span class="sw" style="background:#E5322D"></span><code>accentReact #E5322D</code> on raised, 13px</td><td class="num fail">3.99</td><td>Dark <code>--accent-react: #FF5A52</code> → 5.65 (still a placeholder red)</td></tr>
+          <tr><td>All secondary text (light)</td><td><span class="sw" style="background:#919191"></span><code>contentMuted #919191</code> on white / <code>#F0F6FA</code></td><td class="num fail">3.15 / 2.89</td><td>Light <code>--content-muted: #6B6B70</code> → 5.30 / 4.86</td></tr>
+          <tr><td>Active tab (light)</td><td><span class="sw" style="background:#231E20"></span><code>accent #231E20</code> on <code>tabBarBg #231E20</code></td><td class="num fail">1.00</td><td>Tab bar reads fixed <code>#F5F5F7</code> for active (15.09); fix the aliasing</td></tr>
+          <tr><td>Like count, "Remove" (light)</td><td><span class="sw" style="background:#EC2C91"></span><code>accent2</code> on white</td><td class="num fail">3.94</td><td>Light <code>--accent-2: #C8195F</code> → 5.58</td></tr>
+          <tr><td>Resting counts (dark)</td><td><span class="sw" style="background:#B9B9C0"></span><code>countRest</code> on raised</td><td class="num pass">8.90</td><td>Keep</td></tr>
+          <tr><td>Secondary text (dark)</td><td><span class="sw" style="background:#8E8E91"></span><code>contentMuted</code> .55 on raised</td><td class="num pass">5.63</td><td>Keep; never go below .50</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="targets">
+    <span class="eyebrow">Minimum 44 × 44 CSS px</span>
+    <h2>Touch targets under 44px</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Screen</th><th>Control</th><th>Size today</th><th>Proposal</th></tr></thead>
+        <tbody>
+          <tr><td>Home, Manage Banners</td><td>Profile, back, carousel prev/next</td><td class="num">36 · 36 · 32 · 32</td><td>GlowIconButton 44</td></tr>
+          <tr><td>Home</td><td>Organizer pills, activity chips, feed filter chips</td><td class="num">h 32–34</td><td>Chip height 36 with 4px hit slop, or collapse into "Manage venue"</td></tr>
+          <tr><td>Home (PR #3)</td><td>Reply / like</td><td class="num">16 icon, −10 margin</td><td>44 × 44 action buttons (fixed in PR #3 follow-up)</td></tr>
+          <tr><td>Profile</td><td>Camera button, share-check-ins checkbox</td><td class="num">32 · 20</td><td>44 glass button; full-row toggle</td></tr>
+          <tr><td>Venue chat</td><td>Approve / deny / remove member</td><td class="num">26×29 · 24×27</td><td>44 glass icon buttons</td></tr>
+          <tr><td>Rewards, Banners, Activities, Zones</td><td>Move up / down / delete, Active pill</td><td class="num">28 · 60×24</td><td>44 icon buttons; Active as a 44px switch row</td></tr>
+          <tr><td>Titles, Admin tags</td><td>Edit, delete, icon picker cells</td><td class="num">37×17 · 24×27 · 40</td><td>Row menu (…) at 44; picker cells 44</td></tr>
+          <tr><td>Admin</td><td>Venue action links, "+ Create Venue", "Remove"</td><td class="num">≈50×32 · 101×16 · 51×15</td><td>48px icon tiles; buttons not bare text</td></tr>
+          <tr><td>Messages</td><td>Filter chips, search</td><td class="num">h 34 · h 43</td><td>h 44</td></tr>
+          <tr><td>Location requests</td><td>Approve / reject</td><td class="num">h 33</td><td>h 44</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="literals">
+    <span class="eyebrow">Remaining hard-coded colours</span>
+    <h2>TODO(P7) literals</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Literal</th><th>What it is</th><th>Proposal</th></tr></thead>
+        <tbody>
+          <tr><td><code>components/tabs/MapTab.tsx:516</code></td><td><code>#D0F2F7</code> / <code>#17BFD9</code></td><td>Venue count badge</td><td>Glass pill: <code>glassFill</code> + <code>glassBorder</code>, count in <code>content</code></td></tr>
+          <tr><td><code>components/tabs/MessagesTab.tsx:344</code></td><td><code>#D0F2F7</code> / <code>#17BFD9</code></td><td>Empty-state icon circle</td><td>GlowIconButton-style tile, icon in <code>content</code></td></tr>
+          <tr><td><code>components/tabs/MessagesTab.tsx:247</code></td><td><code>#10B981</code></td><td>Online dot</td><td>New <code>--success</code> token (<code>#3ECF6B</code>, already used as <code>theme.green</code>)</td></tr>
+          <tr><td><code>components/WMap.tsx:10,128,136,182,271,316</code></td><td><code>#17BFD9</code></td><td>Map pins, popup count, cluster</td><td>Pins in <code>#F5F5F7</code> with dark ring; hot venues keep pink. Map chrome stays always-light (sits on OSM tiles)</td></tr>
+          <tr><td><code>components/organizer/OrganizerWelcomeModal.tsx:178</code></td><td><code>#17BFD9</code></td><td>Step number colour</td><td><code>content</code></td></tr>
+          <tr><td><code>components/tabs/ProfileTab.tsx:204, 266</code></td><td><code>rgba(34,195,201,.12)</code></td><td>Old-cyan tint on "Looking for" + Complete Profile</td><td>Selected = <code>accent</code> fill; CTA = secondary glass button</td></tr>
+          <tr><td><code>components/tabs/ProfileTab.tsx:412, 483</code></td><td><code>#D52600</code></td><td>Logout text / confirm button</td><td><code>accent2</code> (destructive)</td></tr>
+          <tr><td><code>tailwind.config.ts:19</code></td><td><code>w-light-blue: #D0F2F7</code></td><td>Unused, and Tailwind emits nothing anyway</td><td>Delete</td></tr>
+          <tr><td><code>app/opengraph-image.tsx:35</code></td><td><code>#22c3c9</code></td><td>Share-card background (cyan)</td><td><code>#0C0C0E</code> with the WMark in <code>#F5F5F7</code> (swap when the real logo lands)</td></tr>
+          <tr><td><code>components/TabBar.tsx:4, 29</code></td><td><code>lightTheme.tabBarBg</code> (=== <code>darkTheme</code>)</td><td>Comment says "keeps its dark bg in light", but both maps are the same <code>var()</code> map, so it follows the theme and goes ink-on-ink</td><td>Use fixed <code>#000</code> / <code>#F5F5F7</code> in the tab bar (theme-agnostic), or give light its own <code>--tab-bar-*</code> tokens</td></tr>
+          <tr><td>Auth pages (4 files)</td><td><code>#FEF2F2</code> / <code>#FECACA</code></td><td>Error banner</td><td><code>color-mix(in srgb, var(--accent-2) 12%, transparent)</code> bg + border</td></tr>
+          <tr><td><code>app/main/venue/rewards/page.tsx:356</code>, <code>carousel/page.tsx:394</code></td><td><code>#0D0D0F</code></td><td>Text on the green Active pill</td><td>New <code>--on-success</code> token</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="checklist">
+    <span class="eyebrow">For you, on your phone</span>
+    <h2>Manual logged-in pass: dark and light</h2>
+    <p class="lede">Do this once in dark, then switch Theme on the Profile tab to Light and do it again. Your ticks are saved in this browser only. <span class="progress" id="progress"></span></p>
+    <form class="check" id="checkform">
+      <fieldset><legend>Before you start</legend>
+        <label><input type="checkbox" id="c1"><span>Sign in with a normal (non-organizer) account on your phone, with location allowed.</span></label>
+        <label><input type="checkbox" id="c2"><span>Have a second account that owns or co-manages a venue, and a master-admin account, for the organizer and admin steps.</span></label>
+        <label><input type="checkbox" id="c3"><span>Profile tab → Theme: note which theme you're in. Hard-reload once and check there's no white flash.</span></label>
+      </fieldset>
+      <fieldset><legend>Home</legend>
+        <label><input type="checkbox" id="c4"><span>Not checked in: nearby venue card and friends' activity are readable; nothing white-on-white.</span></label>
+        <label><input type="checkbox" id="c5"><span>Check in at a venue: the banner photo shows (not a black box) and the venue name is readable over it.</span></label>
+        <label><input type="checkbox" id="c6"><span>Scroll to the bottom: the last row isn't hidden behind the tab bar.</span></label>
+        <label><input type="checkbox" id="c7"><span>Feed: names and posts use the same font as the rest of the app (not a serif), the Post button is fully on screen, and all filter chips are reachable.</span></label>
+        <label><input type="checkbox" id="c8"><span>Tap reply and like on a post with your thumb: each hits first time.</span></label>
+      </fieldset>
+      <fieldset><legend>History, Messages, Profile</legend>
+        <label><input type="checkbox" id="c9"><span>History (Home → History): venue rows readable; note how the pink/orange panel feels next to the rest.</span></label>
+        <label><input type="checkbox" id="c10"><span>Messages: each row shows the full time on the right; the preview ends with "…" rather than being cut.</span></label>
+        <label><input type="checkbox" id="c11"><span>Messages with no conversations (new account): the empty-state icon isn't cyan.</span></label>
+        <label><input type="checkbox" id="c12"><span>Profile: "My Connections", "My Links", "Edit Profile", "Badges", "Privacy &amp; Security" and the Badges heading are all readable.</span></label>
+        <label><input type="checkbox" id="c13"><span>Profile: Logout is readable; "Looking for" selected state isn't teal.</span></label>
+        <label><input type="checkbox" id="c14"><span>Tab bar: you can tell which tab is active, in both themes.</span></label>
+      </fieldset>
+      <fieldset><legend>Organizer (venue owner or co-owner account, checked in at your venue)</legend>
+        <label><input type="checkbox" id="c15"><span>Venue Chat: approve / deny / remove are easy to hit; join mode switch works.</span></label>
+        <label><input type="checkbox" id="c16"><span>Members: titles show an icon, not a word like "star".</span></label>
+        <label><input type="checkbox" id="c17"><span>Rewards, Banners, Zones, Activities: up/down/delete buttons are hittable; the green Active label is readable.</span></label>
+        <label><input type="checkbox" id="c18"><span>Titles: add a title with an icon and an emoji; edit and delete work.</span></label>
+        <label><input type="checkbox" id="c19"><span>Report: numbers and chart readable.</span></label>
+      </fieldset>
+      <fieldset><legend>Admin (master-admin account)</legend>
+        <label><input type="checkbox" id="c20"><span>/admin: each venue's action links stay inside the card on your phone.</span></label>
+        <label><input type="checkbox" id="c21"><span>Location Requests: approve / reject readable and hittable.</span></label>
+        <label><input type="checkbox" id="c22"><span>Venue tags page reachable from /admin and readable.</span></label>
+      </fieldset>
+      <fieldset><legend>Then in light</legend>
+        <label><input type="checkbox" id="c23"><span>Repeat Home, Messages and Profile in light: grey secondary text is readable in daylight.</span></label>
+        <label><input type="checkbox" id="c24"><span>Map tab in light: pins and the count badge are readable (they're still cyan today).</span></label>
+        <label><input type="checkbox" id="c25"><span>Write down anything that looked wrong with the screen name, and send it back.</span></label>
+      </fieldset>
+    </form>
+  </section>
+</div>
+
+<!-- ============================================================ P7 mockups -->
+<template id="p7-home">
+  <div class="ph">
+    <div class="bar"><svg class="wm" viewBox="0 0 48 32"><path d="M2 4c6 0 10 3 12 9 2-6 6-9 10-9 4 0 8 3 10 9 2-6 6-9 12-9-3 8-9 22-13 24-3-2-5-8-9-14-4 6-6 12-9 14C13 26 5 12 2 4Z"/></svg><span class="gib round" aria-label="Profile"><svg><use href="#i-user"/></svg></span></div>
+    <div class="body">
+      <div class="photo">
+        <span class="gib round" style="top:12px;left:12px"><svg><use href="#i-back"/></svg></span>
+        <div style="left:16px;right:16px;bottom:14px;display:grid;gap:8px">
+          <div style="font-size:24px;font-weight:800;letter-spacing:-.01em">Velvet Room</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="tt"><svg><use href="#i-users"/></svg>7 here</span>
+            <span class="tt"><svg><use href="#i-pin"/></svg>Soho · 150 m</span>
+            <span style="margin-left:auto;display:flex;gap:5px"><i style="width:6px;height:6px;border-radius:9px;background:#fff"></i><i style="width:6px;height:6px;border-radius:9px;background:rgba(255,255,255,.4)"></i></span>
+          </div>
+        </div>
+      </div>
+      <div class="tiles">
+        <span class="tile"><span class="gib"><svg><use href="#i-clock"/></svg></span>History</span>
+        <span class="tile"><span class="gib"><svg><use href="#i-trophy"/></svg></span>Rewards</span>
+        <span class="tile"><span class="gib"><svg><use href="#i-qr"/></svg></span>Connect</span>
+      </div>
+      <div class="gl list"><div><span class="gib" style="width:36px;height:36px;border-radius:10px"><svg style="width:18px;height:18px"><use href="#i-spark"/></svg></span><span class="grow" style="font-weight:700">Manage venue<span class="cap" style="display:block;font-weight:400">Chat · Members · Rewards · Zones · Titles</span></span><svg class="muted"><use href="#i-chev"/></svg></div></div>
+      <div class="gl" style="padding:16px;display:grid;gap:10px">
+        <div style="font-weight:700;font-size:16px">What are you here for?</div>
+        <div class="cap">Pick up to 3. Other guests see what you tap.</div>
+        <div class="chips wrap"><span class="chip">Dancing</span><span class="chip on">Live music</span><span class="chip">Networking</span><span class="chip on">Cocktails</span><span class="chip">Meeting friends</span></div>
+      </div>
+      <div class="sh"><span>Who's here</span></div>
+      <div class="chips"><span class="chip on">All</span><span class="chip">Dating</span><span class="chip">Networking</span><span class="chip">Socialising</span></div>
+      <div class="gl" style="padding:2px 14px">
+        <div class="row"><span class="av a2">SR</span><div style="flex:1;min-width:0"><div class="name">Sofia Reyes <svg style="width:15px;height:15px"><use href="#i-verified"/></svg><span class="lf"><i>Dating</i><i>Social</i></span></div><div class="cap">27 · Madrid · Spanish</div><p class="post">The trio just started their second set, grab a seat by the piano 🎷</p><div class="acts"><span class="act"><svg style="width:18px;height:18px"><use href="#i-reply"/></svg></span><span class="act react">3</span></div></div></div>
+        <div class="row"><span class="av a3">JO</span><div style="flex:1;min-width:0"><div class="name">James Okafor <span class="lf"><i>Business</i></span></div><div class="cap">31 · London · Nigerian</div><p class="post">Anyone here working on climate tech? Would love to swap notes.</p><div class="acts"><span class="act"><svg style="width:18px;height:18px"><use href="#i-reply"/></svg></span><span class="act" style="color:#B9B9C0">1</span></div></div></div>
+        <div class="row"><span class="av a5">LM</span><div style="flex:1;min-width:0"><div class="name">Lucas Martin <span class="lf"><i>Dating</i><i>Business</i></span><span class="tt">🎷 Musician</span></div><div class="cap">33 · Paris · French</div><span class="chip" style="margin-top:8px;height:36px">Say hi</span></div></div>
+      </div>
+      <div class="gl" style="display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:999px"><span class="av sm a1" style="padding-bottom:2px">AM</span><span class="muted" style="flex:1">What's up at Velvet Room?</span><span class="gib round" style="background:var(--accent);color:var(--on-accent);border:0"><svg><use href="#i-send"/></svg></span></div>
+    </div>
+    <div class="tabbar"><span class="tab"><svg><use href="#i-pin"/></svg>Map</span><span class="tab on"><svg class="wm" viewBox="0 0 48 32"><path d="M2 4c6 0 10 3 12 9 2-6 6-9 10-9 4 0 8 3 10 9 2-6 6-9 12-9-3 8-9 22-13 24-3-2-5-8-9-14-4 6-6 12-9 14C13 26 5 12 2 4Z"/></svg>Home</span><span class="tab"><svg><use href="#i-msg"/></svg><span class="dot">2</span>Messages</span></div>
+  </div>
+</template>
+
+<template id="p7-history">
+  <div class="ph">
+    <div class="bar"><span class="gib round"><svg><use href="#i-back"/></svg></span><h4>History</h4><span style="width:44px"></span></div>
+    <div class="body">
+      <div class="sh"><span>Places you've been</span></div>
+      <div class="gl list">
+        <div><span class="av a6" style="border-radius:12px;place-items:center;padding:0"><svg><use href="#i-pin"/></svg></span><span class="grow"><b class="ell" style="display:block">Velvet Room</b><span class="cap">14 Greek St · Tonight</span></span><svg class="muted"><use href="#i-chev"/></svg></div>
+        <div><span class="av a4" style="border-radius:12px;place-items:center;padding:0"><svg><use href="#i-pin"/></svg></span><span class="grow"><b class="ell" style="display:block">Rooftop 88</b><span class="cap">88 Shoreditch High St · Mon</span></span><svg class="muted"><use href="#i-chev"/></svg></div>
+        <div><span class="av a5" style="border-radius:12px;place-items:center;padding:0"><svg><use href="#i-pin"/></svg></span><span class="grow"><b class="ell" style="display:block">Founders Friday</b><span class="cap">The Ministry, Borough · 15 Sep</span></span><svg class="muted"><use href="#i-chev"/></svg></div>
+      </div>
+      <div class="sh"><span>Who was at Rooftop 88</span></div>
+      <div class="gl" style="padding:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <span class="av a2">SR</span><span class="av a3">JO</span><span class="av a4">MT</span><span class="av a6">PS</span>
+        <p class="cap" style="flex-basis:100%">Say hi to someone you met. They'll see where you both were.</p>
+      </div>
+    </div>
+    <div class="tabbar"><span class="tab"><svg><use href="#i-pin"/></svg>Map</span><span class="tab on"><svg class="wm" viewBox="0 0 48 32"><path d="M2 4c6 0 10 3 12 9 2-6 6-9 10-9 4 0 8 3 10 9 2-6 6-9 12-9-3 8-9 22-13 24-3-2-5-8-9-14-4 6-6 12-9 14C13 26 5 12 2 4Z"/></svg>Home</span><span class="tab"><svg><use href="#i-msg"/></svg>Messages</span></div>
+  </div>
+</template>
+
+<template id="p7-messages">
+  <div class="ph">
+    <div class="bar"><h4 style="font-size:24px;font-weight:800">Messages</h4><span class="gib round"><svg><use href="#i-plus"/></svg></span></div>
+    <div class="body">
+      <div class="input"><svg><use href="#i-search"/></svg>Search messages</div>
+      <div class="chips"><span class="chip on" style="height:44px">All</span><span class="chip" style="height:44px">Unread</span><span class="chip" style="height:44px">Groups</span><span class="chip" style="height:44px">Requests · 1</span></div>
+      <div class="gl list">
+        <div style="min-height:72px"><span class="av a6" style="place-items:center;padding:0;font-size:14px">VR</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell">Velvet Room</b><span class="cap" style="flex:none">11:03</span></span><span style="display:flex;align-items:center;gap:8px"><span class="ell" style="flex:1;font-weight:600">Priya: Happy hour extended to 9pm 🍸</span><span class="unread"></span></span></span></div>
+        <div style="min-height:72px"><span class="av a2">SR</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell">Sofia Reyes</b><span class="cap" style="flex:none">10:45</span></span><span style="display:flex;align-items:center;gap:8px"><span class="ell" style="flex:1;font-weight:600">Great meeting you! Same time next week?</span><span class="unread"></span></span></span></div>
+        <div style="min-height:72px"><span class="av a5">LM</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell">Lucas Martin</b><span class="cap" style="flex:none">Yesterday</span></span><span style="display:flex;align-items:center;gap:6px"><span class="tt">Request</span><span class="ell cap" style="flex:1">Hey, saw you at Rooftop 88…</span></span></span></div>
+        <div style="min-height:72px"><span class="av a4" style="place-items:center;padding:0;font-size:14px">CF</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell">Climate founders</b><span class="cap" style="flex:none">23 Sep</span></span><span class="ell cap" style="display:block">James: Deck is in the shared folder</span></span></div>
+      </div>
+    </div>
+    <div class="tabbar"><span class="tab"><svg><use href="#i-pin"/></svg>Map</span><span class="tab"><svg class="wm" viewBox="0 0 48 32"><path d="M2 4c6 0 10 3 12 9 2-6 6-9 10-9 4 0 8 3 10 9 2-6 6-9 12-9-3 8-9 22-13 24-3-2-5-8-9-14-4 6-6 12-9 14C13 26 5 12 2 4Z"/></svg>Home</span><span class="tab on"><svg><use href="#i-msg"/></svg>Messages</span></div>
+  </div>
+</template>
+
+<template id="p7-profile">
+  <div class="ph">
+    <div class="bar"><span class="gib round"><svg><use href="#i-back"/></svg></span><h4>Profile</h4><span class="gib round"><svg><use href="#i-edit"/></svg></span></div>
+    <div class="body">
+      <div style="display:grid;justify-items:center;gap:6px;padding-top:6px">
+        <span style="position:relative"><span class="av lg a1">AM</span><span class="gib round" style="position:absolute;right:-8px;bottom:-4px"><svg><use href="#i-camera"/></svg></span></span>
+        <div style="font-size:22px;font-weight:800;display:flex;align-items:center;gap:6px">Alex Morgan <svg style="width:18px;height:18px"><use href="#i-verified"/></svg></div>
+        <div class="cap">29 · London · Product designer</div>
+      </div>
+      <div class="gl kv"><span><b>12</b><span class="cap">Connections</span></span><span><b>8</b><span class="cap">Venues</span></span><span><b>31</b><span class="cap">Check-ins</span></span></div>
+      <div class="gl" style="padding:16px;display:grid;gap:10px"><div style="font-weight:700">I'm looking for</div><div class="chips wrap"><span class="chip on" style="height:44px"><svg><use href="#i-users"/></svg>Socialising</span><span class="chip on" style="height:44px">Business</span><span class="chip" style="height:44px">Love</span></div></div>
+      <div class="gl" style="padding:16px;display:grid;gap:10px"><div style="display:flex;justify-content:space-between"><b>Badges</b><span class="cap">2 of 4</span></div><div style="display:flex;gap:14px"><span class="tile"><span class="gib round" style="width:48px;height:48px">📍</span>First check-in</span><span class="tile"><span class="gib round" style="width:48px;height:48px">🦉</span>Night owl</span></div></div>
+      <div class="gl list">
+        <div><svg class="muted"><use href="#i-moon"/></svg><span class="grow">Theme</span><span class="cap">Dark</span></div>
+        <div><svg class="muted"><use href="#i-users"/></svg><span class="grow">My connections</span><svg class="muted"><use href="#i-chev"/></svg></div>
+        <div><svg class="muted"><use href="#i-link"/></svg><span class="grow">My links</span><svg class="muted"><use href="#i-chev"/></svg></div>
+        <div><svg class="muted"><use href="#i-shield"/></svg><span class="grow">Privacy &amp; security</span><svg class="muted"><use href="#i-chev"/></svg></div>
+        <div class="danger"><svg><use href="#i-out"/></svg><span class="grow" style="font-weight:600">Log out</span></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="p7-venue-chat">
+  <div class="ph">
+    <div class="bar"><span class="gib round"><svg><use href="#i-back"/></svg></span><h4>Venue chat</h4><span style="width:44px"></span></div>
+    <div class="body">
+      <div class="gl" style="padding:16px;display:grid;gap:12px">
+        <div><b style="font-size:16px">Velvet Room</b><p class="cap">One group chat for everyone connected to this venue.</p></div>
+        <div class="cap" style="font-weight:600;color:var(--content)">Who can join</div>
+        <div class="seg2"><span class="on">Request to join</span><span>Anyone checked in</span></div>
+        <div class="btn">Open chat</div>
+      </div>
+      <div class="sh"><span>Join requests · 2</span></div>
+      <div class="gl list">
+        <div><span class="av sm a4">MT</span><span class="grow"><b>Mei Tanaka</b><span class="cap" style="display:block">Attempt 1 of 3</span></span><span class="gib"><svg><use href="#i-check"/></svg></span><span class="gib danger"><svg><use href="#i-x"/></svg></span></div>
+        <div><span class="av sm a7">N</span><span class="grow"><b>Noah Fischer</b><span class="cap" style="display:block">Attempt 1 of 3</span></span><span class="gib"><svg><use href="#i-check"/></svg></span><span class="gib danger"><svg><use href="#i-x"/></svg></span></div>
+      </div>
+      <div class="sh"><span>Members · 4</span></div>
+      <div class="gl list">
+        <div><span class="av sm a1">AM</span><span class="grow"><b>Alex Morgan</b></span><span class="tt"><svg><use href="#i-shield"/></svg>Admin</span></div>
+        <div><span class="av sm a6">PS</span><span class="grow"><b>Priya Shah</b></span><span class="tt"><svg><use href="#i-shield"/></svg>Admin</span></div>
+        <div><span class="av sm a3">JO</span><span class="grow"><b>James Okafor</b></span><span class="gib" style="color:var(--muted)"><svg><use href="#i-x"/></svg></span></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="p7-venue-members">
+  <div class="ph">
+    <div class="bar"><span class="gib round"><svg><use href="#i-back"/></svg></span><h4>Members</h4><span style="width:44px"></span></div>
+    <div class="body">
+      <div class="input"><svg><use href="#i-search"/></svg>Search 8 members</div>
+      <div class="gl list">
+        <div style="min-height:72px"><span class="av a2">SR</span><span class="grow"><b>Sofia Reyes</b><span style="display:flex;gap:6px;margin-top:4px"><span class="tt"><svg><use href="#i-star"/></svg>Regular</span></span></span><span style="text-align:center"><span class="num" style="display:block;font-size:18px">6</span><span class="cap">visits</span></span></div>
+        <div style="min-height:72px"><span class="av a5">LM</span><span class="grow"><b>Lucas Martin</b><span style="display:flex;gap:6px;margin-top:4px"><span class="tt">🎷 Musician</span></span></span><span style="text-align:center"><span class="num" style="display:block;font-size:18px">3</span><span class="cap">visits</span></span></div>
+        <div style="min-height:72px"><span class="av a6">PS</span><span class="grow"><b>Priya Shah</b><span style="display:flex;gap:6px;margin-top:4px"><span class="tt"><svg><use href="#i-shield"/></svg>Staff</span></span></span><span style="text-align:center"><span class="num" style="display:block;font-size:18px">14</span><span class="cap">visits</span></span></div>
+        <div style="min-height:72px"><span class="av a3">JO</span><span class="grow"><b>James Okafor</b><span class="cap" style="display:block">First visit 20 Sep</span></span><span style="text-align:center"><span class="num" style="display:block;font-size:18px">1</span><span class="cap">visit</span></span></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="p7-admin">
+  <div class="ph">
+    <div class="bar"><h4 style="font-size:22px;font-weight:800">Staff admin</h4><span class="gib round"><svg><use href="#i-user"/></svg></span></div>
+    <div class="body">
+      <div class="gl list"><div><svg><use href="#i-inbox"/></svg><span class="grow" style="font-weight:600">Location requests</span><span class="badge">2</span><svg class="muted"><use href="#i-chev"/></svg></div></div>
+      <div class="gl" style="padding:16px;display:grid;gap:10px"><div class="sh" style="text-align:left"><span>Master admins</span></div><p class="cap">No one else has master admin access yet.</p><div class="input"><svg><use href="#i-search"/></svg>Grant to someone…</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><div class="sh"><span>Venues · 3</span></div><span class="chip" style="height:44px"><svg><use href="#i-plus"/></svg>New venue</span></div>
+      <div class="gl" style="padding:16px;display:grid;gap:12px">
+        <div><b style="font-size:16px">Velvet Room</b><p class="cap">14 Greek St, London</p></div>
+        <div class="list" style="border:1px solid var(--glass-b);border-radius:12px"><div style="min-height:48px"><span class="av sm a1">AM</span><span class="grow"><span class="cap" style="display:block">Organizer</span><b>Alex Morgan</b></span><span class="chip danger" style="height:36px">Change</span></div></div>
+        <div class="grid4">
+          <span><span class="gib"><svg><use href="#i-image"/></svg></span>Banners</span>
+          <span><span class="gib"><svg><use href="#i-tag"/></svg></span>Titles</span>
+          <span><span class="gib"><svg><use href="#i-chart"/></svg></span>Report</span>
+          <span><span class="gib"><svg><use href="#i-users"/></svg></span>Members</span>
+          <span><span class="gib"><svg><use href="#i-msg"/></svg></span>Chat</span>
+          <span><span class="gib"><svg><use href="#i-trophy"/></svg></span>Rewards</span>
+          <span><span class="gib"><svg><use href="#i-layers"/></svg></span>Zones</span>
+          <span><span class="gib"><svg><use href="#i-spark"/></svg></span>Activities</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+(() => {
+  const SCREENS = [
+    { id: 'home', title: 'Home, checked in', route: '/main → Home tab, at Velvet Room', p7: 'p7-home', notes: [
+      ['bug', 'Banner photo is a black box (HeroCarousel style bug, fixed in this PR).'],
+      ['bug', 'PR #3 feed rows render in Times: no base font because Tailwind emits nothing.'],
+      ['bug', 'PR #3 composer\'s Post button and the Socialising filter chip run off the right edge.'],
+      ['target', 'Profile 36px, back 36px, carousel arrows 32px, organizer pills 34px tall.'],
+      ['contrast', 'Pink like count 4.41:1 at 12px.'],
+      ['p7', 'Six organizer pills push guests\' content down. Proposal: one "Manage venue" row, quick-access tiles under the hero, SectionHeader "Who\'s here", like count as a number only.'],
+    ]},
+    { id: 'history', title: 'History', route: 'Home → History button', p7: 'p7-history', notes: [
+      ['p7', 'Full-bleed pink→orange gradient panel. Not part of P1 and the loudest surface in the app.'],
+      ['contrast', 'Light theme: addresses at 2.89:1.'],
+      ['p7', 'Proposal: glass list rows with a venue tile, the date of your last visit, and the "who was there" strip.'],
+    ]},
+    { id: 'messages', title: 'Messages', route: '/main → Messages tab', p7: 'p7-messages', notes: [
+      ['bug', 'Rows overflow at 390px: timestamps and previews are clipped at the right edge instead of ending in "…".'],
+      ['p7', 'Rows are flat panels with letter avatars even when people have photos.'],
+      ['target', 'Filter chips 34px tall, search 43px.'],
+      ['contrast', 'Light theme: previews and times at 3.15:1.'],
+      ['p7', 'Proposal: glass list, real avatars, neutral unread dot (no green/cyan), a Requests filter.'],
+    ]},
+    { id: 'profile', title: 'Profile', route: '/main → profile icon', p7: 'p7-profile', notes: [
+      ['bug', 'Menu labels and the Badges heading are black on dark (1.21:1): buttons don\'t inherit text colour.'],
+      ['contrast', 'Logout #D52600 at 3.40:1.'],
+      ['p7', 'Teal tint on "I\'m looking for" and Complete Profile (old cyan rgba(34,195,201,.12)).'],
+      ['target', 'Camera button 32px; share-check-ins checkbox 20px.'],
+      ['p7', 'Proposal: stats in one glass panel, selected looking-for as accent fill, one grouped glass menu with Theme at the top.'],
+    ]},
+    { id: 'venue-chat', title: 'Venue chat (organizer)', route: '/main/venue/chat', p7: 'p7-venue-chat', notes: [
+      ['target', 'Approve 26×29, deny 26×29, remove member 24×27, "Switch to Auto-join" 31px tall.'],
+      ['keep', 'Structure is clear: join mode, open chat, requests, members.'],
+      ['p7', 'Proposal: a segmented control for join mode, 44px glass approve/deny buttons, SectionHeaders. This is the pattern for every organizer page.'],
+    ]},
+    { id: 'venue-members', title: 'Members (organizer)', route: '/main/venue/members', p7: 'p7-venue-members', notes: [
+      ['bug', 'Title chips print the icon name: "star Regular".'],
+      ['contrast', 'Light theme: visit dates at 3.15:1, "VISIT" at 2.84:1.'],
+      ['p7', 'Proposal: one glass list, visit count as a countRest numeral, title chips with real icons.'],
+    ]},
+  ];
+  const MORE = [
+    { id: 'venue-rewards', title: 'Manage rewards', route: '/main/venue/rewards', notes: [['target', 'Move up/down/delete 28px; Active pill 24px tall.'], ['keep', 'Form layout works; apply glass cards and 44px controls.']] },
+    { id: 'venue-carousel', title: 'Manage banners', route: '/main/venue/carousel', notes: [['bug', 'Preview hero is black (same HeroCarousel bug, fixed here).'], ['target', 'Remove co-owner 18×21; reorder/delete 28px.']] },
+    { id: 'venue-titles', title: 'Manage titles', route: '/main/venue/titles', notes: [['target', 'Edit 37×17, delete 24×27, icon picker cells 40px.'], ['p7', 'Assign-titles list is long: collapse each person to one row with a "+ Title" sheet.']] },
+    { id: 'venue-activities', title: 'Activities', route: '/main/venue/activities', notes: [['target', 'Move/delete buttons 28px.']] },
+    { id: 'venue-zones', title: 'Zones', route: '/main/venue/zones', notes: [['target', 'Delete 28px, Re-center 27px tall.'], ['p7', 'Show coordinates in the mono/caption style or hide them behind the zone name.']] },
+    { id: 'venue-report', title: 'Report', route: '/main/venue/report', notes: [['keep', 'Already closest to P1: uppercase card titles, big numerals. Needs glass cards only.']] },
+    { id: 'admin-location-requests', title: 'Location requests', route: '/admin/location-requests', notes: [['target', 'Approve/Reject 33px tall; avatar link 24px.']] },
+    { id: 'admin-venue-tags', title: 'Venue tags (admin)', route: '/admin/venue/[id]/tags', notes: [['target', 'Same as Manage titles: edit/delete and picker cells under 44px.'], ['target', '"Back to admin" is a 16px-tall text link.']] },
+  ];
+  const ADMIN = { id: 'admin', title: 'Staff admin', route: '/admin', p7: 'p7-admin', notes: [
+    ['bug', 'Each venue card\'s five action links overflow the card at 390px ("Venue Chat" pokes out).'],
+    ['target', 'Action links ≈50×32, "+ Create Venue" 16px tall, "Remove" 15px tall.'],
+    ['contrast', '"Remove" pink at 4.41:1 (dark), 3.94:1 (light).'],
+    ['p7', 'Proposal: Location requests as a row with a count badge, organizer as a row with Change, and a 4-column grid of 48px tool tiles.'],
+  ]};
+  const TAGS = { bug: ['t-bug', 'Bug'], contrast: ['t-contrast', 'Contrast'], target: ['t-target', '< 44px'], p7: ['t-p7', 'P7'], keep: ['t-keep', 'Keep'] };
+
+  const root = document.getElementById('screens');
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const notesHtml = (n) => '<ul class="notes">' + n.map(([k, t]) => `<li><span class="tag ${TAGS[k][0]}">${TAGS[k][1]}</span><span>${esc(t)}</span></li>`).join('') + '</ul>';
+  const shot = (id, alt) => `<div class="shot clip"><img data-shot="${id}" src="shots/dark/${id}.png" alt="${esc(alt)} as it looks today" loading="lazy"></div>`;
+
+  const card = (s, anchor) => {
+    const el = document.createElement('article');
+    el.className = 'screen';
+    el.id = anchor ?? s.id;
+    el.innerHTML = `<div class="screen-head"><h3>${esc(s.title)}</h3><span class="route">${esc(s.route)}</span></div>
+      <div class="pair">
+        <div class="col"><div class="col-label"><span>Today</span></div>${shot(s.id, s.title)}</div>
+        <div class="col"><div class="col-label"><span>P7 proposal</span></div><div data-slot></div></div>
+      </div>${notesHtml(s.notes)}`;
+    const slot = el.querySelector('[data-slot]');
+    if (s.p7) slot.replaceWith(document.getElementById(s.p7).content.cloneNode(true));
+    else slot.outerHTML = `<div class="pattern"><b>Same pattern as Venue chat</b>Glass cards, SectionHeaders, and 44px glass icon buttons for every reorder, delete and approve control. No separate mockup.</div>`;
+    return el;
+  };
+
+  SCREENS.forEach((s) => root.appendChild(card(s)));
+  const moreHead = document.createElement('div');
+  moreHead.id = 'venue-more';
+  moreHead.style.cssText = 'display:grid;gap:6px;padding-top:12px;scroll-margin-top:70px';
+  moreHead.innerHTML = '<span class="eyebrow">Other organizer pages</span><h2>Rewards, banners, titles, activities, zones, report, admin sub-pages</h2><p class="lede">These follow the Venue chat pattern, so there is one mockup for them rather than eight.</p>';
+  root.appendChild(moreHead);
+  MORE.forEach((s) => root.appendChild(card(s)));
+  root.appendChild(card(ADMIN));
+
+  // Today's-theme switch
+  const setTheme = (t) => {
+    document.querySelectorAll('img[data-shot]').forEach((img) => { img.src = `shots/${t}/${img.dataset.shot}.png`; });
+    document.getElementById('th-dark').setAttribute('aria-pressed', String(t === 'dark'));
+    document.getElementById('th-light').setAttribute('aria-pressed', String(t === 'light'));
+    try { localStorage.setItem('p7-shot-theme', t); } catch (e) {}
+  };
+  document.getElementById('th-dark').addEventListener('click', () => setTheme('dark'));
+  document.getElementById('th-light').addEventListener('click', () => setTheme('light'));
+  try { if (localStorage.getItem('p7-shot-theme') === 'light') setTheme('light'); } catch (e) {}
+
+  // Checklist (per-viewer, this browser only)
+  const form = document.getElementById('checkform');
+  const boxes = [...form.querySelectorAll('input[type=checkbox]')];
+  const prog = document.getElementById('progress');
+  const KEY = 'p7-checklist';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const update = () => { prog.textContent = `${boxes.filter((b) => b.checked).length} of ${boxes.length} done.`; };
+  boxes.forEach((b) => { b.checked = !!saved[b.id]; b.addEventListener('change', () => { saved[b.id] = b.checked; try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {} update(); }); });
+  form.addEventListener('submit', (e) => e.preventDefault());
+  update();
+})();
+</script>
