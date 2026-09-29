@@ -20,7 +20,9 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body className="font-montserrat bg-w-back-gray text-w-black antialiased">
+      {/* Renders instead of the root layout, so globals.css may not be
+          loaded: colours and font are inline, dark-theme literals. */}
+      <body style={{ margin: 0, minHeight: "100vh", background: "#0C0C0E", color: "#F5F5F7", fontFamily: "Montserrat, system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
         <div style={{ maxWidth: "28rem", margin: "20vh auto", padding: "0 1.5rem", textAlign: "center" }}>
           <h1 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
             Something went wrong

@@ -1,10 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* Colors live in lib/theme.ts (the .bg-w-* / .text-w-* / gradient / shadow
    custom classes that used to sit here were unreferenced and drifted to the
-   stray dark palette — removed in the theme-token reconciliation). */
+   stray dark palette — removed in the theme-token reconciliation).
+
+   No Tailwind directives here. The project runs Tailwind v4, which ignores
+   v3's `@tailwind base/components/utilities`, so those lines emitted no
+   utility classes and no base reset: `font-montserrat`, `pb-16`, etc. were
+   silent no-ops, text without an inline font fell back to the browser serif,
+   and <button> text without an inline colour rendered UA black on the dark
+   theme. The base rules below replace what the app actually relied on,
+   without switching on v4's full preflight reset (which would also zero
+   heading/paragraph margins the inline-styled screens currently use). */
 
 @layer base {
   :root {
@@ -97,13 +102,15 @@
   }
 
   html {
+    font-family: var(--font-montserrat), 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply min-h-screen;
+    min-height: 100vh;
+    margin: 0;
     overscroll-behavior: none;
     background: var(--surface);
     color: var(--content);
@@ -141,6 +148,16 @@
     z-index: 1;
   }
 
+  /* Form controls don't inherit font or colour by default (UA styles give
+     them system-ui and black). Inline styles still win where set. */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    color: inherit;
+  }
+
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
@@ -148,6 +165,21 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background-color: #D5D5D5; border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background-color: #919191; }
+}
+
+/* Loading spinner (HistoryTab, HistoryPanel use className="spinner"; it
+   was never defined, so those loaders rendered nothing). */
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--content);
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
 }
 
 @keyframes spin {
