@@ -66,3 +66,20 @@ export function requestLocation(maximumAge = 0): Promise<void> {
     );
   });
 }
+
+// A fresh, high-accuracy fix for server-verified actions (e.g. posting to a
+// venue feed, where create_venue_post re-checks the distance). Doesn't touch
+// the store. Rejects if location is unavailable or denied.
+export function getFreshPosition(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('Location unavailable'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  });
+}

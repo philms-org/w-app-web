@@ -47,6 +47,39 @@ export interface VenuePost {
   author?: Profile | null;
   like_count?: number;
   liked_by_me?: boolean;
+  comment_count?: number;
+  // Set on posts fetched outside a venue view (connections' posts on Home).
+  venue_name?: string | null;
+}
+
+// A comment on a venue post (migration 0030). Readable by anyone who has
+// visited the venue; writable only while checked in there.
+export interface VenuePostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: Profile | null;
+}
+
+export type VenueReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+
+// A report on a venue post or comment, as a venue manager sees it on the
+// Reports page. `target_body` / `target_author` are filled in client-side
+// (null once the reported content has been deleted).
+export interface VenueReport {
+  id: string;
+  location_id: string;
+  target_type: 'post' | 'comment';
+  target_id: string;
+  reporter_id: string;
+  reason: VenueReportReason;
+  details: string | null;
+  status: 'open' | 'resolved';
+  created_at: string;
+  target_body?: string | null;
+  target_author?: string | null;
 }
 
 export interface Venue {

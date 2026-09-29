@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { BadgeCheck, Heart, Reply, Trash2 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { BadgeCheck, Flag, Heart, MessageSquare, Reply, Trash2 } from 'lucide-react';
+import { reportVenueContent } from '@/lib/data';
+import PostComments from './PostComments';
+import InlineReport from './InlineReport';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Profile, VenuePost } from '@/lib/types';
 
@@ -40,6 +43,9 @@ export default function VenueFeedRow({
   onReply,
   onToggleLike,
   onDelete,
+  myUserId,
+  canComment = false,
+  canModerate = false,
 }: {
   profile: Profile;
   post?: VenuePost;
@@ -47,7 +53,16 @@ export default function VenueFeedRow({
   onReply: (profile: Profile) => void;
   onToggleLike?: (postId: string) => void;
   onDelete?: (postId: string) => Promise<void>;
+  myUserId?: string;
+  /** Currently checked in at this venue (RLS lets only them comment). */
+  canComment?: boolean;
+  /** Venue manager: may remove anyone's post or comment. */
+  canModerate?: boolean;
 }) {
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const handleCount = useCallback((n: number) => setCommentCount(n), []);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -105,9 +120,11 @@ export default function VenueFeedRow({
             </p>
             {confirmingDelete ? (
               <div role="group" aria-label="Delete this post?" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: typeTokens.caption.fontSize, color: theme.text, marginRight: 4 }}>Delete this post?</span>
+                <span style={{ fontSize: typeTokens.caption.fontSize, color: theme.text, marginRight: 4 }}>
+                  {isMine ? 'Delete this post?' : 'Remove this post for everyone?'}
+                </span>
                 <button type="button" onClick={confirmDelete} disabled={deleting} style={{ ...iconButton, padding: '0 10px', color: theme.accent2, fontWeight: 700, fontSize: typeTokens.caption.fontSize }}>
-                  {deleting ? 'Deleting…' : 'Delete'}
+                  {deleting ? 'Deleting…' : isMine ? 'Delete' : 'Remove'}
                 </button>
                 <button type="button" onClick={() => setConfirmingDelete(false)} disabled={deleting} style={{ ...iconButton, padding: '0 10px', color: theme.muted, fontWeight: 600, fontSize: typeTokens.caption.fontSize }}>
                   Cancel
@@ -133,17 +150,57 @@ export default function VenueFeedRow({
                   <Heart size={16} fill={post.liked_by_me ? theme.accent2 : 'none'} />
                   {!!post.like_count && <span style={{ fontSize: 12, fontWeight: 700 }}>{post.like_count}</span>}
                 </button>
-                {isMine && onDelete && !pending && (
+                <button
+                  type="button"
+                  onClick={() => setShowComments((v) => !v)}
+                  disabled={pending}
+                  aria-expanded={showComments}
+                  aria-label={showComments ? 'Hide comments' : 'Show comments'}
+                  style={{ ...iconButton, color: showComments ? theme.text : theme.muted }}
+                >
+                  <MessageSquare size={16} />
+                  {!!(commentCount ?? post.comment_count) && (
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>{commentCount ?? post.comment_count}</span>
+                  )}
+                </button>
+                <span style={{ marginLeft: 'auto' }} />
+                {(isMine || canModerate) && onDelete && !pending && (
                   <button
                     type="button"
                     onClick={() => { setDeleteError(false); setConfirmingDelete(true); }}
-                    aria-label="Delete your post"
-                    style={{ ...iconButton, color: theme.muted, marginLeft: 'auto' }}
+                    aria-label={isMine ? 'Delete your post' : 'Remove this post'}
+                    style={{ ...iconButton, color: theme.muted }}
                   >
                     <Trash2 size={16} />
                   </button>
                 )}
+                {!isMine && !pending && (
+                  <button
+                    type="button"
+                    onClick={() => setReporting((v) => !v)}
+                    aria-label="Report this post"
+                    style={{ ...iconButton, color: theme.muted }}
+                  >
+                    <Flag size={16} />
+                  </button>
+                )}
               </div>
+            )}
+            {reporting && (
+              <InlineReport
+                what="post"
+                onSubmit={(reason, details) => reportVenueContent('post', post.id, reason, details)}
+                onCancel={() => setReporting(false)}
+              />
+            )}
+            {showComments && !pending && (
+              <PostComments
+                postId={post.id}
+                myUserId={myUserId}
+                canComment={canComment}
+                canModerate={canModerate}
+                onCountChange={handleCount}
+              />
             )}
             {deleteError && (
               <p role="alert" style={{ margin: '8px 0 0', color: theme.accent2, fontSize: typeTokens.caption.fontSize }}>
