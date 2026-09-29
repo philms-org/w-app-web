@@ -53,7 +53,7 @@
     --surface-raised-2: #F3F3F3;
     --pill: #F0F6FA;
     --content: #231E20;
-    --content-muted: #919191;
+    --content-muted: #6B6B70;     /* was #919191: 3.15:1 on white, 2.89:1 on surface */
     --border: #E7EDF2;
     --accent: #231E20;
     --on-accent: #FFFFFF;
@@ -80,7 +80,7 @@
       --surface-raised-2: #F3F3F3;
       --pill: #F0F6FA;
       --content: #231E20;
-      --content-muted: #919191;
+      --content-muted: #6B6B70;
       --border: #E7EDF2;
       --accent: #231E20;
       --on-accent: #FFFFFF;

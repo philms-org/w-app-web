@@ -218,7 +218,7 @@ export default function MessagesTab() {
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.surface}
             >
               {/* Profile Image */}
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
                   width: '56px',
                   height: '56px',
@@ -251,21 +251,29 @@ export default function MessagesTab() {
                 )}
               </div>
 
-              {/* Message Content */}
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              {/* Message Content — minWidth 0 lets this flex child shrink below
+                  its no-wrap preview's width, so the ellipsis kicks in instead
+                  of the row running off the right edge on a phone. */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
                   <h3 style={{
                     fontWeight: '600',
                     color: message.unread ? theme.text : theme.muted,
                     fontSize: '16px',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                    fontFamily: 'Montserrat, system-ui, sans-serif',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}>
                     {message.userName}
                   </h3>
                   <span style={{
                     fontSize: '12px',
                     color: message.unread ? theme.accent : theme.muted,
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
+                    fontFamily: 'Montserrat, system-ui, sans-serif',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
                   }}>
                     {formatTimestamp(message.timestamp)}
                   </span>
@@ -280,6 +288,7 @@ export default function MessagesTab() {
                     whiteSpace: 'nowrap',
                     paddingRight: '8px',
                     flex: 1,
+                    minWidth: 0,
                     fontFamily: 'Montserrat, system-ui, sans-serif'
                   }}>
                     {message.lastMessage}

@@ -409,8 +409,10 @@ export default function ProfileTab() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            color: '#D52600',
-            fontWeight: '500',
+            // Neutral label (was #D52600: 3.40:1 on the dark card); the icon
+            // carries the destructive colour, and a confirm step follows.
+            color: theme.text,
+            fontWeight: '600',
             marginBottom: '32px',
             border: 'none',
             cursor: 'pointer',
@@ -418,7 +420,7 @@ export default function ProfileTab() {
             fontFamily: 'Montserrat, system-ui, sans-serif'
           }}
         >
-          <LogOut style={{ width: '20px', height: '20px' }} />
+          <LogOut style={{ width: '20px', height: '20px', color: theme.accent2 }} />
           <span>Logout</span>
         </button>
       </div>

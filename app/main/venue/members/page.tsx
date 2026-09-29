@@ -9,6 +9,7 @@ import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchReward
 import { theme } from '@/lib/theme';
 import type { Venue, VenueMember, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
+import TagBadge from '@/components/shared/TagBadge';
 
 export default function VenueMembersPage() {
   return (
@@ -261,18 +262,10 @@ function VenueMembersPageInner() {
                           </span>
                         ) : null;
                       })()}
-                      {m.tags.map((t) => (
-                        <span key={t.id} style={{
-                          backgroundColor: theme.surface2,
-                          color: theme.text,
-                          fontSize: '11px',
-                          borderRadius: '9999px',
-                          padding: '2px 10px',
-                          fontFamily: 'Montserrat, system-ui, sans-serif',
-                        }}>
-                          {t.icon ? `${t.icon} ` : ''}{t.tag}
-                        </span>
-                      ))}
+                      {/* TagBadge resolves the catalog icon (lucide / emoji /
+                          uploaded image). Printing t.icon as text showed lucide
+                          names as words, e.g. "star Regular". */}
+                      {m.tags.map((t) => <TagBadge key={t.id} tag={t} />)}
                     </div>
                   )}
                 </div>
