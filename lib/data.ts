@@ -2267,3 +2267,35 @@ export async function resolveVenueReport(reportId: string): Promise<void> {
   const { error } = await supabase.rpc('resolve_venue_report', { p_report_id: reportId });
   if (error) throw error;
 }
+
+// ---- Venue Broadcast (Mass Message) ----
+
+export async function sendVenueBroadcast(
+  locationId: string,
+  venueName: string,
+  message: string,
+  filter: { minVisits?: number } = {}
+): Promise<number> {
+  const members = await fetchVenueMembers(locationId);
+  const targets = filter.minVisits
+    ? members.filter((m) => m.checkinCount >= (filter.minVisits ?? 1))
+    : members;
+  if (targets.length === 0) return 0;
+  const recipientIds = targets.map((m) => m.profile.id);
+  const label = `📢 ${venueName} — ${new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+  await startConversation(recipientIds, label, true, message);
+  return targets.length;
+}
+
+// ---- Venue Info Update (for organizers) ----
+
+export async function updateVenueInfo(
+  locationId: string,
+  fields: { name?: string; description?: string; address?: string; city?: string; whatsapp?: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('locations')
+    .update(fields)
+    .eq('id', locationId);
+  if (error) throw error;
+}

@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
 import {
   fetchProfile, setShareCheckinsWithFriends,
-  fetchMyRoleBadges,
+  fetchMyRoleBadges, fetchMyVenues,
 } from '@/lib/data';
 import type { RoleBadge } from '@/lib/types';
 import RolePass from '@/components/profile/RolePass';
@@ -14,7 +14,7 @@ import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
   Camera, Edit2, Shield, Link2, Award,
-  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users
+  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard
 } from 'lucide-react';
 
 export default function ProfileTab() {
@@ -24,6 +24,7 @@ export default function ProfileTab() {
   const [shareCheckins, setShareCheckins] = useState(false);
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -42,6 +43,15 @@ export default function ProfileTab() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchMyVenues()
+      .then((venues) => { if (!cancelled) setIsOrganizer(venues.length > 0); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -53,6 +63,7 @@ export default function ProfileTab() {
   };
 
   const menuItems = [
+    ...(isOrganizer ? [{ id: 'organizer', label: 'Organizer Dashboard', icon: LayoutDashboard, action: () => router.push('/main/organizer') }] : []),
     { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
     { id: 'links', label: 'My Links', icon: Link2, action: () => router.push('/main/connect/links') },
     { id: 'edit', label: 'Edit Profile', icon: Edit2, action: () => router.push('/profile/edit') },
