@@ -13,6 +13,7 @@ import type {
   VerificationTagType,
   TagIconKind,
   Banner,
+  VenueAnnouncement,
   LocationManager,
   VenueMember,
   JoinRequest,
@@ -35,6 +36,7 @@ import type {
   VenuePostComment,
   VenueReport,
   VenueReportReason,
+  RoleBadge,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -51,7 +53,7 @@ const PUBLIC_PROFILE = 'profiles_public';
 // Full row. Only works for your own id (or any id for a master admin); for
 // anyone else use fetchPublicProfile.
 export async function fetchProfile(id: string): Promise<Profile> {
-  const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
+  const { data, error } = await supabase.from('profiles_public').select().eq('id', id).single();
   if (error) throw error;
   return data;
 }
@@ -916,6 +918,55 @@ export async function fetchVenueTitleRoster(
     }));
 }
 
+// The current user's badges: every role (verification tag) an organizer has
+// approved them for, newest first, with the venue or event it was for.
+// verification_tags is readable by any signed-in user (0001), so this only
+// filters to our own rows. Venue names come from a second query rather than
+// an embed so this doesn't depend on a verification_tags -> locations FK.
+export async function fetchMyRoleBadges(): Promise<RoleBadge[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data: tags, error } = await supabase
+    .from('verification_tags')
+    .select('id, location_id, tag, icon, assigned_at, verification_tag_types(*)')
+    .eq('user_id', uid)
+    .order('assigned_at', { ascending: false });
+  if (error) throw error;
+
+  type Row = {
+    id: string; location_id: string; tag: string; icon: string | null; assigned_at: string;
+    verification_tag_types: VerificationTagType | null;
+  };
+  const rows = (tags ?? []) as unknown as Row[];
+  if (rows.length === 0) return [];
+
+  const ids = Array.from(new Set(rows.map((r) => r.location_id)));
+  const { data: venues, error: venueError } = await supabase
+    .from('locations')
+    .select('id, name, is_event, event_date')
+    .in('id', ids);
+  if (venueError) throw venueError;
+  const byId = new Map(
+    ((venues ?? []) as Pick<Venue, 'id' | 'name' | 'is_event' | 'event_date'>[]).map((v) => [v.id, v]),
+  );
+
+  return rows.map((r) => {
+    const type = r.verification_tag_types;
+    const venue = byId.get(r.location_id);
+    return {
+      id: r.id,
+      label: type?.label ?? r.tag,
+      iconKind: type?.icon_kind ?? 'legacy',
+      icon: type?.icon ?? r.icon ?? null,
+      venueId: r.location_id,
+      venueName: venue?.name ?? 'A W venue',
+      isEvent: !!venue?.is_event,
+      eventDate: venue?.event_date ?? null,
+      assignedAt: r.assigned_at,
+    };
+  });
+}
+
 export async function removeVerificationTag(tagId: string): Promise<void> {
   const { error } = await supabase.from('verification_tags').delete().eq('id', tagId);
   if (error) throw error;
@@ -1000,6 +1051,63 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
 }
 
 // ---- Banners ----
+
+// ---- Venue announcements (migration 0029) ----
+// RLS returns only active, unexpired rows to everyone; venue managers also
+// get inactive/expired ones (manage page history).
+
+export async function fetchCurrentAnnouncement(locationId: string): Promise<VenueAnnouncement | null> {
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .select()
+    .eq('location_id', locationId)
+    .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as VenueAnnouncement | undefined) ?? null;
+}
+
+export async function fetchAnnouncements(locationId: string): Promise<VenueAnnouncement[]> {
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .select()
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as VenueAnnouncement[];
+}
+
+export async function createAnnouncement(
+  locationId: string,
+  body: string,
+  expiresAt: string | null,
+): Promise<VenueAnnouncement> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('venue_announcements')
+    .insert({ location_id: locationId, body: body.trim(), expires_at: expiresAt, created_by: uid })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VenueAnnouncement;
+}
+
+export async function updateAnnouncement(
+  id: string,
+  fields: Partial<Pick<VenueAnnouncement, 'is_active' | 'expires_at'>>,
+): Promise<void> {
+  const { error } = await supabase.from('venue_announcements').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  const { error } = await supabase.from('venue_announcements').delete().eq('id', id);
+  if (error) throw error;
+}
 
 export async function fetchBanners(locationId: string, activeOnly = true): Promise<Banner[]> {
   let query = supabase.from('banners').select().eq('location_id', locationId);

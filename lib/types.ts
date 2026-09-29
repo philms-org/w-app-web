@@ -222,6 +222,21 @@ export interface VerificationTag {
   profiles?: Profile;
 }
 
+// A role an organizer approved someone for at a venue or event (a granted
+// verification tag, e.g. "Staff", "Head Judge", "Musician"). These are what
+// the app shows as a person's badges.
+export interface RoleBadge {
+  id: string;
+  label: string;
+  iconKind: TagIconKind | 'legacy';
+  icon: string | null;
+  venueId: string;
+  venueName: string;
+  isEvent: boolean;
+  eventDate: string | null;
+  assignedAt: string;
+}
+
 export interface LocationManager {
   id: string;
   location_id: string;
@@ -242,6 +257,18 @@ export interface VenueMember {
   firstCheckinAt: string | null;
   lastCheckinAt: string | null;
   tags: VerificationTag[];
+}
+
+// Organizer-authored announcement shown at the top of checked-in Home
+// (migration 0029). Writable by venue managers only.
+export interface VenueAnnouncement {
+  id: string;
+  location_id: string;
+  body: string;
+  is_active: boolean;
+  expires_at: string | null;
+  created_by: string;
+  created_at: string;
 }
 
 export interface Banner {

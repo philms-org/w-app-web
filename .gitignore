@@ -44,3 +44,7 @@ scripts/camoufox/venv/
 
 # brainstorm companion scratch
 .superpowers/
+
+# P7 review capture output
+scripts/p7-mockups/out/
+docs/p7-review/shots/

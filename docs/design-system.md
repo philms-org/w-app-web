@@ -39,7 +39,7 @@ Dark values first (the default). Pull the literals from
 | `surfaceRaised` | `#1A1A1D` | `#FFFFFF` | Cards, sheets, list rows |
 | `surfaceRaised2` | `#232327` | `#F3F3F3` | Inset fields, nested panels |
 | `content` | `#F5F5F7` | `#231E20` | Primary text, icons |
-| `contentMuted` | `rgba(245,245,247,.55)` | `#919191` | Secondary text, captions |
+| `contentMuted` | `rgba(245,245,247,.55)` | `#6B6B70` | Secondary text, captions (light was `#919191`, raised to pass 4.5:1) |
 | `border` | `rgba(255,255,255,.09)` | `#E7EDF2` | Hairlines, card outlines |
 | `accent` | `#EDEDF0` | `#231E20` | Primary actions, links, active nav — **now a neutral** (near-white on dark, near-black on light) |
 | `onAccent` | `#0C0C0E` | `#FFFFFF` | Text / icon on top of an `accent` fill |
