@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { signUp } from '@/lib/auth';
 import { upsertProfile, uploadAvatar } from '@/lib/data';
+import { getErrorMessage } from '@/lib/errors';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Button, Input, Chip } from '@/components/ui/primitives';
 import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
@@ -176,7 +177,7 @@ export default function RegisterPage() {
       // seconds after landing instead.
       router.push('/main');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(getErrorMessage(err, 'Registration failed'));
       captchaRef.current?.reset();
       setCaptchaToken('');
     } finally {

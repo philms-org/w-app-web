@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { signIn } from '@/lib/auth';
 import { fetchProfile } from '@/lib/data';
+import { getErrorMessage } from '@/lib/errors';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
 import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
@@ -84,7 +85,7 @@ export default function LoginPage() {
         router.push('/profile/setup');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid email or password');
+      setError(getErrorMessage(err, 'Invalid email or password'));
       captchaRef.current?.reset();
       setCaptchaToken('');
     } finally {
