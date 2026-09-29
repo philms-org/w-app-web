@@ -47,7 +47,7 @@ const PUBLIC_PROFILE = 'profiles_public';
 // Full row. Only works for your own id (or any id for a master admin); for
 // anyone else use fetchPublicProfile.
 export async function fetchProfile(id: string): Promise<Profile> {
-  const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
+  const { data, error } = await supabase.from('profiles_public').select().eq('id', id).single();
   if (error) throw error;
   return data;
 }

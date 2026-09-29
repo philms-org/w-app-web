@@ -7,6 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { updatePassword } from '@/lib/auth';
+import { getErrorMessage } from '@/lib/errors';
 import { Button, Input } from '@/components/ui/primitives';
 
 type Status = 'checking' | 'ready' | 'invalid' | 'done';
@@ -57,7 +58,7 @@ export default function ResetPasswordPage() {
       setStatus('done');
       setTimeout(() => router.push('/auth/login'), 1800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update password');
+      setError(getErrorMessage(err, 'Could not update password'));
     } finally {
       setIsLoading(false);
     }

@@ -63,7 +63,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={montserrat.variable} suppressHydrationWarning>
-      <body className="font-montserrat antialiased">
+      <body>
         <ThemeScript />
         <ThemeProvider>
           {children}
