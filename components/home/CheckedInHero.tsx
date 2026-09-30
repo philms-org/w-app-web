@@ -22,6 +22,7 @@ import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import VenueFeed from '@/components/home/VenueFeed';
+import TeamsView from '@/components/teams/TeamsView';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
 import RoomMeter from '@/components/home/RoomMeter';
 import { contribute, contributeCarousel } from '@/lib/meter';
@@ -54,6 +55,7 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
+  const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
 
@@ -560,14 +562,50 @@ export default function CheckedInHero() {
 
           {checkedIn && <RoomMeter locationId={selectedLocation.id} />}
 
-          <VenueFeed
-            locationId={selectedLocation.id}
-            presenceProfiles={presenceProfiles}
-            myUserId={user?.id}
-            myAvatarUrl={user?.image}
-            onReply={(profile) => setSelectedAttendeeId(profile.id)}
-            checkedIn={checkedIn}
-          />
+          <div
+            role="tablist"
+            aria-label="Room view"
+            style={{
+              display: 'flex', padding: 4, marginBottom: 12, borderRadius: 9999,
+              backgroundColor: theme.surface2, border: `1px solid ${theme.divider}`,
+            }}
+          >
+            {(['people', 'teams'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={roomView === v}
+                onClick={() => setRoomView(v)}
+                style={{
+                  flex: 1, minHeight: 44, borderRadius: 9999, border: 'none', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif',
+                  backgroundColor: roomView === v ? theme.text : 'transparent',
+                  color: roomView === v ? theme.bg : theme.muted,
+                }}
+              >
+                {v === 'people' ? 'People' : 'Teams'}
+              </button>
+            ))}
+          </div>
+
+          {roomView === 'teams' ? (
+            <TeamsView
+              locationId={selectedLocation.id}
+              myUserId={user?.id}
+              roomProfiles={presenceProfiles}
+              checkedIn={checkedIn}
+            />
+          ) : (
+            <VenueFeed
+              locationId={selectedLocation.id}
+              presenceProfiles={presenceProfiles}
+              myUserId={user?.id}
+              myAvatarUrl={user?.image}
+              onReply={(profile) => setSelectedAttendeeId(profile.id)}
+              checkedIn={checkedIn}
+            />
+          )}
 
           {selectedAttendee && (
             <div style={{ marginTop: '14px' }}>

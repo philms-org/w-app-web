@@ -3,10 +3,10 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Send, Users } from 'lucide-react';
-import { fetchVenue, fetchVenueMembers, sendVenueBroadcast } from '@/lib/data';
+import { fetchVenue, fetchVenueMembers, sendVenueBroadcast, fetchTeams, fetchCheckedInUserIds } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
-import type { Venue, VenueMember } from '@/lib/types';
+import type { Venue, VenueMember, TeamWithMembers } from '@/lib/types';
 
 export default function VenueMessagePage() {
   return (
@@ -23,6 +23,7 @@ export default function VenueMessagePage() {
 }
 
 type FilterKey = 'all' | 'min3' | 'min5' | 'min10' | 'min20';
+type AudienceMode = 'visits' | 'teams' | 'noteam';
 
 const FILTERS: { key: FilterKey; label: string; minVisits?: number }[] = [
   { key: 'all', label: 'All members' },
@@ -41,6 +42,10 @@ function VenueMessagePageInner() {
   const [members, setMembers] = useState<VenueMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [mode, setMode] = useState<AudienceMode>('visits');
+  const [teams, setTeams] = useState<TeamWithMembers[]>([]);
+  const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
+  const [pickedTeams, setPickedTeams] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<number | null>(null);
@@ -51,10 +56,17 @@ function VenueMessagePageInner() {
   useEffect(() => {
     if (!locationId) return;
     setLoading(true);
-    Promise.all([fetchVenue(locationId), fetchVenueMembers(locationId)])
-      .then(([v, m]) => {
+    Promise.all([
+      fetchVenue(locationId),
+      fetchVenueMembers(locationId),
+      fetchTeams(locationId).catch(() => [] as TeamWithMembers[]),
+      fetchCheckedInUserIds(locationId).catch(() => [] as string[]),
+    ])
+      .then(([v, m, t, ids]) => {
         setVenue(v);
         setMembers(m);
+        setTeams(t);
+        setCheckedInIds(ids);
       })
       .catch((err) => {
         console.error('Failed to load venue/members:', err);
@@ -64,9 +76,26 @@ function VenueMessagePageInner() {
   }, [locationId]);
 
   const selectedFilter = FILTERS.find((f) => f.key === filter)!;
-  const targets = selectedFilter.minVisits
+  const visitTargets = selectedFilter.minVisits
     ? members.filter((m) => m.checkinCount >= selectedFilter.minVisits!)
     : members;
+
+  // Who will actually receive this, for each audience mode.
+  const teamMemberIds = new Set(teams.flatMap((t) => t.members.map((m) => m.user_id)));
+  const teamTargetIds = Array.from(
+    new Set(teams.filter((t) => pickedTeams.has(t.id)).flatMap((t) => t.members.map((m) => m.user_id))),
+  );
+  const noTeamTargetIds = checkedInIds.filter((id) => !teamMemberIds.has(id));
+  const targets: { length: number } =
+    mode === 'teams' ? teamTargetIds : mode === 'noteam' ? noTeamTargetIds : visitTargets;
+  const teamCount = pickedTeams.size;
+  const toggleTeam = (id: string) =>
+    setPickedTeams((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const handleSend = async () => {
     if (!venue || !message.trim() || targets.length === 0) return;
@@ -77,7 +106,9 @@ function VenueMessagePageInner() {
         locationId,
         venue.name,
         message.trim(),
-        { minVisits: selectedFilter.minVisits }
+        mode === 'visits'
+          ? { minVisits: selectedFilter.minVisits }
+          : { recipientIds: mode === 'teams' ? teamTargetIds : noTeamTargetIds }
       );
       setSent(count);
       setMessage('');
@@ -166,7 +197,7 @@ function VenueMessagePageInner() {
               }}>
                 <Send style={{ width: '32px', height: '32px', color: theme.accent, margin: '0 auto 12px' }} />
                 <p style={{ fontSize: '16px', fontWeight: 700, color: theme.text, marginBottom: '6px' }}>
-                  Message sent to {sent} {sent === 1 ? 'member' : 'members'}
+                  Message sent to {sent} {sent === 1 ? 'person' : 'people'}
                 </p>
                 <p style={{ fontSize: '13px', color: theme.muted, marginBottom: '20px' }}>
                   They&apos;ll see it as a group message in their Messages tab.
@@ -194,17 +225,59 @@ function VenueMessagePageInner() {
                   <p style={{ fontSize: '13px', fontWeight: 600, color: theme.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                     Audience
                   </p>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {FILTERS.map((f) => (
-                      <button key={f.key} onClick={() => setFilter(f.key)} style={chipStyle(filter === f.key)}>
-                        {f.label}
-                      </button>
-                    ))}
+                  <div role="group" aria-label="Audience type" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                    <button onClick={() => setMode('visits')} aria-pressed={mode === 'visits'} style={chipStyle(mode === 'visits')}>Everyone</button>
+                    <button onClick={() => setMode('teams')} aria-pressed={mode === 'teams'} style={chipStyle(mode === 'teams')}>Teams</button>
+                    <button onClick={() => setMode('noteam')} aria-pressed={mode === 'noteam'} style={chipStyle(mode === 'noteam')}>No team yet</button>
                   </div>
+                  {mode === 'visits' && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {FILTERS.map((f) => (
+                        <button key={f.key} onClick={() => setFilter(f.key)} style={chipStyle(filter === f.key)}>
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {mode === 'noteam' && (
+                    <p style={{ fontSize: '13px', color: theme.muted }}>
+                      People checked in right now who haven&apos;t joined a team.
+                    </p>
+                  )}
+                  {mode === 'teams' && (
+                    <div>
+                      {teams.length === 0 ? (
+                        <p style={{ fontSize: '13px', color: theme.muted }}>No teams have been created here yet.</p>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                            <button onClick={() => setPickedTeams(new Set(teams.map((t) => t.id)))} style={chipStyle(false)}>Select all</button>
+                            <button onClick={() => setPickedTeams(new Set())} style={chipStyle(false)}>Clear</button>
+                          </div>
+                          {teams.map((t) => (
+                            <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '52px', borderTop: `1px solid ${theme.divider}`, cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={pickedTeams.has(t.id)}
+                                onChange={() => toggleTeam(t.id)}
+                                style={{ width: '22px', height: '22px', accentColor: theme.accent }}
+                              />
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: theme.text }}>{t.name}</span>
+                                <span style={{ display: 'block', fontSize: '12.5px', color: theme.muted }}>
+                                  {t.members.length} {t.members.length === 1 ? 'person' : 'people'}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
                     <Users style={{ width: '14px', height: '14px', color: theme.muted }} />
                     <p style={{ fontSize: '13px', color: theme.muted }}>
-                      {targets.length} {targets.length === 1 ? 'member' : 'members'} will receive this
+                      {targets.length} {targets.length === 1 ? 'person' : 'people'} will receive this{mode === 'teams' && teamCount > 0 ? ` on ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}` : ''}
                     </p>
                   </div>
                 </div>
@@ -250,7 +323,7 @@ function VenueMessagePageInner() {
                   }}
                 >
                   <Send style={{ width: '18px', height: '18px' }} />
-                  {sending ? 'Sending…' : `Send to ${targets.length} ${targets.length === 1 ? 'member' : 'members'}`}
+                  {sending ? 'Sending…' : `Send to ${targets.length} ${targets.length === 1 ? 'person' : 'people'}${mode === 'teams' && teamCount > 0 ? ` on ${teamCount} ${teamCount === 1 ? 'team' : 'teams'}` : ''}`}
                 </button>
               </>
             )}

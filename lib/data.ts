@@ -37,6 +37,10 @@ import type {
   VenueReport,
   VenueReportReason,
   RoleBadge,
+  Team,
+  TeamMember,
+  TeamNeed,
+  TeamWithMembers,
 } from './types';
 
 // Central Supabase data service. Mirrors WAPData.swift in the iOS app —
@@ -2274,17 +2278,24 @@ export async function sendVenueBroadcast(
   locationId: string,
   venueName: string,
   message: string,
-  filter: { minVisits?: number } = {}
+  filter: { minVisits?: number; recipientIds?: string[] } = {}
 ): Promise<number> {
-  const members = await fetchVenueMembers(locationId);
-  const targets = filter.minVisits
-    ? members.filter((m) => m.checkinCount >= (filter.minVisits ?? 1))
-    : members;
-  if (targets.length === 0) return 0;
-  const recipientIds = targets.map((m) => m.profile.id);
+  let recipientIds: string[];
+  if (filter.recipientIds) {
+    // Explicit audience (for example chosen teams). Never message yourself.
+    const me = await getCurrentUserId();
+    recipientIds = Array.from(new Set(filter.recipientIds)).filter((id) => id !== me);
+  } else {
+    const members = await fetchVenueMembers(locationId);
+    const targets = filter.minVisits
+      ? members.filter((m) => m.checkinCount >= (filter.minVisits ?? 1))
+      : members;
+    recipientIds = targets.map((m) => m.profile.id);
+  }
+  if (recipientIds.length === 0) return 0;
   const label = `📢 ${venueName} — ${new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
   await startConversation(recipientIds, label, true, message);
-  return targets.length;
+  return recipientIds.length;
 }
 
 // ---- Venue Info Update (for organizers) ----
@@ -2298,4 +2309,120 @@ export async function updateVenueInfo(
     .update(fields)
     .eq('id', locationId);
   if (error) throw error;
+}
+
+// ---- Teams (migration 0032) ----
+// Reads go through RLS (people who have visited the venue see its teams).
+// Every write is a SECURITY DEFINER RPC that enforces the rules: one team per
+// person per event, size limit, owner-only changes, must be checked in.
+
+function teamError(err: unknown, fallback: string): Error {
+  const msg = (err as { message?: string } | null)?.message;
+  // Our RPCs raise short, user-readable messages. Anything else is a
+  // connection/permission problem the user can't act on.
+  if (msg && msg.length < 120 && !/violates|permission denied|JWT|relation/i.test(msg)) return new Error(msg);
+  return new Error(fallback);
+}
+
+export async function fetchTeams(locationId: string): Promise<TeamWithMembers[]> {
+  const { data: teams, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  const list = (teams ?? []) as Team[];
+  if (list.length === 0) return [];
+
+  const { data: rows, error: memberError } = await supabase
+    .from('team_members')
+    .select(`team_id, user_id, role, status, created_at, profile:${PUBLIC_PROFILE}!user_id(*)`)
+    .eq('location_id', locationId)
+    .order('created_at', { ascending: true });
+  if (memberError) throw memberError;
+
+  const byTeam = new Map<string, { members: TeamMember[]; requests: TeamMember[] }>();
+  for (const t of list) byTeam.set(t.id, { members: [], requests: [] });
+  for (const r of (rows ?? []) as unknown as (TeamMember & { team_id: string })[]) {
+    const bucket = byTeam.get(r.team_id);
+    if (!bucket) continue;
+    const m: TeamMember = { user_id: r.user_id, role: r.role, status: r.status, profile: r.profile ?? null };
+    (r.status === 'active' ? bucket.members : bucket.requests).push(m);
+  }
+  return list.map((t) => ({ ...t, ...byTeam.get(t.id)! }));
+}
+
+export async function createTeam(input: {
+  locationId: string;
+  name: string;
+  kind?: 'team' | 'company';
+  idea?: string;
+  needs?: TeamNeed[];
+  maxSize?: number;
+}): Promise<Team> {
+  const { data, error } = await supabase.rpc('create_team', {
+    p_location_id: input.locationId,
+    p_name: input.name,
+    p_kind: input.kind ?? 'team',
+    p_idea: input.idea ?? null,
+    p_needs: input.needs ?? [],
+    p_max_size: input.maxSize ?? 6,
+  });
+  if (error) throw teamError(error, "Couldn't create the team. Try again.");
+  return data as Team;
+}
+
+export async function joinTeamByCode(code: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_team_by_code', { p_code: code });
+  if (error) throw teamError(error, "Couldn't join that team. Try again.");
+  return data as string;
+}
+
+export async function requestToJoinTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.rpc('request_to_join_team', { p_team_id: teamId });
+  if (error) throw teamError(error, "Couldn't send your request. Try again.");
+}
+
+export async function respondToJoinRequest(teamId: string, userId: string, accept: boolean): Promise<void> {
+  const { error } = await supabase.rpc('respond_to_join_request', {
+    p_team_id: teamId,
+    p_user_id: userId,
+    p_accept: accept,
+  });
+  if (error) throw teamError(error, "Couldn't update that request. Try again.");
+}
+
+export async function addTeamMember(teamId: string, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('add_team_member', { p_team_id: teamId, p_user_id: userId });
+  if (error) throw teamError(error, "Couldn't add that person. Try again.");
+}
+
+export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_team_member', { p_team_id: teamId, p_user_id: userId });
+  if (error) throw teamError(error, "Couldn't update the team. Try again.");
+}
+
+export async function updateTeam(
+  teamId: string,
+  fields: { name: string; idea?: string; needs?: TeamNeed[]; maxSize?: number },
+): Promise<void> {
+  const { error } = await supabase.rpc('update_team', {
+    p_team_id: teamId,
+    p_name: fields.name,
+    p_idea: fields.idea ?? null,
+    p_needs: fields.needs ?? [],
+    p_max_size: fields.maxSize ?? null,
+  });
+  if (error) throw teamError(error, "Couldn't save your changes. Try again.");
+}
+
+// People checked in right now (for "no team yet" audiences).
+export async function fetchCheckedInUserIds(locationId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('user_id')
+    .eq('location_id', locationId)
+    .is('checked_out_at', null);
+  if (error) throw error;
+  return Array.from(new Set((data ?? []).map((r: { user_id: string }) => r.user_id)));
 }
