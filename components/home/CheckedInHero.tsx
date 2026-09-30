@@ -23,6 +23,8 @@ import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import VenueFeed from '@/components/home/VenueFeed';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
+import RoomMeter from '@/components/home/RoomMeter';
+import { contribute, contributeCarousel } from '@/lib/meter';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
@@ -173,7 +175,11 @@ export default function CheckedInHero() {
     if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
-        .then(() => setCheckedIn(true))
+        .then(() => {
+          setCheckedIn(true);
+          // Give the meter a moment to mount, then celebrate the check-in.
+          setTimeout(() => contribute('checkin', null), 900);
+        })
         .catch((err) => {
           checkInAttemptedFor.current = null;
           console.error('Check-in failed:', err);
@@ -236,7 +242,13 @@ export default function CheckedInHero() {
 
   return (
     <div>
-      <HeroCarousel images={bannerImages} links={bannerLinks} title={selectedLocation.name} onBack={handleBack} />
+      <HeroCarousel
+        images={bannerImages}
+        links={bannerLinks}
+        title={selectedLocation.name}
+        onBack={handleBack}
+        onEngage={(el) => checkedIn && contributeCarousel(selectedLocation.id, el)}
+      />
 
       <div style={{ padding: '16px 20px 0' }}>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
@@ -545,6 +557,8 @@ export default function CheckedInHero() {
           {/* Pinned above the feed and outside its lock: everyone checked in
               sees announcements, even before unlocking who's here. */}
           <AnnouncementPill locationId={selectedLocation.id} venueName={selectedLocation.name} />
+
+          {checkedIn && <RoomMeter locationId={selectedLocation.id} />}
 
           <VenueFeed
             locationId={selectedLocation.id}

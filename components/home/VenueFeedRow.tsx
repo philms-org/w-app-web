@@ -1,5 +1,6 @@
 'use client';
 
+import { contribute } from '@/lib/meter';
 import { useCallback, useState } from 'react';
 import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, Reply, Trash2 } from 'lucide-react';
 import { reportVenueContent } from '@/lib/data';
@@ -150,7 +151,10 @@ export default function VenueFeedRow({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onToggleLike?.(post.id)}
+                  onClick={(e) => {
+                    onToggleLike?.(post.id);
+                    if (!post.liked_by_me) contribute('like', e.currentTarget);
+                  }}
                   disabled={pending}
                   aria-label={post.liked_by_me ? 'Unlike' : 'Like'}
                   style={{ ...iconButton, color: post.liked_by_me ? theme.accent2 : theme.muted }}

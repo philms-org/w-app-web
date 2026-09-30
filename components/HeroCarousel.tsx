@@ -10,9 +10,12 @@ interface HeroCarouselProps {
   title: string;
   onBack: () => void;
   links?: (string | null)[];
+  // Called when someone swipes/taps through the carousel or opens a slide's
+  // link, with the element they used. Feeds the room activity meter.
+  onEngage?: (el: Element | null) => void;
 }
 
-export default function HeroCarousel({ images, title, onBack, links }: HeroCarouselProps) {
+export default function HeroCarousel({ images, title, onBack, links, onEngage }: HeroCarouselProps) {
   const [index, setIndex] = useState(0);
   const [browserUrl, setBrowserUrl] = useState<string | null>(null);
   const hasImages = images.length > 0;
@@ -46,7 +49,7 @@ export default function HeroCarousel({ images, title, onBack, links }: HeroCarou
           element that receives the "open link" click — buttons stay on top
           in paint order and handle their own clicks first. */}
       <div
-        onClick={currentLink ? openLink : undefined}
+        onClick={currentLink ? (e) => { openLink(); onEngage?.(e.currentTarget); } : undefined}
         style={{
           position: 'absolute',
           inset: 0,
@@ -81,7 +84,7 @@ export default function HeroCarousel({ images, title, onBack, links }: HeroCarou
       {images.length > 1 && (
         <>
           <button
-            onClick={goPrev}
+            onClick={(e) => { goPrev(); onEngage?.(e.currentTarget); }}
             aria-label="Previous photo"
             style={{
               position: 'absolute',
@@ -102,7 +105,7 @@ export default function HeroCarousel({ images, title, onBack, links }: HeroCarou
             <ChevronLeft style={{ width: '18px', height: '18px', color: 'white' }} />
           </button>
           <button
-            onClick={goNext}
+            onClick={(e) => { goNext(); onEngage?.(e.currentTarget); }}
             aria-label="Next photo"
             style={{
               position: 'absolute',
