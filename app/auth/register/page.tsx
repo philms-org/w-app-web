@@ -140,12 +140,16 @@ export default function RegisterPage() {
         return;
       }
 
+      // The account already exists at this point, so a failed photo upload
+      // shouldn't fail signup — but it mustn't vanish silently either: send
+      // them to the edit page with a note to re-add it.
       let avatarUrl: string | undefined;
+      let photoFailed = false;
       if (profileImage) {
         try {
           avatarUrl = await uploadAvatar(profileImage, authUser.id);
         } catch {
-          avatarUrl = undefined;
+          photoFailed = true;
         }
       }
 
@@ -176,7 +180,7 @@ export default function RegisterPage() {
       // Straight into the app — the 5-step wizard is no longer a forced
       // gate; ProfileSetupPrompt (mounted on /main) nudges completion a few
       // seconds after landing instead.
-      router.push('/main');
+      router.push(photoFailed ? '/profile/edit?photo=failed' : '/main');
     } catch (err) {
       setError(getErrorMessage(err, 'Registration failed'));
       captchaRef.current?.reset();
@@ -271,8 +275,8 @@ export default function RegisterPage() {
           <div
             ref={errorRef}
             style={{
-              backgroundColor: '#FEF2F2', // TODO(P7): tokenize error-banner bg
-              border: '1px solid #FECACA',
+              backgroundColor: `color-mix(in srgb, ${theme.accent2} 10%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.accent2} 35%, transparent)`,
               color: theme.accent2,
               padding: '12px 16px',
               borderRadius: '12px',
@@ -435,6 +439,12 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link href="/auth/login" style={{ color: theme.accent, fontWeight: 600, textDecoration: 'none' }}>
             Sign in
+          </Link>
+        </p>
+
+        <p style={{ textAlign: 'center', marginTop: '12px', color: theme.muted, fontSize: typeTokens.caption.fontSize }}>
+          <Link href="/privacy" style={{ color: 'inherit' }}>
+            Privacy Policy
           </Link>
         </p>
       </div>
