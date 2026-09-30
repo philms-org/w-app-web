@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
@@ -24,7 +24,7 @@ const NEARBY_LIMIT = 5;
 //   - not recognized / location off: "We don't recognize where you are —
 //     add this location/event or search", over a faded map
 export default function NearbyBanner() {
-  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -32,6 +32,8 @@ export default function NearbyBanner() {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState('');
   const [peekVenue, setPeekVenue] = useState<Venue | null>(null);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const comingSoonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A denied/timed-out/unsupported geolocation request still writes a
   // hardcoded fallback coordinate to the store (see lib/geolocation.ts), so
@@ -114,8 +116,25 @@ export default function NearbyBanner() {
     setQuery('');
   };
 
-  // Adding a location is a map-pin flow and already lives on the Map tab.
-  const openAddLocation = () => setActiveTab('map');
+  // Adding a location isn't available yet on the live app (the request
+  // flow's table, migration 0020, isn't on prod), so + says so for now.
+  const openAddLocation = () => {
+    setShowComingSoon(true);
+    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
+    comingSoonTimer.current = setTimeout(() => setShowComingSoon(false), 3000);
+  };
+  useEffect(() => () => {
+    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
+  }, []);
+
+  const comingSoonNote = showComingSoon && (
+    <p role="status" style={{
+      margin: '30px auto 0', width: 'fit-content', padding: '8px 14px', borderRadius: 9999,
+      backgroundColor: theme.surface2, color: theme.text, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+    }}>
+      Adding locations is coming soon
+    </p>
+  );
 
   const circleButton = (size: number): React.CSSProperties => ({
     width: size, height: size, borderRadius: 9999, border: 'none', flexShrink: 0,
@@ -201,6 +220,7 @@ export default function NearbyBanner() {
             <MapPinPlus style={{ width: 20, height: 20, color: theme.onAccent }} />
           </button>
         </section>
+        {comingSoonNote}
         {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
       </div>
     );
@@ -284,8 +304,8 @@ export default function NearbyBanner() {
                   {loadError
                     ? "Couldn't load venues. Tap refresh to try again."
                     : query.trim()
-                      ? 'No venues match that name. Tap + to add it.'
-                      : 'No venues to show yet. Tap + to add one.'}
+                      ? 'No venues match that name.'
+                      : 'No venues to show yet.'}
                 </p>
               ) : (
                 searchable.map((v) => (
@@ -318,6 +338,7 @@ export default function NearbyBanner() {
           <Plus style={{ width: 26, height: 26, color: '#fff' }} strokeWidth={3} />
         </button>
       </section>
+      {comingSoonNote}
       {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
     </div>
   );
