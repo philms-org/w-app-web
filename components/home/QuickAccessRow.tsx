@@ -16,42 +16,40 @@ interface QuickAccessRowProps {
 }
 
 // Generalized from MainFeedTab's 3-icon quick-access row. Home passes
-// History / Rewards / Connect — Profile moved to AppHeader.
+// History / Rewards / Connect — Profile moved to AppHeader. Styled as the
+// large rounded-square tiles from the founder's Home mock (2026-09-30).
 export default function QuickAccessRow({ items, activeId = null }: QuickAccessRowProps) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', padding: '20px 24px' }}>
+    <div style={{ display: 'flex', gap: '10px', padding: '28px 16px 16px' }}>
       {items.map((item) => {
         const isActive = item.id === activeId;
         return (
           <button
             key={item.id}
             onClick={item.onClick}
+            aria-pressed={isActive}
             style={{
+              flex: 1,
+              minWidth: 0,
+              height: '88px',
+              borderRadius: '24px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '8px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer'
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              backgroundColor: isActive ? theme.accent : theme.surface2,
+              border: `1.5px solid ${isActive ? theme.accent : theme.glassHighlight}`,
+              boxShadow: `inset 0 1px 0 ${theme.glassHighlight}`,
+              transition: 'background-color 0.2s ease, border-color 0.2s ease'
             }}
           >
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              backgroundColor: isActive ? theme.accent : theme.surface2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: isActive ? `2px solid ${theme.accent}` : `1px solid ${theme.divider}`,
-              transition: 'background-color 0.2s ease, border-color 0.2s ease'
-            }}>
-              {item.icon}
-            </div>
+            {item.icon}
             <span style={{
-              color: isActive ? theme.accent : theme.muted,
+              color: isActive ? theme.onAccent : theme.muted,
               fontSize: '12px',
+              fontWeight: 600,
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>{item.label}</span>
           </button>
