@@ -91,8 +91,14 @@ export async function signOut() {
 // Sends the Supabase recovery email. The link in it lands on /auth/reset,
 // where detectSessionInUrl establishes a short-lived recovery session.
 export async function requestPasswordReset(email: string, captchaToken?: string) {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/reset` : undefined;
+  // Use the canonical production origin when available so reset links always
+  // point to a URL that's in Supabase's redirect allowlist — Vercel preview
+  // URLs are dynamic and can't all be pre-registered there.
+  const productionHost = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
+  const origin = productionHost
+    ? `https://${productionHost}`
+    : (typeof window !== 'undefined' ? window.location.origin : '');
+  const redirectTo = origin ? `${origin}/auth/reset` : undefined;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo, captchaToken });
   if (error) throw error;
 }
