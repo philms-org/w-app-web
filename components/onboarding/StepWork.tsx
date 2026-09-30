@@ -13,7 +13,7 @@ export default function StepWork({ data, patch }: Props) {
         All optional — share as much or as little as you like.
       </p>
       <Input label="Profession" value={data.profession} onChange={(e) => patch({ profession: e.target.value })} placeholder="What do you do?" />
-      <Input label="Company or affiliation" value={data.affiliation} onChange={(e) => patch({ affiliation: e.target.value })} placeholder="Where?" />
+      <Input label="Team idea or company" hint="Optional. At an event, we use this to suggest your team." value={data.affiliation} onChange={(e) => patch({ affiliation: e.target.value })} placeholder="For example TutorAI or Nike" />
       <Input label="Industry" value={data.industry} onChange={(e) => patch({ industry: e.target.value })} placeholder="Which field?" />
       <Input label="Role" value={data.role} onChange={(e) => patch({ role: e.target.value })} placeholder="Your title" />
     </div>
