@@ -151,6 +151,25 @@ export interface Reward {
   // set unlocks once the member's location_checkins count at this venue
   // reaches it. Null means "no tier requirement" (visible to everyone).
   min_checkins?: number | null;
+  // Event hotspots (0032): unlocks once the member has visited this many
+  // distinct hotspots of the reward's event. Null = no hotspot requirement.
+  min_hotspots?: number | null;
+}
+
+// Event hotspots (0032): an organizer-recommended place attached to an event.
+export interface EventHotspot {
+  id: string;
+  event_id: string;
+  location_id: string;
+  note: string | null;
+  sort_order: number;
+  created_at: string;
+  place: Venue | null;
+}
+
+export interface HotspotCheckin {
+  location_id: string;
+  checked_in_at: string;
 }
 
 export interface Conversation {
