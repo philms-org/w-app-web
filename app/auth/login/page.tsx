@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { signIn } from '@/lib/auth';
-import { fetchProfile } from '@/lib/data';
+import { fetchOwnProfile } from '@/lib/data';
 import { getErrorMessage } from '@/lib/errors';
 import { theme, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       let profile = null;
       try {
-        profile = await fetchProfile(authUser.id);
+        profile = await fetchOwnProfile(authUser.id);
       } catch {
         profile = null;
       }

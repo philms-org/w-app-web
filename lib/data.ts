@@ -58,6 +58,16 @@ export async function fetchProfile(id: string): Promise<Profile> {
   return data;
 }
 
+// The signed-in user's own full row, from the base table (RLS lets everyone
+// read their own row). Use this, not fetchProfile, for anything private to
+// the user: profiles_public (migration 0026) drops is_master_admin, phone,
+// profession etc., and nulls a hidden city.
+export async function fetchOwnProfile(id: string): Promise<Profile> {
+  const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchPublicProfile(id: string): Promise<Profile> {
   const { data, error } = await supabase.from(PUBLIC_PROFILE).select().eq('id', id).single();
   if (error) throw error;
