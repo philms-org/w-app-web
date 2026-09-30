@@ -7,14 +7,17 @@ import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import ChatView, { type ChatConversation } from '@/components/ChatView';
+import VitalsGate from '@/components/onboarding/VitalsGate';
+import { Button, LockedOverlay } from '@/components/ui/primitives';
 
 export default function MessagesTab() {
-  const { setActiveChat, setActiveTab } = useStore();
+  const { setActiveChat, setActiveTab, user } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // all, unread, groups
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [openChat, setOpenChat] = useState<ChatConversation | null>(null);
+  const [showVitalsGate, setShowVitalsGate] = useState(false);
 
   const loadConversations = useCallback(() => {
     fetchConversations()
@@ -93,6 +96,30 @@ export default function MessagesTab() {
     }
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
+
+  if (user?.isAnonymous) {
+    return (
+      <div style={{ padding: 20 }}>
+        <LockedOverlay
+          title="Say hi when you're ready"
+          body="Messaging unlocks the moment you check in somewhere or want to reach out — just your name and email, no password."
+        >
+          {/* A plausible-looking blurred backdrop: reuse the same empty-state
+             shape the real list uses, just static. */}
+          <div style={{ height: 220 }} />
+        </LockedOverlay>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Button onClick={() => setShowVitalsGate(true)}>Unlock messaging</Button>
+        </div>
+        <VitalsGate
+          open={showVitalsGate}
+          intent="messages"
+          onClose={() => setShowVitalsGate(false)}
+          onIdentified={() => setShowVitalsGate(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>

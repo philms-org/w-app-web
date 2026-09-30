@@ -20,8 +20,11 @@ interface VenueLike {
 }
 
 // Nearest venue whose geofence actually contains `loc`, or null if none does.
-// Shared by NearbyBanner (in-range/nearby split) and LandingLocationGate
-// (pre-signup "are you at an active venue right now?" check).
+// No remaining callers as of guest-first onboarding: LandingLocationGate (the
+// pre-signup "are you at an active venue right now?" check) was removed in
+// favor of EnsureSession, which bootstraps every visitor straight into the
+// app without a geofence check. Left in place in case a similar check
+// returns; NearbyBanner does its own in-range/nearby split inline.
 export function findClosestVenueInRange<T extends VenueLike>(
   venues: T[],
   loc: { lat: number; lng: number }

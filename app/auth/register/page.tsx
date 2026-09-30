@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store';
 import { signUp } from '@/lib/auth';
 import { upsertProfile, uploadAvatar } from '@/lib/data';
 import { getErrorMessage } from '@/lib/errors';
+import { computeAge, MIN_AGE } from '@/lib/age';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Button, Input, Chip } from '@/components/ui/primitives';
 import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
@@ -21,7 +22,11 @@ const GENDERS = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setUser, setToken } = useStore();
+  const { user, setUser, setToken } = useStore();
+  // Founder decision (2026-09-25): guests (anonymous sessions) may register
+  // without a photo; they're asked for one later, on their first feed post.
+  // Everyone else still needs one, as before.
+  const photoRequired = !user?.isAnonymous;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -107,6 +112,7 @@ export default function RegisterPage() {
     if (!formData.gender) errors.gender = 'Required';
 
     if (!formData.birthDate) errors.birthDate = 'Required';
+    else if ((computeAge(formData.birthDate) ?? 0) < MIN_AGE) errors.birthDate = `You must be at least ${MIN_AGE} to join`;
 
     if (!formData.password) errors.password = 'Required';
     else if (formData.password.length < 6) errors.password = 'Must be at least 6 characters';
@@ -114,7 +120,7 @@ export default function RegisterPage() {
     if (!formData.confirmPassword) errors.confirmPassword = 'Required';
     else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
 
-    if (!profileImage) errors.photo = 'Required';
+    if (photoRequired && !profileImage) errors.photo = 'Required';
 
     if (captchaEnabled && !captchaToken) errors.captcha = 'Please complete the verification challenge';
 
@@ -263,7 +269,7 @@ export default function RegisterPage() {
             <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <span style={{ fontSize: typeTokens.label.fontSize, color: fieldErrors.photo ? theme.accent2 : theme.muted }}>
-            {fieldErrors.photo ? 'Profile photo required' : 'Profile photo (required)'}
+            {fieldErrors.photo ? 'Profile photo required' : photoRequired ? 'Profile photo (required)' : 'Profile photo (optional, you can add it later)'}
           </span>
         </div>
 

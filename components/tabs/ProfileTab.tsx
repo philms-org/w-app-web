@@ -12,6 +12,9 @@ import type { RoleBadge } from '@/lib/types';
 import RolePass from '@/components/profile/RolePass';
 import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import VitalsGate from '@/components/onboarding/VitalsGate';
+import ProfileFieldsList from '@/components/onboarding/ProfileFieldsList';
+import { LockedOverlay, Button } from '@/components/ui/primitives';
 import {
   Camera, Edit2, Shield, Link2, Award,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard
@@ -25,6 +28,7 @@ export default function ProfileTab() {
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const [showVitalsGate, setShowVitalsGate] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -76,6 +80,28 @@ export default function ProfileTab() {
     { id: 'business', label: 'Business', icon: Briefcase, active: user?.networkingId !== '0' },
     { id: 'love', label: 'Love', icon: Heart, active: user?.datingId !== '0' },
   ];
+
+  if (user?.isAnonymous) {
+    return (
+      <div style={{ padding: 20 }}>
+        <LockedOverlay
+          title="Set up your guest profile"
+          body="Save a name so people you meet can find you again. Everything else can wait."
+        >
+          <div style={{ height: 220 }} />
+        </LockedOverlay>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Button onClick={() => setShowVitalsGate(true)}>Set up guest profile</Button>
+        </div>
+        <VitalsGate
+          open={showVitalsGate}
+          intent="profile"
+          onClose={() => setShowVitalsGate(false)}
+          onIdentified={() => setShowVitalsGate(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -359,6 +385,13 @@ export default function ProfileTab() {
 
         {/* Theme toggle */}
         <ThemeToggle style={{ marginBottom: 12 }} />
+
+        {/* Progressive profile fields */}
+        {user?.id && (
+          <div style={{ marginBottom: 16 }}>
+            <ProfileFieldsList userId={user.id} avatarUrl={user.image} />
+          </div>
+        )}
 
         {/* Menu Items */}
         <div style={{

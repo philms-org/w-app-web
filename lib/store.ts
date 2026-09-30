@@ -21,6 +21,7 @@ interface User {
   profession?: string;
   setupComplete?: boolean;
   isMasterAdmin?: boolean;
+  isAnonymous?: boolean;
 }
 
 interface Location {
