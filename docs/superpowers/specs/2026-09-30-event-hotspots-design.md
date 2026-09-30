@@ -89,7 +89,9 @@ prod.
 
 A visit = a `location_checkins` row by the user at a hotspot's `location_id`.
 
-- Event has `event_date`: only check-ins on that date count.
+- Event has `event_date`: only check-ins whose local calendar day falls
+  between `event_date` and `event_end_date` (inclusive; `event_end_date`
+  defaults to `event_date`) count.
 - No `event_date` (ongoing venue trail): check-ins at or after the hotspot's
   `created_at` count.
 
@@ -99,7 +101,7 @@ the same set — no new per-visit table.
 ## 2. Attendee experience
 
 - **Map tab:** hotspot pins use a distinct flame marker. Shown for events
-  whose `event_date` is today plus the event the user is checked in at. Tapping
+  running today (`event_date` ≤ today ≤ `event_end_date`) plus the event the user is checked in at. Tapping
   a pin opens a sheet: hotspot name, note, parent event, stamp state, **Check
   in** (existing geofenced flow) and **Directions**.
 - **Checked in at the event:** a **Hotspots** card on the checked-in view
@@ -164,8 +166,9 @@ Out of scope for v1: push notifications, suggested routes, leaderboards.
   `hotspot_visit_counts` raises for non-managers.
 - Browser pass on the QA preview deployment as organizer (set up hotspots +
   reward) and attendee (check in, stamps, meter, unlock).
-- The repo has no unit-test runner. `computeHotspotProgress` is kept pure so a
-  small test can be added if a runner is introduced.
+- `computeHotspotProgress` lives in its own dependency-free file and is unit
+  tested with Node's built-in runner (`node --test`, Node 26 strips TypeScript
+  types natively) — no new dependencies.
 
 ### Rollout
 
