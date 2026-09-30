@@ -12,7 +12,7 @@ create table if not exists event_hotspots (
   location_id uuid not null references locations(id) on delete cascade,
   note text check (note is null or char_length(note) <= 140),
   sort_order int not null default 0,
-  created_by uuid references profiles(id),
+  created_by uuid default auth.uid() references profiles(id),
   created_at timestamptz not null default now(),
   constraint event_hotspots_unique unique (event_id, location_id),
   constraint event_hotspots_not_self check (event_id <> location_id)
@@ -29,7 +29,7 @@ create policy event_hotspots_select on event_hotspots for select to authenticate
 drop policy if exists event_hotspots_write on event_hotspots;
 create policy event_hotspots_write on event_hotspots for all to authenticated
   using (is_venue_manager(event_hotspots.event_id, auth.uid()))
-  with check (is_venue_manager(event_hotspots.event_id, auth.uid()));
+  with check (is_venue_manager(event_hotspots.event_id, auth.uid()) and (created_by is null or created_by = auth.uid()));
 
 -- Reward unlock by distinct hotspots visited. Covered by rewards_write (0009).
 alter table rewards add column if not exists min_hotspots int
@@ -37,7 +37,8 @@ alter table rewards add column if not exists min_hotspots int
 
 -- Organizer stats: distinct visitors per hotspot within the event window.
 -- Aggregates only. Dates compared in UTC here (display-only counts); the
--- attendee-facing progress uses the browser's local day.
+-- attendee-facing progress uses the browser's local day. Only check-ins at
+-- or after the hotspot's created_at are counted.
 create or replace function public.hotspot_visit_counts(p_event_id uuid)
 returns table (location_id uuid, visitors bigint)
 language plpgsql
@@ -59,20 +60,20 @@ begin
     from event_hotspots h
     left join location_checkins lc
       on lc.location_id = h.location_id
-     and (
-       (v_start is not null and lc.checked_in_at::date between v_start and v_end)
-       or (v_start is null and lc.checked_in_at >= h.created_at)
-     )
+     and lc.checked_in_at >= h.created_at
+     and ((v_start is not null and lc.checked_in_at::date between v_start and v_end) or v_start is null)
     where h.event_id = p_event_id
     group by h.location_id;
 end;
 $$;
-revoke all on function public.hotspot_visit_counts(uuid) from public;
+revoke all on function public.hotspot_visit_counts(uuid) from public, anon;
 grant execute on function public.hotspot_visit_counts(uuid) to authenticated;
 
 -- Organizers can't insert into locations (0002: master admins only). This is
 -- the one narrow path: create a place AND link it as a hotspot of an event
--- the caller manages. locations RLS is not loosened.
+-- the caller manages. The place is created ownerless (owner_id = null) so the
+-- caller does not become its manager; only master admins can edit it.
+-- locations RLS is not loosened.
 create or replace function public.create_hotspot_place(
   p_event_id uuid,
   p_name text,
@@ -99,8 +100,11 @@ begin
   if p_radius is null or p_radius < 10 or p_radius > 1000 then
     raise exception 'radius must be 10-1000m' using errcode = '22023';
   end if;
+  if p_lat is null or p_lng is null or p_lat not between -90 and 90 or p_lng not between -180 and 180 then
+    raise exception 'valid lat/lng required' using errcode = '22023';
+  end if;
   insert into locations (name, lat, lng, geofence_radius_meters, owner_id, is_event)
-    values (trim(p_name), p_lat, p_lng, p_radius, auth.uid(), false)
+    values (trim(p_name), p_lat, p_lng, p_radius, null, false)
     returning id into v_place_id;
   select coalesce(max(sort_order) + 1, 0) into v_next
     from event_hotspots where event_id = p_event_id;
@@ -109,5 +113,5 @@ begin
   return v_place_id;
 end;
 $$;
-revoke all on function public.create_hotspot_place(uuid, text, double precision, double precision, int, text) from public;
+revoke all on function public.create_hotspot_place(uuid, text, double precision, double precision, int, text) from public, anon;
 grant execute on function public.create_hotspot_place(uuid, text, double precision, double precision, int, text) to authenticated;

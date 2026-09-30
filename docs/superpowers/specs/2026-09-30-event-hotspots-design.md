@@ -69,12 +69,14 @@ the existing `rewards_write` policy.
 visitors bigint)` — `security definer`, `set search_path = public`, raises
 unless `is_venue_manager(p_event_id, auth.uid())`. Returns distinct visitor
 counts per hotspot using the visit rule below. Aggregates only; never returns
-user ids. Modeled on the 0013 analytics functions.
+user ids. Modeled on the 0013 analytics functions. Only check-ins at or after
+the hotspot's `created_at` are counted.
 
 ### New hotspot places
 
 An organizer can create a hotspot place directly: an insert into `locations`
-(name, lat, lng, `geofence_radius_meters` default 75, `owner_id` = organizer,
+(name, lat, lng, `geofence_radius_meters` default 75, `owner_id` null
+(ownerless, so the caller does not become its manager),
 `is_event` false). Today only master admins may insert into `locations`
 (`locations_insert_master_admin`, 0002), so the migration adds a narrowly
 scoped `security definer` function
