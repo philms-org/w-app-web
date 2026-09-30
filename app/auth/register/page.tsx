@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store';
 import { signUp } from '@/lib/auth';
 import { upsertProfile, uploadAvatar } from '@/lib/data';
 import { getErrorMessage } from '@/lib/errors';
+import { computeAge, MIN_AGE } from '@/lib/age';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Button, Input, Chip } from '@/components/ui/primitives';
 import Captcha, { captchaEnabled } from '@/components/ui/Captcha';
@@ -111,6 +112,7 @@ export default function RegisterPage() {
     if (!formData.gender) errors.gender = 'Required';
 
     if (!formData.birthDate) errors.birthDate = 'Required';
+    else if ((computeAge(formData.birthDate) ?? 0) < MIN_AGE) errors.birthDate = `You must be at least ${MIN_AGE} to join`;
 
     if (!formData.password) errors.password = 'Required';
     else if (formData.password.length < 6) errors.password = 'Must be at least 6 characters';

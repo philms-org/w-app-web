@@ -7,17 +7,7 @@ import PostComments from './PostComments';
 import InlineReport from './InlineReport';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Profile, VenuePost } from '@/lib/types';
-
-function computeAge(dob?: string | null): number | null {
-  if (!dob) return null;
-  const birth = new Date(dob);
-  if (Number.isNaN(birth.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  const monthDiff = now.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
-  return age;
-}
+import { computeAge } from '@/lib/age';
 
 // dating_id/networking_id/socialising_id are FK ids into lookup tables;
 // 0/null means "not opted into this category" (same convention
