@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import AuthedRedirect from '@/components/AuthedRedirect';
-import LandingLocationGate from '@/components/LandingLocationGate';
+import EnsureSession from '@/components/EnsureSession';
 import { theme } from '@/lib/theme';
 
 export const metadata: Metadata = {
@@ -25,8 +24,10 @@ const VALUE_PROPS = [
   },
 ];
 
-// Server-rendered so crawlers and link unfurls get real content. Authenticated
-// visitors are still bounced straight to the app by <AuthedRedirect>.
+// Server-rendered so crawlers and link unfurls get real content. Every real
+// (JS-running) visitor is bounced straight into the app by <EnsureSession>,
+// which bootstraps a fresh anonymous session for anyone not already
+// authenticated — no signup wall on the way in.
 export default function HomePage() {
   return (
     <main
@@ -41,8 +42,7 @@ export default function HomePage() {
         fontFamily: 'Montserrat, system-ui, sans-serif',
       }}
     >
-      <AuthedRedirect />
-      <LandingLocationGate />
+      <EnsureSession />
 
       <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
         <div
