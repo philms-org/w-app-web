@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { fetchHotspotParents } from '@/lib/hotspots';
 import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
@@ -8,12 +8,14 @@ import { hotspotMeterFill, localDay, pickHotspotParent } from '@/lib/hotspotProg
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { Stamp } from '@/components/hotspots/HotspotsCard';
+import { reportHotspotVisit } from '@/lib/meter';
 
 // Screen 4: shown on a venue that is a hotspot of some event.
 export default function HotspotStrip({
   locationId, checkedIn, onOpenEvent,
 }: { locationId: string; checkedIn: boolean; onOpenEvent: (event: Venue) => void }) {
   const [parent, setParent] = useState<Venue | null>(null);
+  const stripRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,11 +34,20 @@ export default function HotspotStrip({
   const { progress, reload } = useEventHotspots(parent?.id);
   useEffect(() => { if (checkedIn) reload(); }, [checkedIn, reload]);
 
+  // Feed the room meter (0033): being checked in at a hotspot of a running
+  // event counts as a hotspot visit. reportHotspotVisit throttles to one per
+  // five minutes and the server ignores it unless you're checked in here.
+  const parentId = parent?.id;
+  useEffect(() => {
+    if (checkedIn && parentId) reportHotspotVisit(locationId, stripRef.current);
+  }, [checkedIn, parentId, locationId]);
+
   if (!parent || !progress) return null;
   const stamped = progress.visited.has(locationId);
 
   return (
     <button
+      ref={stripRef}
       onClick={() => onOpenEvent(parent)}
       style={{
         display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 56, textAlign: 'left',
