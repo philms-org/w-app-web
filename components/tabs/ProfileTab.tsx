@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
 import {
-  fetchProfile, setShareCheckinsWithFriends,
+  fetchOwnProfile, setShareCheckinsWithFriends,
   fetchMyRoleBadges, fetchMyVenues,
 } from '@/lib/data';
-import type { RoleBadge } from '@/lib/types';
+import type { Profile, RoleBadge } from '@/lib/types';
+import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
 import RolePass from '@/components/profile/RolePass';
 import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -25,12 +26,17 @@ export default function ProfileTab() {
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
-    fetchProfile(user.id)
-      .then((p) => { if (!cancelled) setShareCheckins(p?.share_checkins_with_friends ?? false); })
+    fetchOwnProfile(user.id)
+      .then((p) => {
+        if (cancelled) return;
+        setProfile(p);
+        setShareCheckins(p?.share_checkins_with_friends ?? false);
+      })
       .catch((err) => console.error('Failed to load sharing preference:', err));
     return () => { cancelled = true; };
   }, [user?.id]);
@@ -72,11 +78,16 @@ export default function ProfileTab() {
     { id: 'privacy', label: 'Privacy & Security', icon: Shield, action: () => router.push('/privacy') },
   ];
 
+  // Read the picks from the DB row, not the store: the store's string ids are
+  // only populated by the password-login path, so for other sessions they're
+  // undefined and `undefined !== '0'` lit every category up.
+  const pick = (options: { id: number; emoji: string; label: string }[], id?: number | null) =>
+    id ? options.find((o) => o.id === id) : undefined;
   const lookingForItems = [
-    { id: 'socializing', label: 'Socializing', icon: Users, active: user?.socialisingId !== '0' },
-    { id: 'business', label: 'Business', icon: Briefcase, active: user?.networkingId !== '0' },
-    { id: 'love', label: 'Love', icon: Heart, active: user?.datingId !== '0' },
-  ];
+    { id: 'socializing', label: 'Socializing', icon: Users, choice: pick(LOOKING_FOR_OPTIONS.socializing.options, profile?.socialising_id) },
+    { id: 'business', label: 'Business', icon: Briefcase, choice: pick(LOOKING_FOR_OPTIONS.business.options, profile?.networking_id) },
+    { id: 'love', label: 'Love', icon: Heart, choice: pick(LOOKING_FOR_OPTIONS.love.options, profile?.dating_id) },
+  ].map((item) => ({ ...item, active: !!item.choice }));
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -223,6 +234,9 @@ export default function ProfileTab() {
                 >
                   <Icon style={{ width: '20px', height: '20px' }} />
                   <span style={{ fontSize: '12px' }}>{item.label}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: item.active ? theme.text : theme.muted }}>
+                    {item.choice ? `${item.choice.emoji} ${item.choice.label}` : 'Not set'}
+                  </span>
                 </button>
               );
             })}

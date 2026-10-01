@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 import { fetchVenues, fetchPublicProfile, fetchAllProfilesForAdmin, setMasterAdmin, assignVenueOwner, createVenue } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import PersonPicker from '@/components/shared/PersonPicker';
@@ -37,6 +39,7 @@ const linkButtonStyle: React.CSSProperties = {
 };
 
 export default function AdminPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<VenueRow[]>([]);
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [masterAdmins, setMasterAdmins] = useState<Profile[]>([]);
@@ -173,12 +176,21 @@ export default function AdminPage() {
         paddingTop: 'max(16px, env(safe-area-inset-top))',
         borderBottom: `1px solid ${theme.divider}`,
       }}>
-        <h1 style={{
-          fontSize: '20px',
-          fontWeight: 600,
-          color: theme.text,
-          fontFamily: 'Montserrat, system-ui, sans-serif',
-        }}>W Staff Admin</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => (window.history.length > 1 ? router.back() : router.push('/main'))}
+            aria-label="Back"
+            style={{ color: theme.text, display: 'flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <ChevronLeft style={{ width: '24px', height: '24px' }} />
+          </button>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: 600,
+            color: theme.text,
+            fontFamily: 'Montserrat, system-ui, sans-serif',
+          }}>W Staff Admin</h1>
+        </div>
         <p style={{
           fontSize: '13px',
           color: theme.muted,
