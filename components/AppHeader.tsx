@@ -43,7 +43,9 @@ export default function AppHeader() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '4px'
+          width: '44px',
+          height: '44px',
+          marginRight: '-8px'
         }}
       >
         <UserCircle style={{ width: '28px', height: '28px', color: theme.text }} />
