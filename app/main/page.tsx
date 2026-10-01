@@ -18,7 +18,7 @@ import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setLocationDenied } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
@@ -78,7 +78,8 @@ export default function MainPage() {
   const handleDenyLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
-    setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+    // Leave currentLocation empty: a made-up position (this used to be NYC)
+    // sorted search, map and distances around a city the user isn't in.
     setLocationDenied(true);
     setShowLocationPrompt(false);
   };

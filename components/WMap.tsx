@@ -51,6 +51,8 @@ interface WMapProps {
   onMapClick?: (lat: number, lng: number) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
+  // False when center is a fallback (no location): don't draw "Your Location" there.
+  showUserMarker?: boolean;
 }
 
 export default function WMap({
@@ -58,7 +60,8 @@ export default function WMap({
   onLocationSelect,
   onMapClick,
   center = { lat: 40.7128, lng: -74.0060 },
-  zoom = 13
+  zoom = 13,
+  showUserMarker = true,
 }: WMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -160,7 +163,10 @@ export default function WMap({
 
     map.setView([center.lat, center.lng], zoom);
 
-    if (userMarkerRef.current) {
+    if (!showUserMarker) {
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+    } else if (userMarkerRef.current) {
       userMarkerRef.current.setLatLng([center.lat, center.lng]);
     } else {
       const userIcon = L.divIcon({
@@ -182,7 +188,7 @@ export default function WMap({
       userMarkerRef.current = L.marker([center.lat, center.lng], { icon: userIcon }).addTo(map)
         .bindPopup('Your Location');
     }
-  }, [center, zoom]);
+  }, [center, zoom, showUserMarker]);
 
   return (
     <>
