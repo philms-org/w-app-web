@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck } from 'lucide-react';
+import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck, Flame } from 'lucide-react';
 import { fetchMyVenues, fetchVenueMembers } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
@@ -62,6 +62,7 @@ const TOOLS: Tool[] = [
   { label: 'Reports', icon: FileText, href: (id) => `/main/venue/reports?locationId=${id}` },
   { label: 'Chat', icon: MessageCircle, href: (id) => `/main/venue/chat?locationId=${id}` },
   { label: 'Zones', icon: Map, href: (id) => `/main/venue/zones?locationId=${id}` },
+  { label: 'Hotspots', icon: Flame, href: (id) => `/main/venue/hotspots?locationId=${id}` },
   { label: 'Titles', icon: UserCheck, href: (id) => `/admin/venue/${id}/tags` },
   { label: 'Edit Info', icon: Settings, href: (id) => `/main/venue/edit?locationId=${id}` },
 ];
