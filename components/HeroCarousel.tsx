@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import InAppBrowserModal from '@/components/ui/InAppBrowserModal';
@@ -15,156 +15,123 @@ interface HeroCarouselProps {
   onEngage?: (el: Element | null) => void;
 }
 
+const SWIPE_PX = 40;
+
+// Organizer slides (event graphics, schedules, sponsor cards) carry text and
+// QR codes, so they are shown whole (`contain`, 3:2 frame) and never cropped.
+// The venue name sits below the image instead of on top of it.
 export default function HeroCarousel({ images, title, onBack, links, onEngage }: HeroCarouselProps) {
   const [index, setIndex] = useState(0);
   const [browserUrl, setBrowserUrl] = useState<string | null>(null);
+  const touchX = useRef<number | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const hasImages = images.length > 0;
-  const currentLink = links?.[index] ?? null;
+  const many = images.length > 1;
+  const current = Math.min(index, Math.max(0, images.length - 1));
+  const currentLink = links?.[current] ?? null;
 
-  const goPrev = () => setIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const goNext = () => setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
-  const openLink = () => {
-    if (currentLink) setBrowserUrl(currentLink);
+  const goPrev = () => setIndex((i) => (i <= 0 ? images.length - 1 : i - 1));
+  const goNext = () => setIndex((i) => (i >= images.length - 1 ? 0 : i + 1));
+
+  const roundBtn: React.CSSProperties = {
+    width: 44, height: 44, borderRadius: 9999, border: 'none', cursor: 'pointer',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 
   return (
-    <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
-      {browserUrl && (
-        <InAppBrowserModal url={browserUrl} onClose={() => setBrowserUrl(null)} />
-      )}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        // Only ever set ONE of these keys. React writes '' for an undefined
-        // `background`, and clearing that shorthand also wipes the
-        // backgroundImage longhand — the photo silently never showed.
-        backgroundImage: hasImages
-          ? `url(${images[index]})`
-          : `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }} />
+    <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+      {browserUrl && <InAppBrowserModal url={browserUrl} onClose={() => setBrowserUrl(null)} />}
 
-      {/* Sibling (not ancestor) of the nav buttons below, so this is the only
-          element that receives the "open link" click — buttons stay on top
-          in paint order and handle their own clicks first. */}
       <div
-        onClick={currentLink ? (e) => { openLink(); onEngage?.(e.currentTarget); } : undefined}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)',
-          cursor: currentLink ? 'pointer' : undefined,
+        ref={frameRef}
+        role={hasImages ? 'region' : undefined}
+        aria-roledescription={hasImages ? 'carousel' : undefined}
+        aria-label={hasImages ? `${title} slides` : undefined}
+        onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (!many || touchX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchX.current;
+          touchX.current = null;
+          if (Math.abs(dx) < SWIPE_PX) return;
+          if (dx < 0) goNext(); else goPrev();
+          onEngage?.(frameRef.current);
         }}
-      />
-
-      <button
-        onClick={onBack}
-        aria-label="Back"
         style={{
-          position: 'absolute',
-          top: '16px',
-          left: '16px',
-          width: '36px',
-          height: '36px',
-          borderRadius: '9999px',
-          backgroundColor: 'rgba(0, 0, 0, 0.35)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer'
+          position: 'relative', width: '100%', maxWidth: '100%',
+          aspectRatio: hasImages ? '3 / 2' : undefined, height: hasImages ? undefined : 150,
+          maxHeight: 360, overflow: 'hidden',
+          background: hasImages ? '#000' : `linear-gradient(135deg, ${theme.gradientStart} 0%, ${theme.gradientEnd} 100%)`,
         }}
       >
-        <ArrowLeft style={{ width: '18px', height: '18px', color: 'white' }} />
-      </button>
-
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={(e) => { goPrev(); onEngage?.(e.currentTarget); }}
-            aria-label="Previous photo"
+        {hasImages && (
+          // Only ever set ONE background key here. React writes '' for an
+          // undefined `background`, which also wipes backgroundImage.
+          <div
+            role="img"
+            aria-label={`Slide ${current + 1} of ${images.length}`}
+            onClick={currentLink ? (e) => { setBrowserUrl(currentLink); onEngage?.(e.currentTarget); } : undefined}
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '12px',
-              transform: 'translateY(-50%)',
-              width: '32px',
-              height: '32px',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(0, 0, 0, 0.35)',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
+              position: 'absolute', inset: 0,
+              backgroundImage: `url(${images[current]})`,
+              backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+              cursor: currentLink ? 'pointer' : undefined,
             }}
-          >
-            <ChevronLeft style={{ width: '18px', height: '18px', color: 'white' }} />
-          </button>
-          <button
-            onClick={(e) => { goNext(); onEngage?.(e.currentTarget); }}
-            aria-label="Next photo"
-            style={{
-              position: 'absolute',
-              top: '50%',
-              right: '12px',
-              transform: 'translateY(-50%)',
-              width: '32px',
-              height: '32px',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(0, 0, 0, 0.35)',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-          >
-            <ChevronRight style={{ width: '18px', height: '18px', color: 'white' }} />
-          </button>
-        </>
-      )}
+          />
+        )}
 
-      <div style={{ position: 'absolute', bottom: '16px', left: '20px', right: '20px' }}>
+        <button onClick={onBack} aria-label="Back" style={{ ...roundBtn, position: 'absolute', top: 10, left: 10 }}>
+          <ArrowLeft style={{ width: 20, height: 20, color: 'white' }} />
+        </button>
+
+        {many && (
+          <>
+            <span style={{
+              position: 'absolute', top: 18, right: 12, padding: '3px 10px', borderRadius: 9999,
+              backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 12, fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {current + 1} / {images.length}
+            </span>
+            <button
+              onClick={(e) => { goPrev(); onEngage?.(e.currentTarget); }}
+              aria-label="Previous slide"
+              style={{ ...roundBtn, position: 'absolute', top: '50%', left: 8, transform: 'translateY(-50%)' }}
+            >
+              <ChevronLeft style={{ width: 22, height: 22, color: 'white' }} />
+            </button>
+            <button
+              onClick={(e) => { goNext(); onEngage?.(e.currentTarget); }}
+              aria-label="Next slide"
+              style={{ ...roundBtn, position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)' }}
+            >
+              <ChevronRight style={{ width: 22, height: 22, color: 'white' }} />
+            </button>
+          </>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px 0' }}>
         <h1 style={{
-          color: 'white',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          fontFamily: 'Montserrat, system-ui, sans-serif',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.4)',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '8px'
+          flex: 1, minWidth: 0, margin: 0, color: theme.text, fontSize: 20, fontWeight: 800,
+          display: 'flex', alignItems: 'baseline', gap: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           <span style={{ color: theme.accent }}>W</span>
           {title}
         </h1>
+        {many && (
+          <div aria-hidden="true" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {images.map((_, i) => (
+              <span
+                key={i}
+                style={{
+                  width: i === current ? 18 : 7, height: 7, borderRadius: 9999, transition: 'width .2s ease',
+                  backgroundColor: i === current ? theme.text : theme.divider,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {images.length > 1 && (
-        <div style={{
-          position: 'absolute',
-          bottom: '16px',
-          right: '20px',
-          display: 'flex',
-          gap: '6px'
-        }}>
-          {images.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '9999px',
-                backgroundColor: i === index ? 'white' : 'rgba(255, 255, 255, 0.45)'
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
