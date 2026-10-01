@@ -178,7 +178,9 @@ export default function AdminPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            onClick={() => (window.history.length > 1 ? router.back() : router.push('/main'))}
+            // Always exit to the app: router.back() bounced into whichever admin
+            // sub-page linked here (e.g. Titles → "Back to admin" → back → Titles).
+            onClick={() => router.push('/main')}
             aria-label="Back"
             style={{ color: theme.text, display: 'flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
           >
