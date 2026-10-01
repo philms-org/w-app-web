@@ -2133,45 +2133,72 @@ export async function canReadVenueFeed(locationId: string): Promise<boolean> {
   return !!data;
 }
 
-/** Joined by invite link and early access is still on (switch on, event not started). Can post/like/comment from anywhere. */
+/** Attending by link (or a guest) while that link is on (0037: no time limit). Can post/like/comment from anywhere. */
 export async function hasEarlyAccess(locationId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('has_early_access', { p_location_id: locationId });
   if (error) throw error;
   return !!data;
 }
 
-export type VenueInvite = { token: string; enabled: boolean; event_starts_at: string | null };
+export type VenueInvite = {
+  token: string;
+  enabled: boolean;
+  guest_token: string | null;
+  guest_enabled: boolean;
+};
 
-/** Managers only (RLS): the venue's invite link state, or null if never set up. */
+/** Managers only (RLS): the venue's attendee link + guest pass state, or null if never set up. */
 export async function fetchVenueInvite(locationId: string): Promise<VenueInvite | null> {
   const { data, error } = await supabase
     .from('venue_invites')
-    .select('token, enabled, event_starts_at')
+    .select('token, enabled, guest_token, guest_enabled')
     .eq('location_id', locationId)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-/**
- * Turn pre-arrival access on/off. Early access ends at `eventStartsAt`
- * (ISO string; null = only the switch ends it). `rotate` replaces the link.
- * Returns the current token.
- */
-export async function setVenueInvite(
-  locationId: string,
-  enabled: boolean,
-  eventStartsAt: string | null,
-  rotate = false,
-): Promise<string> {
+/** Turn the attendee link on/off; `rotate` replaces it. Returns the current token. */
+export async function setVenueInvite(locationId: string, enabled: boolean, rotate = false): Promise<string> {
   const { data, error } = await supabase.rpc('set_venue_invite', {
     p_location_id: locationId,
     p_enabled: enabled,
-    p_event_starts_at: eventStartsAt,
+    p_event_starts_at: null, // 0037: attendee access no longer ends at the event start
     p_rotate: rotate,
   });
   if (error) throw error;
   return data as string;
+}
+
+/** Turn the guest pass (investors / sponsors) on/off; `rotate` replaces it. Returns the current guest token. */
+export async function setVenueGuestPass(locationId: string, enabled: boolean, rotate = false): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_guest_pass', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export type VenueAttendee = { profile: Profile; kind: 'attendee' | 'guest' };
+
+/**
+ * Everyone attending this venue by link (or by checking in while the link was
+ * on) plus guests, for anyone who can see its feed (0037). Whether they're in
+ * the room right now comes from fetchPresence, not from here.
+ */
+export async function fetchVenueAttendees(locationId: string): Promise<VenueAttendee[]> {
+  const { data: rows, error } = await supabase.rpc('venue_attendees', { p_location_id: locationId });
+  if (error) throw error;
+  const kinds = new Map(((rows ?? []) as { user_id: string; kind: VenueAttendee['kind'] }[]).map((r) => [r.user_id, r.kind]));
+  if (kinds.size === 0) return [];
+  const { data: profiles, error: pErr } = await supabase
+    .from(PUBLIC_PROFILE)
+    .select()
+    .in('id', Array.from(kinds.keys()));
+  if (pErr) throw pErr;
+  return ((profiles ?? []) as Profile[]).map((profile) => ({ profile, kind: kinds.get(profile.id) ?? 'attendee' }));
 }
 
 /** Redeem an invite link token; returns the venue id it opens. */
