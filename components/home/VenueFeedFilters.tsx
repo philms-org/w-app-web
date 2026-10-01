@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
 
-export type FeedFilter = 'all' | 'posted' | 'noteam' | 'networking' | 'socialising' | 'dating';
+export type FeedFilter = 'all' | 'posted' | 'noteam' | 'networking' | 'socialising';
 
 const LABELS: Record<FeedFilter, string> = {
   all: 'Everyone',
@@ -11,7 +11,6 @@ const LABELS: Record<FeedFilter, string> = {
   noteam: 'Needs a team',
   networking: 'Networking',
   socialising: 'Socialising',
-  dating: 'Dating',
 };
 
 // "Everyone" is always shown and selected by default, so nobody is hidden
