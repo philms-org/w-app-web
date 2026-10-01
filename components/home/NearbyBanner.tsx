@@ -5,7 +5,7 @@ import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
-import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import { haversineMeters, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
@@ -89,18 +89,7 @@ export default function NearbyBanner() {
     // Same Venue -> store Location conversion MapTab.tsx uses for its own
     // "Check In Here" button — CheckedInHero's geofence math depends on this
     // exact shape (latitude/longitude/radius, not lat/lng/geofence_radius_meters).
-    setSelectedLocation({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description ?? '',
-      latitude: venue.lat as number,
-      longitude: venue.lng as number,
-      radius: venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS,
-      count: 0,
-      category: 'venue',
-      isHot: false,
-      banner_image: venue.banner_image ?? null,
-    });
+    setSelectedLocation(venueToLocation(venue));
   };
 
   // Without a real fix, picking a venue sets it as your location (the old

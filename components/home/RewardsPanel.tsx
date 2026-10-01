@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchRewards, fetchMyCheckinCount } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
@@ -13,8 +13,12 @@ import { Trophy, Gift, Lock } from 'lucide-react';
 // Phase 4: a reward with min_checkins set is an attendance-tier badge —
 // shown locked with a progress note until the member's own check-in count
 // at this venue reaches it.
-export default function RewardsPanel() {
-  const { selectedLocation } = useStore();
+// `locationId` lets Home show the venue you're checked in at while no venue
+// screen is open; otherwise it's the open venue.
+export default function RewardsPanel({ locationId }: { locationId?: string } = {}) {
+  const { selectedLocation: openVenue } = useStore();
+  const venueId = locationId ?? openVenue?.id ?? null;
+  const selectedLocation = useMemo(() => (venueId ? { id: venueId } : null), [venueId]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [checkinCount, setCheckinCount] = useState(0);
   const [loading, setLoading] = useState(false);

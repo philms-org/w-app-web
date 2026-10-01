@@ -13,6 +13,27 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
 
 export const DEFAULT_RADIUS_METERS = 50;
 
+// Venue row -> the store's selectedLocation shape. CheckedInHero's geofence
+// math depends on this exact shape (latitude/longitude/radius).
+export function venueToLocation(venue: {
+  id: string; name: string; description?: string | null;
+  lat?: number | null; lng?: number | null;
+  geofence_radius_meters?: number | null; banner_image?: string | null;
+}) {
+  return {
+    id: venue.id,
+    name: venue.name,
+    description: venue.description ?? '',
+    latitude: venue.lat as number,
+    longitude: venue.lng as number,
+    radius: venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS,
+    count: 0,
+    category: 'venue',
+    isHot: false,
+    banner_image: venue.banner_image ?? null,
+  };
+}
+
 interface VenueLike {
   lat?: number | null;
   lng?: number | null;
