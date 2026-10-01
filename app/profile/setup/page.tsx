@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { fetchProfile, updateProfile } from '@/lib/data';
+import { fetchOwnProfile, updateProfile } from '@/lib/data';
 import { getErrorMessage } from '@/lib/errors';
 import { ChevronLeft } from 'lucide-react';
 import { theme, type as typeTokens } from '@/lib/theme';
@@ -37,7 +37,7 @@ export default function ProfileSetupPage() {
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
-    fetchProfile(user.id)
+    fetchOwnProfile(user.id)
       .then((p) => { if (!cancelled) setData(profileToData(p)); })
       .catch(() => { /* new user with no row yet — keep EMPTY_DATA */ });
     return () => { cancelled = true; };

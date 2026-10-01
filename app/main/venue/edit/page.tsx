@@ -7,6 +7,7 @@ import { fetchVenue, updateVenueInfo } from '@/lib/data';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
+import VenueInviteCard from '@/components/organizer/VenueInviteCard';
 
 export default function VenueEditPage() {
   return (
@@ -196,6 +197,8 @@ function VenueEditPageInner() {
               <Save style={{ width: '18px', height: '18px' }} />
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
+
+            {canManage && <VenueInviteCard locationId={locationId} />}
           </div>
         )}
       </div>

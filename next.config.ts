@@ -42,6 +42,18 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Build gates are ON: lint and type errors fail the build.
   // (They were previously ignored; see git history.)
+  env: {
+    // Expose Vercel's deployment environment to the client bundle so
+    // client-side code can distinguish production from preview/dev.
+    // Turnstile CAPTCHA is only shown on production (Turnstile doesn't
+    // support the dynamic preview hostnames Vercel generates).
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? 'development',
+    // Expose the canonical production hostname so auth redirects (password
+    // reset) always land on the production URL — not dynamic preview URLs
+    // which aren't in Supabase's redirect allowlist.
+    // VERCEL_PROJECT_PRODUCTION_URL is a Vercel system var (no https://).
+    NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL ?? '',
+  },
   async headers() {
     return [
       {

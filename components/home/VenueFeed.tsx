@@ -6,13 +6,14 @@ import { supabase } from '@/lib/supabase';
 import { LockedOverlay } from '@/components/ui/primitives';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { getFreshPosition } from '@/lib/geolocation';
-import { canAnnounceAt, createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchTeams, fetchVenuePosts, toggleLike } from '@/lib/data';
+import { canAnnounceAt, canReadVenueFeed, createVenuePost, hasEarlyAccess, deleteVenuePost, fetchMyConnectionCount, fetchTeams, fetchVenuePosts, toggleLike } from '@/lib/data';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import { Search } from 'lucide-react';
 import type { Profile, VenuePost } from '@/lib/types';
 import VenueFeedRow from './VenueFeedRow';
 import VenueFeedComposer from './VenueFeedComposer';
 import VenueFeedFilters, { type FeedFilter } from './VenueFeedFilters';
+import InRoomStrip from './InRoomStrip';
 import AddPhotoPrompt, { shouldShowPhotoPrompt } from './AddPhotoPrompt';
 
 const REQUIRED_CONNECTIONS = 3;
@@ -26,32 +27,38 @@ export class FeedPostError extends Error {
 }
 const TEMP_PREFIX = 'temp-';
 
+type FilterContext = { teamMemberIds: Set<string>; inRoomIds: Set<string>; guestIds: Set<string> };
+
 function matchesFilter(
   row: { profile: Profile; post?: VenuePost },
   filter: FeedFilter,
-  teamMemberIds: Set<string>,
+  { teamMemberIds, inRoomIds, guestIds }: FilterContext,
 ): boolean {
   const p = row.profile;
   switch (filter) {
     case 'all': return true;
+    case 'inroom': return inRoomIds.has(p.id);
+    case 'guests': return guestIds.has(p.id);
     case 'posted': return !!row.post;
     case 'noteam': return !teamMemberIds.has(p.id);
-    case 'dating': return !!p.dating_id;
     case 'networking': return !!p.networking_id;
     case 'socialising': return !!p.socialising_id;
   }
 }
 
-const FILTER_KEYS: FeedFilter[] = ['all', 'posted', 'noteam', 'networking', 'socialising', 'dating'];
+const FILTER_KEYS: FeedFilter[] = ['all', 'inroom', 'guests', 'posted', 'noteam', 'networking', 'socialising'];
 
 const EMPTY_COPY: Record<FeedFilter, string> = {
-  all: 'No one else is checked in yet',
+  all: 'No one else is here yet',
+  inroom: 'No one is in the room right now',
+  guests: 'No guests yet',
   posted: 'No posts yet',
   noteam: 'Everyone here is on a team',
   networking: 'No one here is networking yet',
   socialising: 'No one here is socialising yet',
-  dating: 'No one here is dating yet',
 };
+
+const NO_IDS: Set<string> = new Set();
 
 type PostRow = { id: string; location_id: string; author_id: string; body: string; created_at: string };
 type LikeRow = { post_id: string; user_id: string };
@@ -63,6 +70,8 @@ export default function VenueFeed({
   myAvatarUrl,
   onReply,
   checkedIn = true,
+  inRoomIds = NO_IDS,
+  guestIds = NO_IDS,
 }: {
   locationId: string;
   presenceProfiles: Profile[];
@@ -71,6 +80,10 @@ export default function VenueFeed({
   onReply: (profile: Profile) => void;
   /** Actually checked in (inside the geofence); only then can you comment. */
   checkedIn?: boolean;
+  /** People with an open check-in right now: they get the green light (0037). */
+  inRoomIds?: Set<string>;
+  /** People on the venue's guest pass: shown with a guest label (0037). */
+  guestIds?: Set<string>;
 }) {
   const [connectionCount, setConnectionCount] = useState<number | null>(null);
   const [posts, setPosts] = useState<VenuePost[]>([]);
@@ -116,9 +129,30 @@ export default function VenueFeed({
     return () => { cancelled = true; };
   }, []);
 
+  // Checked in here before, or joined by invite link while early access lasts:
+  // the server already lets you read this feed. Early access also lets you
+  // post / like / comment before you arrive (migration 0035).
+  const [hasFeedAccess, setHasFeedAccess] = useState(false);
+  const [earlyAccess, setEarlyAccess] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setHasFeedAccess(false);
+    setEarlyAccess(false);
+    if (checkedIn) return;
+    Promise.all([canReadVenueFeed(locationId), hasEarlyAccess(locationId)])
+      .then(([read, early]) => {
+        if (cancelled) return;
+        setHasFeedAccess(read);
+        setEarlyAccess(early);
+      })
+      .catch(() => { /* fall back to the connections gate */ });
+    return () => { cancelled = true; };
+  }, [locationId, checkedIn]);
+  const canEngage = checkedIn || earlyAccess;
+
   // Checked in: you see everyone in the room. Only a preview from outside the
-  // venue stays locked behind the connections gate.
-  const unlocked = checkedIn || (connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS);
+  // venue stays locked behind the connections gate (or an invite link).
+  const unlocked = checkedIn || hasFeedAccess || (connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS);
 
   // Keeps optimistic (temp-*) posts that the server hasn't confirmed yet, so a
   // refetch racing an in-flight post doesn't make it flicker out.
@@ -243,15 +277,23 @@ export default function VenueFeed({
     return [...posted, ...silent];
   }, [posts, presenceProfiles, myUserId]);
 
+  const filterCtx = useMemo(() => ({ teamMemberIds, inRoomIds, guestIds }), [teamMemberIds, inRoomIds, guestIds]);
+
   const counts = useMemo(() => {
     const c = {} as Record<FeedFilter, number>;
-    for (const k of FILTER_KEYS) c[k] = allRows.filter((r) => matchesFilter(r, k, teamMemberIds)).length;
+    for (const k of FILTER_KEYS) c[k] = allRows.filter((r) => matchesFilter(r, k, filterCtx)).length;
     return c;
-  }, [allRows, teamMemberIds]);
+  }, [allRows, filterCtx]);
 
   const rows = useMemo(
-    () => allRows.filter((r) => matchesFilter(r, filter, teamMemberIds)),
-    [allRows, filter, teamMemberIds],
+    () => allRows.filter((r) => matchesFilter(r, filter, filterCtx)),
+    [allRows, filter, filterCtx],
+  );
+
+  // Everyone with an open check-in, you included: the "In the room now" strip.
+  const inRoomProfiles = useMemo(
+    () => presenceProfiles.filter((p) => inRoomIds.has(p.id)),
+    [presenceProfiles, inRoomIds],
   );
 
   const handleToggleLike = (postId: string) => {
@@ -283,11 +325,14 @@ export default function VenueFeed({
       ...prev,
     ]);
     try {
-      let pos: { lat: number; lng: number };
-      try {
-        pos = await getFreshPosition();
-      } catch {
-        throw new FeedPostError("Couldn't get your location. Allow location access to post here.");
+      // Invitees posting before they arrive don't need a location fix.
+      let pos: { lat: number | null; lng: number | null } = { lat: null, lng: null };
+      if (!earlyAccess || checkedIn) {
+        try {
+          pos = await getFreshPosition();
+        } catch {
+          throw new FeedPostError("Couldn't get your location. Allow location access to post here.");
+        }
       }
       let saved: VenuePost;
       try {
@@ -322,7 +367,7 @@ export default function VenueFeed({
     }
   };
 
-  if (connectionCount === null && !checkedIn) return null;
+  if (connectionCount === null && !checkedIn && !hasFeedAccess) return null;
 
   if (!unlocked) {
     return (
@@ -341,6 +386,7 @@ export default function VenueFeed({
 
   return (
     <div style={{ fontFamily: typeTokens.family }}>
+      <InRoomStrip profiles={inRoomProfiles} />
       <VenueFeedFilters value={filter} onChange={setFilter} counts={counts} />
       {rows.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '24px 12px' }}>
@@ -376,8 +422,10 @@ export default function VenueFeed({
             onToggleLike={handleToggleLike}
             onDelete={handleDelete}
             myUserId={myUserId}
-            canComment={checkedIn}
+            canComment={canEngage}
             canModerate={canModerate}
+            inRoom={inRoomIds.has(profile.id)}
+            isGuest={guestIds.has(profile.id)}
           />
         ))
       )}
@@ -386,7 +434,7 @@ export default function VenueFeed({
         avatarUrl={myAvatarUrl}
         onSubmit={handlePost}
         placeholder={canAnnounce ? 'Post an announcement…' : "What's up?"}
-        disabledReason={checkedIn || canAnnounce ? undefined : 'Check in at the venue to post'}
+        disabledReason={canEngage || canAnnounce ? undefined : 'Check in at the venue to post'}
       />
       {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>

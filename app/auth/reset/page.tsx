@@ -22,23 +22,38 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Supabase detects the recovery token from the URL hash during client
+    // initialisation — before this component mounts. onAuthStateChange replays
+    // the current state on subscription, so the PASSWORD_RECOVERY event should
+    // arrive shortly after we subscribe. We give it 4 s before giving up.
     let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (!settled) setStatus('invalid');
+    }, 4000);
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         settled = true;
+        clearTimeout(timeout);
         setStatus('ready');
+      } else if (!settled && (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION')) {
+        // No recovery session — fail fast unless a SIGNED_IN/RECOVERY follows
+        supabase.auth.getSession().then(({ data }) => {
+          if (settled) return;
+          if (!data.session) {
+            settled = true;
+            clearTimeout(timeout);
+            setStatus('invalid');
+          }
+        });
       }
     });
 
-    // The link may already have been consumed into a session by the time this
-    // mounts (detectSessionInUrl runs on client init).
-    supabase.auth.getSession().then(({ data }) => {
-      if (settled) return;
-      setStatus(data.session ? 'ready' : 'invalid');
-    });
-
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

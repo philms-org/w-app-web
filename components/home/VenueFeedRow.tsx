@@ -6,6 +6,8 @@ import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, MoreHorizontal, Send
 import { reportVenueContent } from '@/lib/data';
 import PostComments from './PostComments';
 import InlineReport from './InlineReport';
+import GuestBadge from './GuestBadge';
+import { AvatarWithLight } from './InRoomStrip';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Profile, VenuePost } from '@/lib/types';
 
@@ -47,6 +49,8 @@ export default function VenueFeedRow({
   myUserId,
   canComment = false,
   canModerate = false,
+  inRoom = false,
+  isGuest = false,
 }: {
   profile: Profile;
   post?: VenuePost;
@@ -59,6 +63,10 @@ export default function VenueFeedRow({
   canComment?: boolean;
   /** Venue manager: may remove anyone's post or comment. */
   canModerate?: boolean;
+  /** Checked in right now: green light on the avatar (0037). */
+  inRoom?: boolean;
+  /** On the venue's guest pass: guest label (0037). */
+  isGuest?: boolean;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
@@ -91,16 +99,7 @@ export default function VenueFeedRow({
 
   return (
     <div style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: `1px solid ${theme.divider}`, fontFamily: typeTokens.family }}>
-      <div style={{ width: 44, height: 44, borderRadius: 999, overflow: 'hidden', flexShrink: 0, background: theme.pill, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {profile.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- matches existing avatar convention (ProfileTab, ConnectSheet)
-          <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <span style={{ fontWeight: 700, color: theme.text, fontSize: typeTokens.body.fontSize }}>
-            {(profile.display_name ?? '?').charAt(0).toUpperCase()}
-          </span>
-        )}
-      </div>
+      <AvatarWithLight profile={profile} size={44} inRoom={inRoom} ring={theme.bg} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -109,6 +108,8 @@ export default function VenueFeedRow({
           </span>
           {profile.is_verified && <BadgeCheck size={14} color={theme.accent} aria-label="Verified" />}
           {lookingForIcons(profile) && <span style={{ fontSize: 13 }}>{lookingForIcons(profile)}</span>}
+          {isGuest && <GuestBadge />}
+          {inRoom && <span style={{ fontSize: typeTokens.caption.fontSize, color: theme.green, fontWeight: 600 }}>· in the room</span>}
         </div>
 
         {meta.length > 0 && (
