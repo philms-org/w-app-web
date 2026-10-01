@@ -23,7 +23,7 @@ export function Stamp({ on, size = 28 }: { on: boolean; size?: number }) {
 
 // Screen 3: the event's hotspots in organizer order, stamped when visited.
 export default function HotspotsCard({
-  hotspots, progress, loading, error, onRetry,
+  hotspots, progress, error, onRetry,
 }: {
   hotspots: EventHotspot[];
   progress: HotspotProgress | null;
@@ -31,7 +31,8 @@ export default function HotspotsCard({
   error: boolean;
   onRetry: () => void;
 }) {
-  if (!error && (loading || hotspots.length === 0)) return null;
+  // Keep showing the list while a reload is in flight (no flicker).
+  if (!error && hotspots.length === 0) return null;
 
   return (
     <section aria-label="Hotspots" style={{

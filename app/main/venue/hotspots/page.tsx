@@ -35,7 +35,7 @@ export default function VenueHotspotsPage() {
 function VenueHotspotsInner() {
   const router = useRouter();
   const eventId = useSearchParams().get('locationId');
-  const { canManage } = useIsOrganizer(eventId);
+  const { canManage, isMasterAdmin, resolved } = useIsOrganizer(eventId);
 
   const [event, setEvent] = useState<Venue | null>(null);
   const [hotspots, setHotspots] = useState<EventHotspot[]>([]);
@@ -122,7 +122,8 @@ function VenueHotspotsInner() {
       </div>
     );
   }
-  if (!event) {
+  // Wait for the organizer check too, so organizers don't see a denied flash.
+  if (!event || !(resolved || isMasterAdmin)) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: theme.muted, fontFamily: FONT }}>Loading...</p>

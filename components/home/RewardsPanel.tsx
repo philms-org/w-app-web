@@ -21,8 +21,11 @@ export default function RewardsPanel() {
   const [checkinCount, setCheckinCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const { progress: hp } = useEventHotspots(selectedLocation?.id);
+  const { progress: hp, loading: hpLoading, error: hpError } = useEventHotspots(selectedLocation?.id);
   const hotspotCount = hp?.count ?? 0;
+  // No progress yet (loading or failed): keep hotspot rewards locked but
+  // don't claim "0/N".
+  const hpPending = !hp && (hpLoading || hpError);
 
   const HINT: React.CSSProperties = { color: theme.warm1, fontSize: '11px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' };
 
@@ -84,7 +87,7 @@ export default function RewardsPanel() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           {rewards.map((reward) => {
             const lockedByVisits = reward.min_checkins != null && checkinCount < reward.min_checkins;
-            const lockedByHotspots = reward.min_hotspots != null && hotspotCount < reward.min_hotspots;
+            const lockedByHotspots = reward.min_hotspots != null && (hpPending || hotspotCount < reward.min_hotspots);
             const locked = lockedByVisits || lockedByHotspots;
             return (
               <div key={reward.id} style={{
@@ -122,7 +125,11 @@ export default function RewardsPanel() {
                   <p style={HINT}>Unlocks at {reward.min_checkins} visits ({checkinCount}/{reward.min_checkins})</p>
                 )}
                 {lockedByHotspots && (
-                  <p style={HINT}>Visit {reward.min_hotspots} hotspots to unlock ({hotspotCount}/{reward.min_hotspots})</p>
+                  <p style={HINT}>
+                    {hpPending
+                      ? (hpLoading ? 'Checking hotspot progress…' : "Couldn't load hotspot progress")
+                      : `Visit ${reward.min_hotspots} hotspots to unlock (${hotspotCount}/${reward.min_hotspots})`}
+                  </p>
                 )}
                 {!locked && reward.min_hotspots != null && hp && (
                   <div aria-label={`${hp.count} hotspot stamps`} style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>

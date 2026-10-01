@@ -10,6 +10,10 @@ export function useIsOrganizer(locationId: string | null | undefined) {
   const { user } = useStore();
   const isMasterAdmin = !!user?.isMasterAdmin;
   const [isOrganizer, setIsOrganizer] = useState(false);
+  // Which locationId/user the last settled check was for, so `resolved` is
+  // false while a check for the current pair is still in flight.
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const key = locationId && user ? `${locationId}:${user.id}` : null;
 
   useEffect(() => {
     if (!locationId || !user) {
@@ -24,9 +28,12 @@ export function useIsOrganizer(locationId: string | null | undefined) {
         const isOwner = venue?.owner_id === user.id;
         const isCoOwner = managers.some((m) => m.user_id === user.id);
         setIsOrganizer(isOwner || isCoOwner);
+        setSettledKey(`${locationId}:${user.id}`);
       })
       .catch(() => {
-        if (!cancelled) setIsOrganizer(false);
+        if (cancelled) return;
+        setIsOrganizer(false);
+        setSettledKey(`${locationId}:${user.id}`);
       });
 
     return () => {
@@ -34,5 +41,6 @@ export function useIsOrganizer(locationId: string | null | undefined) {
     };
   }, [locationId, user]);
 
-  return { isOrganizer, isMasterAdmin, canManage: isOrganizer || isMasterAdmin };
+  const resolved = !key || isMasterAdmin || settledKey === key;
+  return { isOrganizer, isMasterAdmin, canManage: isOrganizer || isMasterAdmin, resolved };
 }

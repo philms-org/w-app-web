@@ -8,6 +8,7 @@ import { ACTIVITY_TARGET, meterFill } from '@/lib/activity';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { Chip } from '@/components/ui/primitives';
 import Meter from '@/components/ui/Meter';
+import { HOTSPOT_ORANGE } from '@/components/hotspots/HotspotsCard';
 
 export default function ActivityMeterCard({
   locationId,
@@ -78,11 +79,11 @@ export default function ActivityMeterCard({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6, fontSize: typeTokens.caption.fontSize }}>
             <span style={{ color: theme.text, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Flame size={14} color="#FF7A45" aria-hidden /> {hotspotMeter.label}
+              <Flame size={14} color={HOTSPOT_ORANGE} aria-hidden /> {hotspotMeter.label}
             </span>
             {hotspotMeter.rewardText && <span style={{ color: theme.muted }}>{hotspotMeter.rewardText}</span>}
           </div>
-          <Meter value={hotspotMeter.value} />
+          <Meter value={hotspotMeter.value} fill="linear-gradient(90deg, #FF7A45, #FF3D7F)" />
         </div>
       ) : (
         <Meter value={meterFill(picked.size, ACTIVITY_TARGET)} label={`${picked.size} / ${ACTIVITY_TARGET} picked`} />
