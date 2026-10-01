@@ -3,14 +3,29 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck, Flame } from 'lucide-react';
-import { fetchMyVenues, fetchVenueMembers } from '@/lib/data';
+import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck, BarChart3, Flame } from 'lucide-react';
+import { fetchMyVenues, fetchVenueMembers, fetchVenueReports, fetchVenueConversation, fetchPendingJoinRequests } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 
+// null = that count failed to load; the tile shows a dash instead of a
+// misleading zero.
 interface VenueWithCount {
   venue: Venue;
-  memberCount: number;
+  memberCount: number | null;
+  openReports: number | null;
+  pendingRequests: number | null;
+}
+
+async function loadCounts(venue: Venue): Promise<VenueWithCount> {
+  const [members, reports, pending] = await Promise.all([
+    fetchVenueMembers(venue.id).then((m) => m.length).catch(() => null),
+    fetchVenueReports(venue.id, 'open').then((r) => r.length).catch(() => null),
+    fetchVenueConversation(venue.id)
+      .then((conv) => (conv ? fetchPendingJoinRequests(conv.id).then((r) => r.length) : 0))
+      .catch(() => null),
+  ]);
+  return { venue, memberCount: members, openReports: reports, pendingRequests: pending };
 }
 
 const card: React.CSSProperties = {
@@ -54,6 +69,7 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
+  { label: 'Analytics', icon: BarChart3, href: (id) => `/main/venue/report?locationId=${id}` },
   { label: 'Members', icon: Users, href: (id) => `/main/venue/members?locationId=${id}` },
   { label: 'Announcements', icon: Megaphone, href: (id) => `/main/venue/announcements?locationId=${id}` },
   { label: 'Mass Message', icon: Send, href: (id) => `/main/venue/message?locationId=${id}` },
@@ -75,19 +91,7 @@ export default function OrganizerPage() {
 
   useEffect(() => {
     fetchMyVenues()
-      .then(async (venues) => {
-        const withCounts = await Promise.all(
-          venues.map(async (venue) => {
-            try {
-              const members = await fetchVenueMembers(venue.id);
-              return { venue, memberCount: members.length };
-            } catch {
-              return { venue, memberCount: 0 };
-            }
-          })
-        );
-        setRows(withCounts);
-      })
+      .then(async (venues) => setRows(await Promise.all(venues.map(loadCounts))))
       .catch((err) => {
         console.error('Failed to load organizer venues:', err);
         setError("Couldn't load your venues — try again");
@@ -131,7 +135,7 @@ export default function OrganizerPage() {
             </p>
           </div>
         ) : (
-          rows.map(({ venue, memberCount }) => (
+          rows.map(({ venue, memberCount, openReports, pendingRequests }) => (
             <div key={venue.id} style={card}>
               <div style={{ marginBottom: '12px' }}>
                 <p style={{ fontSize: '17px', fontWeight: 700, color: theme.text, marginBottom: '2px' }}>
@@ -142,9 +146,12 @@ export default function OrganizerPage() {
                     {[venue.address, venue.city].filter(Boolean).join(', ')}
                   </p>
                 )}
-                <p style={{ fontSize: '12px', color: theme.accent, fontWeight: 600, marginTop: '4px' }}>
-                  {memberCount} {memberCount === 1 ? 'member' : 'members'} on record
-                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <StatTile label="Members" value={memberCount} href={`/main/venue/members?locationId=${venue.id}`} />
+                <StatTile label="Open reports" value={openReports} href={`/main/venue/reports?locationId=${venue.id}`} alert />
+                <StatTile label="Chat requests" value={pendingRequests} href={`/main/venue/chat?locationId=${venue.id}`} alert />
               </div>
 
               <p style={sectionLabel}>Manage</p>
@@ -161,5 +168,30 @@ export default function OrganizerPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Tappable count at the top of a venue card. `alert` tiles light up when
+// there's something waiting on the organizer (reports, join requests).
+function StatTile({ label, value, href, alert = false }: { label: string; value: number | null; href: string; alert?: boolean }) {
+  const hot = alert && !!value;
+  return (
+    <Link
+      href={href}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        padding: '10px',
+        borderRadius: '10px',
+        textDecoration: 'none',
+        backgroundColor: theme.surface2,
+        border: `1px solid ${hot ? theme.accent2 : theme.divider}`,
+      }}
+    >
+      <p style={{ fontSize: '20px', fontWeight: 700, color: hot ? theme.accent2 : theme.text, margin: 0 }}>
+        {value ?? '—'}
+      </p>
+      <p style={{ fontSize: '11px', color: theme.muted, margin: 0 }}>{label}</p>
+    </Link>
   );
 }

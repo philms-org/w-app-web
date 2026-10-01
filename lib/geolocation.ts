@@ -17,10 +17,9 @@ export function locationSettingsInstructions(): string {
   return 'Click the lock icon in your address bar → Site settings → Location → Allow, then refresh this page.';
 }
 
-// Same fallback center app/main/page.tsx's modal has always used when
-// geolocation is denied/unsupported — kept identical so behavior doesn't change.
-const FALLBACK_LOCATION = { lat: 40.7128, lng: -74.0060 };
-
+// On failure we never invent a position (this used to write NYC, which put
+// every skipped/blocked user in New York). Denied/unsupported clears it; a
+// timeout or GPS hiccup keeps the last real fix so a check-in isn't dropped.
 // Fetches a fresh position and writes it to the store. Used by the first-run
 // permission modal AND by every manual-refresh entry point (header button,
 // pull-to-refresh, "Enable Location" retry) — there is exactly one place
@@ -34,7 +33,7 @@ export function requestLocation(maximumAge = 0): Promise<void> {
 
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      setCurrentLocation(FALLBACK_LOCATION);
+      setCurrentLocation(null);
       setLocationDenied(true);
       setLocationPermissionBlocked(false);
       resolve();
@@ -50,7 +49,7 @@ export function requestLocation(maximumAge = 0): Promise<void> {
       },
       (error) => {
         console.error('Location error:', error);
-        setCurrentLocation(FALLBACK_LOCATION);
+        if (error.code === error.PERMISSION_DENIED) setCurrentLocation(null);
         setLocationDenied(true);
         // code 1 = PERMISSION_DENIED: the browser has this site blocked and
         // will keep failing instantly on every retry until the user changes

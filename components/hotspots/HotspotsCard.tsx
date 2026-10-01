@@ -4,8 +4,10 @@ import { Check, Flame, RotateCw } from 'lucide-react';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import type { EventHotspot } from '@/lib/types';
 import type { HotspotProgress } from '@/lib/hotspotProgress';
+import Meter from '@/components/ui/Meter';
 
 export const HOTSPOT_ORANGE = '#FF7A45';
+export const HOTSPOT_GRADIENT = 'linear-gradient(90deg, #FF7A45, #FF3D7F)';
 
 export function Stamp({ on, size = 28 }: { on: boolean; size?: number }) {
   return (
@@ -23,13 +25,15 @@ export function Stamp({ on, size = 28 }: { on: boolean; size?: number }) {
 
 // Screen 3: the event's hotspots in organizer order, stamped when visited.
 export default function HotspotsCard({
-  hotspots, progress, error, onRetry,
+  hotspots, progress, error, onRetry, meter,
 }: {
   hotspots: EventHotspot[];
   progress: HotspotProgress | null;
   loading: boolean;
   error: boolean;
   onRetry: () => void;
+  // Progress toward the next reward, shown as the card's header.
+  meter?: { value: number; label: string; rewardText: string | null };
 }) {
   // Keep showing the list while a reload is in flight (no flicker).
   if (!error && hotspots.length === 0) return null;
@@ -39,9 +43,22 @@ export default function HotspotsCard({
       backgroundColor: theme.surface, borderRadius: radius.card, border: `1px solid ${theme.divider}`,
       padding: 16, marginBottom: 20, fontFamily: typeTokens.family,
     }}>
-      <p style={{ color: theme.muted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-        Hotspots
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+        <p style={{ color: theme.muted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Hotspots
+        </p>
+        {meter?.rewardText && (
+          <span style={{ color: theme.muted, fontSize: typeTokens.caption.fontSize }}>{meter.rewardText}</span>
+        )}
+      </div>
+      {meter && !error && (
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ color: theme.text, fontWeight: 700, fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+            <Flame size={14} color={HOTSPOT_ORANGE} aria-hidden /> {meter.label}
+          </span>
+          <Meter value={meter.value} fill={HOTSPOT_GRADIENT} />
+        </div>
+      )}
       {error ? (
         <button onClick={onRetry} style={{
           display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, background: 'none', border: 'none',

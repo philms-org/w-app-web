@@ -13,13 +13,15 @@ import ProfileTab from '@/components/tabs/ProfileTab';
 import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
+import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setLocationDenied } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
+  const [inviteError, dismissInviteError] = usePendingVenueInvite();
 
   useEffect(() => {
     // Wait for the persisted store to rehydrate before deciding — otherwise
@@ -41,7 +43,28 @@ export default function MainPage() {
     // gate (components/LandingLocationGate.tsx) on the very first visit,
     // which silently disabled this prompt for every session after that.
     if (!currentLocation && !locationPermissionAsked) {
-      setShowLocationPrompt(true);
+      // Already granted in the browser: fetch quietly instead of asking again
+      // on every app open. Falls back to the prompt where the Permissions API
+      // is missing or the answer is "prompt"/"denied".
+      let cancelled = false;
+      const showPrompt = () => { if (!cancelled) setShowLocationPrompt(true); };
+      if (navigator.permissions?.query) {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then((status) => {
+            if (cancelled) return;
+            if (status.state === 'granted') {
+              setLocationPermissionAsked(true);
+              requestLocation();
+            } else {
+              showPrompt();
+            }
+          })
+          .catch(showPrompt);
+      } else {
+        showPrompt();
+      }
+      return () => { cancelled = true; };
     }
   }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
 
@@ -55,7 +78,8 @@ export default function MainPage() {
   const handleDenyLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
-    setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+    // Leave currentLocation empty: a made-up position (this used to be NYC)
+    // sorted search, map and distances around a city the user isn't in.
     setLocationDenied(true);
     setShowLocationPrompt(false);
   };
@@ -99,6 +123,22 @@ export default function MainPage() {
       />
 
       <ProfileSetupPrompt />
+
+      {inviteError && (
+        <div
+          role="alert"
+          onClick={dismissInviteError}
+          style={{
+            position: 'fixed', left: 16, right: 16, bottom: 'calc(80px + env(safe-area-inset-bottom))',
+            zIndex: 9998, maxWidth: 420, margin: '0 auto', padding: '12px 16px', borderRadius: 12,
+            backgroundColor: theme.surface, color: theme.text, boxShadow: elevation.glass,
+            fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 14, fontWeight: 600, textAlign: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          {inviteError}
+        </div>
+      )}
 
       {/* Location Permission Prompt */}
       {showLocationPrompt && (

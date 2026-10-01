@@ -8,9 +8,10 @@ export interface Profile {
   email?: string | null;
   phone?: string | null;
   avatar_url?: string | null;
-  affiliation?: string | null;
-  industry?: string | null;
-  role?: string | null;
+  // text[] in Postgres (the iOS app stores a single-item array).
+  affiliation?: string[] | null;
+  industry?: string[] | null;
+  role?: string[] | null;
   city?: string | null;
   fave_drink?: string | null;
   friday_night?: string | null;

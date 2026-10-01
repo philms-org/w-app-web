@@ -62,6 +62,16 @@ export async function fetchProfile(id: string): Promise<Profile> {
   return data;
 }
 
+// The signed-in user's own full row, from the base table (RLS lets everyone
+// read their own row). Use this, not fetchProfile, for anything private to
+// the user: profiles_public (migration 0026) drops is_master_admin, phone,
+// profession etc., and nulls a hidden city.
+export async function fetchOwnProfile(id: string): Promise<Profile> {
+  const { data, error } = await supabase.from('profiles').select().eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchPublicProfile(id: string): Promise<Profile> {
   const { data, error } = await supabase.from(PUBLIC_PROFILE).select().eq('id', id).single();
   if (error) throw error;
@@ -2078,6 +2088,94 @@ export async function canAnnounceAt(locationId: string): Promise<boolean> {
   return !!data;
 }
 
+// ---- Pre-arrival feed access (migration 0035) ----------------------------
+
+/** Server's feed read rule: checked in here before, or joined by invite link while it's on. */
+export async function canReadVenueFeed(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_read_venue_feed', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+/** Attending by link (or a guest) while that link is on (0037: no time limit). Can post/like/comment from anywhere. */
+export async function hasEarlyAccess(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_early_access', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+export type VenueInvite = {
+  token: string;
+  enabled: boolean;
+  guest_token: string | null;
+  guest_enabled: boolean;
+};
+
+/** Managers only (RLS): the venue's attendee link + guest pass state, or null if never set up. */
+export async function fetchVenueInvite(locationId: string): Promise<VenueInvite | null> {
+  const { data, error } = await supabase
+    .from('venue_invites')
+    .select('token, enabled, guest_token, guest_enabled')
+    .eq('location_id', locationId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Turn the attendee link on/off; `rotate` replaces it. Returns the current token. */
+export async function setVenueInvite(locationId: string, enabled: boolean, rotate = false): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_invite', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_event_starts_at: null, // 0037: attendee access no longer ends at the event start
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Turn the guest pass (investors / sponsors) on/off; `rotate` replaces it. Returns the current guest token. */
+export async function setVenueGuestPass(locationId: string, enabled: boolean, rotate = false): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_guest_pass', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export type VenueAttendee = { profile: Profile; kind: 'attendee' | 'guest' };
+
+/**
+ * Everyone attending this venue by link (or by checking in while the link was
+ * on) plus guests, for anyone who can see its feed (0037). Whether they're in
+ * the room right now comes from fetchPresence, not from here.
+ */
+export async function fetchVenueAttendees(locationId: string): Promise<VenueAttendee[]> {
+  const { data: rows, error } = await supabase.rpc('venue_attendees', { p_location_id: locationId });
+  if (error) throw error;
+  const kinds = new Map(((rows ?? []) as { user_id: string; kind: VenueAttendee['kind'] }[]).map((r) => [r.user_id, r.kind]));
+  if (kinds.size === 0) return [];
+  const { data: profiles, error: pErr } = await supabase
+    .from(PUBLIC_PROFILE)
+    .select()
+    .in('id', Array.from(kinds.keys()));
+  if (pErr) throw pErr;
+  return ((profiles ?? []) as Profile[]).map((profile) => ({ profile, kind: kinds.get(profile.id) ?? 'attendee' }));
+}
+
+/** Redeem an invite link token; returns the venue id it opens. */
+export async function redeemVenueInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('redeem_venue_invite', { p_token: token });
+  if (error) throw error;
+  return data as string;
+}
+
+export function venueInviteUrl(token: string): string {
+  return `${window.location.origin}/join/${token}`;
+}
+
 export async function fetchVenueAnnouncerIds(locationId: string): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('venue_announcers')
@@ -2140,11 +2238,12 @@ export async function fetchConnectionsPosts(limit = 20): Promise<VenuePost[]> {
 // real id (and recognise the realtime INSERT echo of its own post).
 // Goes through create_venue_post() (0030), which re-checks on the server that
 // the caller is checked in AND within the venue's radius at (lat, lng).
+// Invitees with early access (0035) skip that check, so they pass nulls.
 export async function createVenuePost(
   locationId: string,
   body: string,
-  lat: number,
-  lng: number,
+  lat: number | null,
+  lng: number | null,
 ): Promise<VenuePost> {
   const { data, error } = await supabase.rpc('create_venue_post', {
     p_location_id: locationId,
@@ -2440,4 +2539,19 @@ export async function fetchCheckedInUserIds(locationId: string): Promise<string[
     .is('checked_out_at', null);
   if (error) throw error;
   return Array.from(new Set((data ?? []).map((r: { user_id: string }) => r.user_id)));
+}
+
+// People checked in right now at every venue, keyed by location id (map pins).
+export async function fetchCheckedInCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('location_id, user_id')
+    .is('checked_out_at', null);
+  if (error) throw error;
+  const users = new Map<string, Set<string>>();
+  for (const r of (data ?? []) as { location_id: string; user_id: string }[]) {
+    if (!users.has(r.location_id)) users.set(r.location_id, new Set());
+    users.get(r.location_id)!.add(r.user_id);
+  }
+  return Object.fromEntries(Array.from(users, ([id, set]) => [id, set.size]));
 }

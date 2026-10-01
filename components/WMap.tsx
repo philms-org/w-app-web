@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -75,6 +75,8 @@ interface WMapProps {
   onMapClick?: (lat: number, lng: number) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
+  // False when center is a fallback (no location): don't draw "Your Location" there.
+  showUserMarker?: boolean;
 }
 
 export default function WMap({
@@ -82,7 +84,8 @@ export default function WMap({
   onLocationSelect,
   onMapClick,
   center = { lat: 40.7128, lng: -74.0060 },
-  zoom = 13
+  zoom = 13,
+  showUserMarker = true,
 }: WMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -90,17 +93,6 @@ export default function WMap({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
-  const [bannerDismissed, setBannerDismissed] = useState(true); // default hidden until we read localStorage
-
-  useEffect(() => {
-    setBannerDismissed(localStorage.getItem('w_app_download_banner_dismissed') === 'true');
-  }, []);
-
-  const dismissBanner = () => {
-    localStorage.setItem('w_app_download_banner_dismissed', 'true');
-    setBannerDismissed(true);
-  };
-
   // Create the map once on mount; never recreated on prop changes.
   useEffect(() => {
     if (typeof window === 'undefined' || !mapRef.current) return;
@@ -204,7 +196,10 @@ export default function WMap({
 
     map.setView([center.lat, center.lng], zoom);
 
-    if (userMarkerRef.current) {
+    if (!showUserMarker) {
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+    } else if (userMarkerRef.current) {
       userMarkerRef.current.setLatLng([center.lat, center.lng]);
     } else {
       const userIcon = L.divIcon({
@@ -226,7 +221,7 @@ export default function WMap({
       userMarkerRef.current = L.marker([center.lat, center.lng], { icon: userIcon }).addTo(map)
         .bindPopup('Your Location');
     }
-  }, [center, zoom]);
+  }, [center, zoom, showUserMarker]);
 
   return (
     <>
@@ -238,83 +233,6 @@ export default function WMap({
           zIndex: 1
         }}
       />
-
-      {/* App Download Banner (dismissible) */}
-      {!bannerDismissed && (
-      <div style={{
-        position: 'absolute',
-        top: '120px',
-        left: '16px',
-        right: '16px',
-        backgroundColor: 'rgba(23, 191, 217, 0.95)',
-        borderRadius: '12px',
-        padding: '16px',
-        zIndex: 1000,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        backdropFilter: 'blur(8px)'
-      }}>
-        <button
-          onClick={dismissBanner}
-          aria-label="Dismiss download banner"
-          style={{
-            position: 'absolute',
-            top: '6px',
-            right: '6px',
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: 'rgba(255,255,255,0.25)',
-            color: 'white',
-            fontSize: '16px',
-            lineHeight: 1,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          ×
-        </button>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          color: 'white'
-        }}>
-          <div style={{
-            fontSize: '24px'
-          }}>📱</div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{
-              fontWeight: '600',
-              fontSize: '16px',
-              margin: '0 0 4px 0',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Get the Full Experience</h3>
-            <p style={{
-              fontSize: '14px',
-              margin: 0,
-              opacity: 0.9,
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Download The W App for full features, messaging, and real-time updates</p>
-          </div>
-          <button style={{
-            backgroundColor: 'white',
-            color: '#17BFD9',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            fontWeight: '600',
-            fontSize: '14px',
-            cursor: 'pointer',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>
-            Download
-          </button>
-        </div>
-      </div>
-      )}
 
       {/* Add Leaflet CSS. intentional: always-light surface — Leaflet popup /
           zoom-control chrome sits on the light OSM map tiles in both themes;

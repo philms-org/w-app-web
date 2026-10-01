@@ -8,6 +8,7 @@ import {
   checkOut,
   fetchPresence,
   fetchAttendeeHistory,
+  fetchVenueAttendees,
   fetchVerificationTags,
   startConversation,
   fetchBanners,
@@ -16,11 +17,11 @@ import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
+import { useVenuePositionWatch } from '@/lib/hooks/useVenuePositionWatch';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
-import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import HotspotsCard from '@/components/hotspots/HotspotsCard';
 import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
 import { hotspotMeterFill } from '@/lib/hotspotProgress';
@@ -47,6 +48,11 @@ import HotspotStrip from '@/components/hotspots/HotspotStrip';
 export default function CheckedInHero() {
   const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
+  // presenceProfiles mixes people in the room, past visitors and people
+  // attending by link (0037). These say who's who: green light = in the room.
+  const [inRoomIds, setInRoomIds] = useState<Set<string>>(new Set());
+  const [attendeeIds, setAttendeeIds] = useState<Set<string>>(new Set());
+  const [guestIds, setGuestIds] = useState<Set<string>>(new Set());
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -60,6 +66,7 @@ export default function CheckedInHero() {
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
   const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
+  const [showOrganizerSheet, setShowOrganizerSheet] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
   const eventHotspots = useEventHotspots(selectedLocation?.id);
@@ -133,28 +140,40 @@ export default function CheckedInHero() {
     if (!selectedLocation) return;
     const locationId = selectedLocation.id;
 
+    const mergeIn = (more: Profile[]) =>
+      setPresenceProfiles((current) => {
+        const seen = new Set(current.map((p) => p.id));
+        const merged = [...current];
+        for (const profile of more) {
+          if (!seen.has(profile.id)) {
+            seen.add(profile.id);
+            merged.push(profile);
+          }
+        }
+        return merged;
+      });
+
     fetchPresence(locationId)
       .then((rows) => {
         const profiles = rows.map((row) => row.profiles).filter((p): p is Profile => !!p);
         setPresenceProfiles(profiles);
+        setInRoomIds(new Set(rows.map((row) => row.user_id)));
       })
       .catch((err) => console.error('Failed to load presence:', err));
 
     fetchAttendeeHistory(locationId)
-      .then((history) => {
-        setPresenceProfiles((current) => {
-          const seen = new Set(current.map((p) => p.id));
-          const merged = [...current];
-          for (const profile of history) {
-            if (!seen.has(profile.id)) {
-              seen.add(profile.id);
-              merged.push(profile);
-            }
-          }
-          return merged;
-        });
-      })
+      .then(mergeIn)
       .catch((err) => console.error('Failed to load attendee history:', err));
+
+    // People attending by link (or guests) show up as cards too, before they
+    // ever check in.
+    fetchVenueAttendees(locationId)
+      .then((attendees) => {
+        setAttendeeIds(new Set(attendees.filter((a) => a.kind === 'attendee').map((a) => a.profile.id)));
+        setGuestIds(new Set(attendees.filter((a) => a.kind === 'guest').map((a) => a.profile.id)));
+        mergeIn(attendees.map((a) => a.profile));
+      })
+      .catch((err) => console.error('Failed to load venue attendees:', err));
   }, [selectedLocation]);
 
   // Live presence: any check-in / check-out row for this venue re-runs the
@@ -213,6 +232,26 @@ export default function CheckedInHero() {
 
   }, [selectedLocation, withinGeofence, loadPresence, reloadHotspots]);
 
+  // Walking out of the room checks you out (green light off); walking back in
+  // checks you in again via the effect above, which reads the store location
+  // we update here. Attendees keep feed access either way (0037). Needs two
+  // fixes in a row clearly outside the radius so GPS jitter at the door
+  // doesn't flicker people in and out.
+  const outsideFixes = useRef(0);
+  useVenuePositionWatch(selectedLocation?.id ?? null, (fix) => {
+    if (!selectedLocation) return;
+    useStore.getState().setCurrentLocation({ lat: fix.lat, lng: fix.lng });
+    const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
+    const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
+    outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;
+    if (checkedIn && outsideFixes.current >= 2) {
+      outsideFixes.current = 0;
+      setCheckedIn(false);
+      checkInAttemptedFor.current = null;
+      checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
+    }
+  });
+
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
       checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
@@ -222,6 +261,13 @@ export default function CheckedInHero() {
   };
 
   if (!selectedLocation) return null;
+
+  // Attending = joined by link or checked in while the link was on, plus
+  // anyone in the room now; guests never count as attending.
+  const attendingCount = new Set(
+    [...Array.from(attendeeIds), ...Array.from(inRoomIds)].filter((id) => !guestIds.has(id)),
+  ).size;
+  const iAmAttending = !!user?.id && (attendeeIds.has(user.id) || guestIds.has(user.id));
 
   const selectedAttendee = presenceProfiles.find((p) => p.id === selectedAttendeeId) ?? null;
   const selectedAttendeeTags = selectedAttendee ? tagsByUserId.get(selectedAttendee.id) ?? [] : [];
@@ -267,7 +313,10 @@ export default function CheckedInHero() {
         onEngage={(el) => checkedIn && contributeCarousel(selectedLocation.id, el)}
       />
 
-      <div style={{ padding: '16px 20px 0' }}>
+      {/* Venue screen per the approved feed mockup (v4): carousel, one status
+          bar, then the pills and feed get the rest of the screen. Organizer
+          tools live in a bottom sheet behind the button on the right. */}
+      <div style={{ padding: '8px 20px 0' }}>
         <HotspotStrip
           locationId={selectedLocation.id}
           checkedIn={checkedIn}
@@ -281,20 +330,38 @@ export default function CheckedInHero() {
             });
           }}
         />
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
-            <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              {selectedLocation.count} {selectedLocation.count === 1 ? 'person' : 'people'} here
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', minHeight: '44px' }}>
+          <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.green, flexShrink: 0 }} />
+          <span style={{ color: theme.text, fontWeight: 600, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            {inRoomIds.size} in the room
+            {attendingCount > 0 && <span style={{ color: theme.muted, fontWeight: 500 }}> · {attendingCount} attending</span>}
+          </span>
           {checkedIn && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 style={{ width: '18px', height: '18px', color: theme.green }} />
-              <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-                Checked in
-              </span>
-            </div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: theme.muted, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              <CheckCircle2 aria-hidden style={{ width: '16px', height: '16px', color: theme.green }} />
+              Checked in
+            </span>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setShowOrganizerSheet(true)}
+              aria-label="Organizer tools"
+              style={{
+                marginLeft: 'auto',
+                width: '44px',
+                height: '44px',
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: '50%',
+                border: `1px solid ${theme.divider}`,
+                backgroundColor: theme.surface,
+                color: theme.text,
+                cursor: 'pointer',
+              }}
+            >
+              <Settings aria-hidden style={{ width: '20px', height: '20px' }} />
+            </button>
           )}
         </div>
 
@@ -317,7 +384,27 @@ export default function CheckedInHero() {
           </Link>
         )}
 
-        {!withinGeofence && (
+        {!checkedIn && iAmAttending && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            backgroundColor: theme.surface2,
+            border: `1px solid ${theme.divider}`,
+            borderRadius: '12px',
+            padding: '12px 14px',
+            marginBottom: '16px'
+          }}>
+            <CheckCircle2 style={{ width: '18px', height: '18px', color: theme.muted, flexShrink: 0, marginTop: '1px' }} />
+            <p style={{ color: theme.text, fontSize: '13px', lineHeight: 1.4, fontFamily: 'Montserrat, system-ui, sans-serif', margin: 0 }}>
+              {guestIds.has(user?.id ?? '')
+                ? "You're following as a guest. You can post and see who's in the room."
+                : "You're attending · away from the room. You can still post and see who's in the room. You'll check in automatically when you arrive."}
+            </p>
+          </div>
+        )}
+
+        {!withinGeofence && !iAmAttending && (
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -335,124 +422,20 @@ export default function CheckedInHero() {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <Link
-            href={`/main/venue/chat?locationId=${selectedLocation.id}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              minHeight: '44px',
-              backgroundColor: theme.surface,
-              color: theme.text,
-              border: `1px solid ${theme.divider}`,
-              borderRadius: '9999px',
-              padding: '0 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              textDecoration: 'none',
-            }}
-          >
-            <MessageCircle aria-hidden style={{ width: '16px', height: '16px' }} />
-            Venue chat
-          </Link>
-          {/* Organizer tools (members, announcements, reports, rewards, zones,
-              activities, titles) live in the organizer hub — one entry point
-              here instead of a row of seven pills above the feed. */}
-          {canManage && (
-            <Link
-              href="/main/organizer"
-              style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              minHeight: '44px',
-              backgroundColor: theme.surface,
-              color: theme.text,
-              border: `1px solid ${theme.divider}`,
-              borderRadius: '9999px',
-              padding: '0 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              textDecoration: 'none',
-            }}
-            >
-              <Settings aria-hidden style={{ width: '16px', height: '16px' }} />
-              Manage venue
-            </Link>
-          )}
-        </div>
-
-        {checkedIn && <ActivityMeterCard locationId={selectedLocation.id} hotspotMeter={hotspotMeter} />}
+        {/* Kept by founder decision (2026-10-01); the picks card is not. */}
+        <TitleRosterCard locationId={selectedLocation.id} />
+        {/* Event hotspots: the progress bar lives in this card now that the
+            picks card is gone from the venue screen (founder, 2026-10-01). */}
         <HotspotsCard
           hotspots={eventHotspots.hotspots}
           progress={hp}
           loading={eventHotspots.loading}
           error={eventHotspots.error}
           onRetry={reloadHotspots}
+          meter={hotspotMeter}
         />
 
-        {selectedLocation && <TitleRosterCard locationId={selectedLocation.id} />}
-
-        <div style={{
-          backgroundColor: theme.surface,
-          borderRadius: '16px',
-          border: `1px solid ${theme.divider}`,
-          padding: '16px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <p style={{
-              color: theme.muted,
-              fontSize: '11px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Who&apos;s here</p>
-
-            {canManage && (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setShowBroadcast(true)}
-                  disabled={presenceProfiles.length === 0}
-                  style={{
-                    backgroundColor: theme.surface2,
-                    color: theme.text,
-                    border: 'none',
-                    borderRadius: '9999px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: presenceProfiles.length === 0 ? 'default' : 'pointer',
-                    opacity: presenceProfiles.length === 0 ? 0.5 : 1,
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}
-                >
-                  Message Everyone Live
-                </button>
-                <button
-                  onClick={() => setShowCreateGroup(true)}
-                  style={{
-                    backgroundColor: theme.surface2,
-                    color: theme.text,
-                    border: 'none',
-                    borderRadius: '9999px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: 'Montserrat, system-ui, sans-serif'
-                  }}
-                >
-                  + Create Group
-                </button>
-              </div>
-            )}
-          </div>
-
+        <div style={{ marginBottom: '20px' }}>
           {showBroadcast && canManage && (
             <div style={{
               backgroundColor: theme.surface2,
@@ -556,6 +539,8 @@ export default function CheckedInHero() {
               myAvatarUrl={user?.image}
               onReply={(profile) => setSelectedAttendeeId(profile.id)}
               checkedIn={checkedIn}
+              inRoomIds={inRoomIds}
+              guestIds={guestIds}
             />
           )}
 
@@ -588,6 +573,86 @@ export default function CheckedInHero() {
           )}
         </div>
       </div>
+
+      {showOrganizerSheet && canManage && (
+        <div
+          role="presentation"
+          onClick={() => setShowOrganizerSheet(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(0,0,0,0.6)' }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Organizer tools"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0,
+              maxWidth: 480, margin: '0 auto',
+              backgroundColor: theme.surface,
+              borderTop: `1px solid ${theme.divider}`,
+              borderRadius: '24px 24px 0 0',
+              padding: '10px 16px calc(18px + env(safe-area-inset-bottom, 0px))',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+            }}
+          >
+            <div aria-hidden style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: theme.divider, margin: '0 auto 12px' }} />
+            <p style={{ color: theme.text, fontSize: '15px', fontWeight: 800, marginBottom: '12px' }}>
+              Organizer tools · {selectedLocation.name}
+            </p>
+            {[
+              {
+                label: 'Message everyone live',
+                icon: MessageCircle,
+                primary: true,
+                disabled: presenceProfiles.length === 0,
+                onClick: () => { setShowOrganizerSheet(false); setShowBroadcast(true); },
+              },
+              {
+                label: 'Create group',
+                icon: Users,
+                primary: false,
+                disabled: false,
+                onClick: () => { setShowOrganizerSheet(false); setShowCreateGroup(true); },
+              },
+            ].map(({ label, icon: Icon, primary, disabled, onClick }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                  minHeight: '52px', padding: '0 16px', marginBottom: '8px',
+                  borderRadius: '14px', fontSize: '15px', fontWeight: 700,
+                  fontFamily: 'inherit', cursor: disabled ? 'default' : 'pointer',
+                  opacity: disabled ? 0.5 : 1,
+                  backgroundColor: primary ? theme.accent : theme.surface2,
+                  color: primary ? theme.onAccent : theme.text,
+                  border: primary ? 'none' : `1px solid ${theme.divider}`,
+                }}
+              >
+                <Icon aria-hidden style={{ width: '20px', height: '20px' }} />
+                {label}
+              </button>
+            ))}
+            {/* Members, announcements, reports, rewards, zones, activities,
+                titles and carousel uploads all live in the organizer hub. */}
+            <Link
+              href="/main/organizer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                minHeight: '52px', padding: '0 16px',
+                borderRadius: '14px', fontSize: '15px', fontWeight: 700,
+                backgroundColor: theme.surface2, color: theme.text,
+                border: `1px solid ${theme.divider}`, textDecoration: 'none',
+              }}
+            >
+              <Settings aria-hidden style={{ width: '20px', height: '20px' }} />
+              Manage venue
+            </Link>
+          </div>
+        </div>
+      )}
 
       {showCreateGroup && (
         <CreateGroupModal
