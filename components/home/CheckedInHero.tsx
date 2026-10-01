@@ -12,6 +12,7 @@ import {
   fetchVerificationTags,
   startConversation,
   fetchBanners,
+  hasOpenCheckin,
 } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
@@ -36,7 +37,7 @@ import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal'
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
-import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import { haversineMeters, venueToLocation } from '@/lib/geo';
 import HotspotStrip from '@/components/hotspots/HotspotStrip';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
@@ -199,15 +200,37 @@ export default function CheckedInHero() {
   // check-out (handleBack) and when the location changes below.
   const checkInAttemptedFor = useRef<string | null>(null);
 
+  // Back goes Home without checking out, so re-opening a venue you're still
+  // checked in at must not check in (or fire the meter's check-in burst)
+  // again. Resolve that first; the geofence check-in waits for the answer.
+  const [openCheckin, setOpenCheckin] = useState<{ id: string; open: boolean } | null>(null);
+  const selectedId = selectedLocation?.id;
+  useEffect(() => {
+    if (!selectedId) return;
+    let cancelled = false;
+    setOpenCheckin(null);
+    hasOpenCheckin(selectedId)
+      .then((open) => { if (!cancelled) setOpenCheckin({ id: selectedId, open }); })
+      .catch(() => { if (!cancelled) setOpenCheckin({ id: selectedId, open: false }); });
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
   useEffect(() => {
     if (!selectedLocation) return;
 
     if (checkInAttemptedFor.current !== selectedLocation.id) {
       setCheckedIn(false);
     }
-    setSelectedAttendeeId(null);
+    if (openCheckin?.id !== selectedLocation.id) return;
+    if (checkInAttemptedFor.current === selectedLocation.id) return;
 
-    if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
+    if (openCheckin.open) {
+      checkInAttemptedFor.current = selectedLocation.id;
+      setCheckedIn(true);
+      return;
+    }
+
+    if (withinGeofence) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
         .then(() => {
@@ -221,6 +244,11 @@ export default function CheckedInHero() {
           console.error('Check-in failed:', err);
         });
     }
+  }, [selectedLocation, withinGeofence, openCheckin, reloadHotspots]);
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    setSelectedAttendeeId(null);
 
     loadPresence();
 
@@ -230,7 +258,7 @@ export default function CheckedInHero() {
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
 
-  }, [selectedLocation, withinGeofence, loadPresence, reloadHotspots]);
+  }, [selectedLocation, loadPresence]);
 
   // Walking out of the room checks you out (green light off); walking back in
   // checks you in again via the effect above, which reads the store location
@@ -248,15 +276,36 @@ export default function CheckedInHero() {
       outsideFixes.current = 0;
       setCheckedIn(false);
       checkInAttemptedFor.current = null;
+      // Forget "already checked in here" so walking back in really checks in.
+      setOpenCheckin({ id: selectedLocation.id, open: false });
       checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
     }
   });
 
+  // Back returns Home and keeps you checked in (Home shows "You're at …" to
+  // come back in). Checking out is its own explicit action.
   const handleBack = () => {
+    setSelectedLocation(null);
+  };
+
+  // Wait for the write before leaving: Home re-reads your check-in on arrival
+  // and would otherwise still show "You're at …".
+  const [checkingOut, setCheckingOut] = useState(false);
+  const handleCheckOut = async () => {
+    if (checkingOut) return;
     if (selectedLocation && checkedIn) {
-      checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
+      setCheckingOut(true);
+      try {
+        await checkOut(selectedLocation.id);
+      } catch (err) {
+        console.error('Check-out failed:', err);
+        setCheckingOut(false);
+        return;
+      }
+      setCheckingOut(false);
     }
     checkInAttemptedFor.current = null;
+    setOpenCheckin(null);
     setSelectedLocation(null);
   };
 
@@ -320,17 +369,9 @@ export default function CheckedInHero() {
         <HotspotStrip
           locationId={selectedLocation.id}
           checkedIn={checkedIn}
-          onOpenEvent={(ev) => {
-            handleBack();
-            setSelectedLocation({
-              id: ev.id, name: ev.name, description: ev.description ?? '',
-              latitude: ev.lat as number, longitude: ev.lng as number,
-              radius: ev.geofence_radius_meters ?? DEFAULT_RADIUS_METERS, count: 0, category: 'venue', isHot: false,
-              banner_image: ev.banner_image ?? null,
-            });
-          }}
+          onOpenEvent={(ev) => setSelectedLocation(venueToLocation(ev))}
         />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', minHeight: '44px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', minHeight: '44px' }}>
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.green, flexShrink: 0 }} />
           <span style={{ color: theme.text, fontWeight: 600, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             {inRoomIds.size} in the room
@@ -361,6 +402,29 @@ export default function CheckedInHero() {
               }}
             >
               <Settings aria-hidden style={{ width: '20px', height: '20px' }} />
+            </button>
+          )}
+          {checkedIn && (
+            <button
+              type="button"
+              onClick={handleCheckOut}
+              disabled={checkingOut}
+              style={{
+                // The organizer gear already takes the right edge.
+                marginLeft: canManage ? 0 : 'auto',
+                minHeight: '32px',
+                padding: '0 14px',
+                borderRadius: '9999px',
+                border: `1px solid ${theme.divider}`,
+                backgroundColor: 'transparent',
+                color: theme.muted,
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+              }}
+            >
+              {checkingOut ? 'Checking out…' : 'Check out'}
             </button>
           )}
         </div>

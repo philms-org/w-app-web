@@ -345,6 +345,8 @@ export async function fetchPresence(locationId: string): Promise<Presence[]> {
   return data ?? [];
 }
 
+// Same 12h window as the 0007 cleanup: an open check-in older than this is a
+// forgotten session, not a current visit.
 const STALE_CHECKIN_MS = 12 * 60 * 60 * 1000;
 
 export async function checkIn(locationId: string): Promise<void> {
@@ -423,6 +425,40 @@ async function autoJoinVenueChatIfEnabled(locationId: string, uid: string): Prom
       { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
     );
   if (joinError) throw joinError;
+}
+
+// The venue I'm checked in at right now, if any. Same 12h window as the
+// 0007 cleanup, so a check-in forgotten yesterday doesn't count.
+export async function fetchMyOpenCheckinVenue(): Promise<Venue | null> {
+  const uid = await getCurrentUserId();
+  if (!uid) return null;
+  const since = new Date(Date.now() - STALE_CHECKIN_MS).toISOString();
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('location_id')
+    .eq('user_id', uid)
+    .is('checked_out_at', null)
+    .gte('checked_in_at', since)
+    .order('checked_in_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const locationId = data?.[0]?.location_id as string | undefined;
+  return locationId ? fetchVenue(locationId) : null;
+}
+
+export async function hasOpenCheckin(locationId: string): Promise<boolean> {
+  const uid = await getCurrentUserId();
+  if (!uid) return false;
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('location_id', locationId)
+    .is('checked_out_at', null)
+    .gte('checked_in_at', new Date(Date.now() - STALE_CHECKIN_MS).toISOString())
+    .limit(1);
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function checkOut(locationId: string): Promise<void> {
