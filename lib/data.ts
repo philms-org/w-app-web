@@ -515,7 +515,7 @@ export async function createReward(
 
 export async function updateReward(
   id: string,
-  fields: Partial<Pick<Reward, 'name' | 'deal_text' | 'instructions' | 'icon_type' | 'display_order' | 'is_active' | 'min_checkins'>>
+  fields: Partial<Pick<Reward, 'name' | 'deal_text' | 'instructions' | 'icon_type' | 'display_order' | 'is_active' | 'min_checkins' | 'min_hotspots'>>
 ): Promise<void> {
   const { error } = await supabase.from('rewards').update(fields).eq('id', id);
   if (error) throw error;
