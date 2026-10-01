@@ -8,6 +8,7 @@ import {
   checkOut,
   fetchPresence,
   fetchAttendeeHistory,
+  fetchVenueAttendees,
   fetchVerificationTags,
   startConversation,
   fetchBanners,
@@ -16,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
+import { useVenuePositionWatch } from '@/lib/hooks/useVenuePositionWatch';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings } from 'lucide-react';
@@ -43,9 +45,11 @@ import { haversineMeters } from '@/lib/geo';
 export default function CheckedInHero() {
   const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
-  // People checked in right now. presenceProfiles also holds past attendees,
-  // and selectedLocation.count is a 0 placeholder from the venue pickers.
-  const [hereNowCount, setHereNowCount] = useState(0);
+  // presenceProfiles mixes people in the room, past visitors and people
+  // attending by link (0037). These say who's who: green light = in the room.
+  const [inRoomIds, setInRoomIds] = useState<Set<string>>(new Set());
+  const [attendeeIds, setAttendeeIds] = useState<Set<string>>(new Set());
+  const [guestIds, setGuestIds] = useState<Set<string>>(new Set());
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -122,29 +126,40 @@ export default function CheckedInHero() {
     if (!selectedLocation) return;
     const locationId = selectedLocation.id;
 
+    const mergeIn = (more: Profile[]) =>
+      setPresenceProfiles((current) => {
+        const seen = new Set(current.map((p) => p.id));
+        const merged = [...current];
+        for (const profile of more) {
+          if (!seen.has(profile.id)) {
+            seen.add(profile.id);
+            merged.push(profile);
+          }
+        }
+        return merged;
+      });
+
     fetchPresence(locationId)
       .then((rows) => {
         const profiles = rows.map((row) => row.profiles).filter((p): p is Profile => !!p);
         setPresenceProfiles(profiles);
-        setHereNowCount(new Set(rows.map((row) => row.user_id)).size);
+        setInRoomIds(new Set(rows.map((row) => row.user_id)));
       })
       .catch((err) => console.error('Failed to load presence:', err));
 
     fetchAttendeeHistory(locationId)
-      .then((history) => {
-        setPresenceProfiles((current) => {
-          const seen = new Set(current.map((p) => p.id));
-          const merged = [...current];
-          for (const profile of history) {
-            if (!seen.has(profile.id)) {
-              seen.add(profile.id);
-              merged.push(profile);
-            }
-          }
-          return merged;
-        });
-      })
+      .then(mergeIn)
       .catch((err) => console.error('Failed to load attendee history:', err));
+
+    // People attending by link (or guests) show up as cards too, before they
+    // ever check in.
+    fetchVenueAttendees(locationId)
+      .then((attendees) => {
+        setAttendeeIds(new Set(attendees.filter((a) => a.kind === 'attendee').map((a) => a.profile.id)));
+        setGuestIds(new Set(attendees.filter((a) => a.kind === 'guest').map((a) => a.profile.id)));
+        mergeIn(attendees.map((a) => a.profile));
+      })
+      .catch((err) => console.error('Failed to load venue attendees:', err));
   }, [selectedLocation]);
 
   // Live presence: any check-in / check-out row for this venue re-runs the
@@ -202,6 +217,26 @@ export default function CheckedInHero() {
 
   }, [selectedLocation, withinGeofence, loadPresence]);
 
+  // Walking out of the room checks you out (green light off); walking back in
+  // checks you in again via the effect above, which reads the store location
+  // we update here. Attendees keep feed access either way (0037). Needs two
+  // fixes in a row clearly outside the radius so GPS jitter at the door
+  // doesn't flicker people in and out.
+  const outsideFixes = useRef(0);
+  useVenuePositionWatch(selectedLocation?.id ?? null, (fix) => {
+    if (!selectedLocation) return;
+    useStore.getState().setCurrentLocation({ lat: fix.lat, lng: fix.lng });
+    const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
+    const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
+    outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;
+    if (checkedIn && outsideFixes.current >= 2) {
+      outsideFixes.current = 0;
+      setCheckedIn(false);
+      checkInAttemptedFor.current = null;
+      checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
+    }
+  });
+
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
       checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
@@ -211,6 +246,13 @@ export default function CheckedInHero() {
   };
 
   if (!selectedLocation) return null;
+
+  // Attending = joined by link or checked in while the link was on, plus
+  // anyone in the room now; guests never count as attending.
+  const attendingCount = new Set(
+    [...Array.from(attendeeIds), ...Array.from(inRoomIds)].filter((id) => !guestIds.has(id)),
+  ).size;
+  const iAmAttending = !!user?.id && (attendeeIds.has(user.id) || guestIds.has(user.id));
 
   const selectedAttendee = presenceProfiles.find((p) => p.id === selectedAttendeeId) ?? null;
   const selectedAttendeeTags = selectedAttendee ? tagsByUserId.get(selectedAttendee.id) ?? [] : [];
@@ -261,7 +303,8 @@ export default function CheckedInHero() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
             <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              {hereNowCount} {hereNowCount === 1 ? 'person' : 'people'} here
+              {inRoomIds.size} in the room
+              {attendingCount > 0 && <span style={{ color: theme.muted }}> · {attendingCount} attending</span>}
             </span>
           </div>
           {checkedIn && (
@@ -293,7 +336,27 @@ export default function CheckedInHero() {
           </Link>
         )}
 
-        {!withinGeofence && (
+        {!checkedIn && iAmAttending && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            backgroundColor: theme.surface2,
+            border: `1px solid ${theme.divider}`,
+            borderRadius: '12px',
+            padding: '12px 14px',
+            marginBottom: '16px'
+          }}>
+            <CheckCircle2 style={{ width: '18px', height: '18px', color: theme.muted, flexShrink: 0, marginTop: '1px' }} />
+            <p style={{ color: theme.text, fontSize: '13px', lineHeight: 1.4, fontFamily: 'Montserrat, system-ui, sans-serif', margin: 0 }}>
+              {guestIds.has(user?.id ?? '')
+                ? "You're following as a guest. You can post and see who's in the room."
+                : "You're attending · away from the room. You can still post and see who's in the room. You'll check in automatically when you arrive."}
+            </p>
+          </div>
+        )}
+
+        {!withinGeofence && !iAmAttending && (
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -525,6 +588,8 @@ export default function CheckedInHero() {
               myAvatarUrl={user?.image}
               onReply={(profile) => setSelectedAttendeeId(profile.id)}
               checkedIn={checkedIn}
+              inRoomIds={inRoomIds}
+              guestIds={guestIds}
             />
           )}
 
