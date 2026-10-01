@@ -41,13 +41,12 @@ function matchesFilter(
     case 'guests': return guestIds.has(p.id);
     case 'posted': return !!row.post;
     case 'noteam': return !teamMemberIds.has(p.id);
-    case 'dating': return !!p.dating_id;
     case 'networking': return !!p.networking_id;
     case 'socialising': return !!p.socialising_id;
   }
 }
 
-const FILTER_KEYS: FeedFilter[] = ['all', 'inroom', 'guests', 'posted', 'noteam', 'networking', 'socialising', 'dating'];
+const FILTER_KEYS: FeedFilter[] = ['all', 'inroom', 'guests', 'posted', 'noteam', 'networking', 'socialising'];
 
 const EMPTY_COPY: Record<FeedFilter, string> = {
   all: 'No one else is here yet',
@@ -57,7 +56,6 @@ const EMPTY_COPY: Record<FeedFilter, string> = {
   noteam: 'Everyone here is on a team',
   networking: 'No one here is networking yet',
   socialising: 'No one here is socialising yet',
-  dating: 'No one here is dating yet',
 };
 
 const NO_IDS: Set<string> = new Set();
