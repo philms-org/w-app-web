@@ -50,23 +50,27 @@ function VenueHotspotsInner() {
   const [newRadius, setNewRadius] = useState('75');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [countsFailed, setCountsFailed] = useState(false);
 
   const load = useCallback(() => {
     if (!eventId) return;
-    Promise.all([fetchVenue(eventId), fetchEventHotspots(eventId), fetchRewards(eventId)])
-      .then(([ev, list, rewards]) => {
-        setEvent(ev);
-        setHotspots(list);
+    Promise.all([fetchVenue(eventId), fetchEventHotspots(eventId)])
+      .then(([ev, list]) => { setEvent(ev); setHotspots(list); })
+      .catch((e) => { console.error(e); setError("Couldn't load hotspots — try again"); });
+    fetchRewards(eventId)
+      .then((rewards) => {
         const targets = rewards.map((r) => r.min_hotspots).filter((n): n is number => n != null);
         setMaxRewardTarget(targets.length ? Math.max(...targets) : null);
       })
-      .catch((e) => { console.error(e); setError("Couldn't load hotspots — try again"); });
-    fetchHotspotVisitCounts(eventId).then(setCounts).catch((e) => console.error(e));
+      .catch((e) => console.error(e));
+    fetchHotspotVisitCounts(eventId)
+      .then((c) => { setCounts(c); setCountsFailed(false); })
+      .catch((e) => { console.error(e); setCountsFailed(true); });
   }, [eventId]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    if (mode === 'search' && allVenues.length === 0) fetchVenues().then(setAllVenues).catch(console.error);
+    if (mode === 'search' && allVenues.length === 0) fetchVenues().then(setAllVenues).catch((e) => { console.error(e); setError("Couldn't load places. Try again"); });
   }, [mode, allVenues.length]);
 
   const taken = useMemo(() => new Set([eventId, ...hotspots.map((h) => h.location_id)]), [eventId, hotspots]);
@@ -75,17 +79,21 @@ function VenueHotspotsInner() {
     .filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()))
     .slice(0, 20);
 
-  const run = (p: Promise<unknown>, msg: string) => {
+  const run = (p: Promise<unknown>, msg: string): Promise<boolean> => {
     setBusy(true); setError(null);
-    return p.then(load).catch((e) => { console.error(e); setError(msg); }).finally(() => setBusy(false));
+    return p.then(() => { load(); return true; })
+      .catch((e) => { console.error(e); setError(msg); return false; })
+      .finally(() => setBusy(false));
   };
 
-  // Swap positions i and i+dir; rewrite both to their index so equal
-  // sort_orders (e.g. both 0) still reorder.
+  // Swap positions i and i+dir, then normalize every changed row to its
+  // new index so arbitrary stored sort_orders end up 0..n-1.
   const move = (i: number, dir: -1 | 1) => {
-    const a = hotspots[i], b = hotspots[i + dir];
-    if (!a || !b) return;
-    run(Promise.all([updateHotspot(a.id, { sort_order: i + dir }), updateHotspot(b.id, { sort_order: i })]),
+    if (!hotspots[i] || !hotspots[i + dir]) return;
+    const next = [...hotspots];
+    [next[i], next[i + dir]] = [next[i + dir], next[i]];
+    const changed = next.map((h, idx) => ({ h, idx })).filter(({ h, idx }) => h.sort_order !== idx);
+    run(Promise.all(changed.map(({ h, idx }) => updateHotspot(h.id, { sort_order: idx }))),
       "Couldn't reorder — try again");
   };
 
@@ -95,10 +103,25 @@ function VenueHotspotsInner() {
     run(
       createHotspotPlace(eventId, { name: newName, lat: pin.lat, lng: pin.lng, radius: Number.isNaN(radius) ? 75 : radius, note: newNote }),
       "Couldn't add hotspot — try again"
-    ).then(() => { setMode('none'); setPin(null); setNewName(''); setNewNote(''); setNewRadius('75'); });
+    ).then((ok) => { if (ok) { setMode('none'); setPin(null); setNewName(''); setNewNote(''); setNewRadius('75'); } });
   };
 
+  const evLat = event?.lat ?? null;
+  const evLng = event?.lng ?? null;
+  const mapCenter = useMemo(
+    () => pin ?? (evLat ? { lat: evLat, lng: evLng as number } : undefined),
+    [pin, evLat, evLng],
+  );
+
   if (!eventId) return null;
+  if (!event && error) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
+        <p role="alert" style={{ color: theme.text, fontFamily: FONT, fontSize: 16, textAlign: 'center' }}>{error}</p>
+        <button onClick={() => { setError(null); load(); }} style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: 'none', backgroundColor: theme.accent, color: theme.onAccent, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>Try again</button>
+      </div>
+    );
+  }
   if (!event) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -144,7 +167,7 @@ function VenueHotspotsInner() {
             <p style={{ color: theme.muted, fontSize: 13, marginTop: 8 }}>No matching places. Try New place instead.</p>
           ) : results.map((v) => (
             <button key={v.id} disabled={busy}
-              onClick={() => run(addHotspot(eventId, v.id), "Couldn't add hotspot — try again").then(() => setMode('none'))}
+              onClick={() => run(addHotspot(eventId, v.id), "Couldn't add hotspot — try again").then((ok) => { if (ok) setMode('none'); })}
               style={{ display: 'block', width: '100%', minHeight: 44, textAlign: 'left', marginTop: 6, padding: '10px 14px',
                 borderRadius: 10, border: `1px solid ${theme.divider}`, backgroundColor: theme.surface, color: theme.text, cursor: 'pointer', fontFamily: FONT }}>
               {v.name}{v.city ? ` — ${v.city}` : ''}
@@ -164,7 +187,7 @@ function VenueHotspotsInner() {
               }] : []}
               onLocationSelect={() => {}}
               onMapClick={(lat, lng) => setPin({ lat, lng })}
-              center={pin ?? (event?.lat ? { lat: event.lat, lng: event.lng as number } : undefined)}
+              center={mapCenter}
               zoom={16}
             />
           </div>
@@ -203,9 +226,11 @@ function VenueHotspotsInner() {
               <input defaultValue={h.note ?? ''} maxLength={140} placeholder="Why go? (optional)" aria-label={`Note for ${h.place?.name ?? 'hotspot'}`}
                 onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== h.note) run(updateHotspot(h.id, { note: v }), "Couldn't save note — try again"); }}
                 style={{ ...inputStyle, minHeight: 36, padding: '6px 10px', fontSize: 12, marginTop: 4 }} />
-              <div style={{ color: theme.muted, fontSize: 12, marginTop: 4 }}>
-                {counts[h.location_id] ?? 0} {(counts[h.location_id] ?? 0) === 1 ? 'person' : 'people'} visited
-              </div>
+              {!countsFailed && (
+                <div style={{ color: theme.muted, fontSize: 12, marginTop: 4 }}>
+                  {counts[h.location_id] ?? 0} {(counts[h.location_id] ?? 0) === 1 ? 'person' : 'people'} visited
+                </div>
+              )}
             </div>
             <button aria-label={`Remove ${h.place?.name ?? 'hotspot'}`} disabled={busy}
               onClick={() => run(removeHotspot(h.id), "Couldn't remove — try again")} style={iconBtn}><X size={18} /></button>
