@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchRewards, fetchVenue } from '@/lib/data';
 import { fetchEventHotspots, fetchMyCheckinsAt } from '@/lib/hotspots';
 import { computeHotspotProgress, type HotspotProgress } from '@/lib/hotspotProgress';
@@ -12,15 +12,24 @@ export function useEventHotspots(eventId: string | null | undefined) {
   const [hotspots, setHotspots] = useState<EventHotspot[]>([]);
   const [event, setEvent] = useState<Venue | null>(null);
   const [progress, setProgress] = useState<HotspotProgress | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!eventId);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
+  const lastIdRef = useRef<string | null | undefined>(eventId);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
+    if (eventId !== lastIdRef.current) {
+      setHotspots([]);
+      setEvent(null);
+      setProgress(null);
+      lastIdRef.current = eventId;
+    }
+
     if (!eventId) {
-      setHotspots([]); setEvent(null); setProgress(null);
+      setLoading(false);
+      setError(false);
       return;
     }
     let cancelled = false;
@@ -31,7 +40,11 @@ export function useEventHotspots(eventId: string | null | undefined) {
         const list = await fetchEventHotspots(eventId);
         if (cancelled) return;
         setHotspots(list);
-        if (list.length === 0) { setProgress(null); return; }
+        if (list.length === 0) {
+          setEvent(null);
+          setProgress(null);
+          return;
+        }
         const [ev, rewards, checkins] = await Promise.all([
           fetchVenue(eventId),
           fetchRewards(eventId),
