@@ -45,6 +45,20 @@ const createLocationIcon = (count: number, isHot: boolean = false) => {
   });
 };
 
+const createHotspotIcon = (stamped: boolean) => {
+  const fill = stamped ? '#3ECF6B' : '#FF7A45';
+  const glyph = stamped
+    ? '<path d="M5 12l5 5L20 7" stroke="#0b1a0f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 1 1-8 0c0-1.6.8-2.8 1.8-3.8.2 1.5 1 2.3 2 2.6C11.2 8 11 5.5 12 3z" fill="#1a0a02"/>';
+  return L.divIcon({
+    html: `<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${fill};border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4)"><svg width="18" height="18" viewBox="0 0 24 24" style="transform:rotate(45deg)">${glyph}</svg></div>`,
+    className: 'w-hotspot-marker',
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+  });
+};
+
+
 interface WMapProps {
   locations: any[];
   onLocationSelect: (location: any) => void;
@@ -116,6 +130,15 @@ export default function WMap({
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = locations.map((location) => {
+      if (location.hotspot) {
+        const hotspotMarker = L.marker([location.latitude, location.longitude], {
+          icon: createHotspotIcon(location.hotspot.stamped),
+          title: location.name,
+          keyboard: true,
+        }).addTo(map);
+        hotspotMarker.on('click', () => onLocationSelect(location));
+        return hotspotMarker;
+      }
       const marker = L.marker([location.latitude, location.longitude], {
         icon: createLocationIcon(location.count, location.isHot)
       }).addTo(map);

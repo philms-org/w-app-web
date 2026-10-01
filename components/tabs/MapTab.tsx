@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
+import { fetchActiveHotspots, fetchMyCheckinsAt } from '@/lib/hotspots';
+import { visitedHotspotIds, localDay } from '@/lib/hotspotProgress';
+import HotspotPinSheet from '@/components/hotspots/HotspotPinSheet';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -41,7 +44,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -100,7 +103,42 @@ export default function MapTab() {
     return matchesSearch && matchesCategory;
   }), [nearbyLocations, searchQuery, selectedCategory]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- map locations are untyped here, like nearbyLocations
+  const [hotspotPins, setHotspotPins] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [hotspotSheet, setHotspotSheet] = useState<any | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const today = localDay(new Date().toISOString());
+    fetchActiveHotspots(today, selectedLocation?.id ?? null)
+      .then(async (rows) => {
+        const checkins = await fetchMyCheckinsAt([...new Set(rows.map((r) => r.location_id))]);
+        const byEvent = new Map<string, typeof rows>();
+        for (const r of rows) byEvent.set(r.event_id, [...(byEvent.get(r.event_id) ?? []), r]);
+        const pins = rows.map((r) => {
+          const visited = visitedHotspotIds(byEvent.get(r.event_id)!, checkins, r.event);
+          return {
+            id: r.place!.id, name: r.place!.name, description: r.place!.description ?? '',
+            latitude: r.place!.lat as number, longitude: r.place!.lng as number,
+            radius: r.place!.geofence_radius_meters ?? 50, count: 0, category: 'venue', isHot: false,
+            banner_image: r.place!.banner_image ?? null,
+            hotspot: { stamped: visited.has(r.location_id), eventName: r.event.name, note: r.note },
+          };
+        });
+        if (!cancelled) setHotspotPins(pins);
+      })
+      .catch((err) => console.error('Failed to load hotspots:', err));
+    return () => { cancelled = true; };
+  }, [selectedLocation?.id]);
+
+  const mapLocations = useMemo(() => {
+    const hotspotIds = new Set(hotspotPins.map((p) => p.id));
+    return [...filteredLocations.filter((l) => !hotspotIds.has(l.id)), ...hotspotPins];
+  }, [filteredLocations, hotspotPins]);
+
   const handleLocationSelect = useCallback((location: any) => {
+    if (location.hotspot) { setHotspotSheet(location); return; }
     setSelectedLocation(location);
     setActiveTab('home');
   }, [setSelectedLocation, setActiveTab]);
@@ -301,7 +339,7 @@ export default function MapTab() {
       {/* Real Interactive Map */}
       <div style={{ position: 'relative', height: '100vh' }}>
         <WMap
-          locations={filteredLocations}
+          locations={mapLocations}
           onLocationSelect={handleLocationSelect}
           onMapClick={handleMapClick}
           center={mapCenter}
@@ -742,6 +780,30 @@ export default function MapTab() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+      {hotspotPins.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: locationDenied ? 'calc(170px + env(safe-area-inset-bottom))' : 'calc(80px + env(safe-area-inset-bottom))',
+          left: 76, zIndex: 1000,
+          display: 'flex', gap: 10, alignItems: 'center', padding: '6px 10px', borderRadius: 10,
+          backgroundColor: 'rgba(12,12,14,0.9)', color: '#F5F5F7', fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 12,
+        }}>
+          <span style={{ color: '#FF7A45' }} aria-hidden>●</span> Hotspot
+          <span style={{ color: '#3ECF6B' }} aria-hidden>●</span> Stamped
+        </div>
+      )}
+      {hotspotSheet && (
+        <HotspotPinSheet
+          location={hotspotSheet}
+          onClose={() => setHotspotSheet(null)}
+          onCheckIn={() => {
+            const place = { ...hotspotSheet };
+            delete place.hotspot;
+            setHotspotSheet(null);
+            setSelectedLocation(place);
+            setActiveTab('home');
+          }}
+        />
+      )}
     </div>
   );
 }
