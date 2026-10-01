@@ -67,3 +67,16 @@ export function hotspotMeterFill(p: HotspotProgress): number {
   if (p.target <= 0) return 0;
   return Math.max(0, Math.min(1, p.count / p.target));
 }
+
+// Which parent event a hotspot venue belongs to right now: one running today
+// (local day within event_date..event_end_date), else an undated trail, else
+// none — a past or future dated event never counts.
+export function pickHotspotParent<T extends EventWindow>(events: T[], todayLocal: string): T | null {
+  const running = events.find((e) => {
+    const s = e.event_date?.slice(0, 10);
+    if (!s) return false;
+    const end = (e.event_end_date ?? e.event_date)!.slice(0, 10);
+    return todayLocal >= s && todayLocal <= end;
+  });
+  return running ?? events.find((e) => !e.event_date) ?? null;
+}

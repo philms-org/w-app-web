@@ -4,22 +4,10 @@ import { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { fetchHotspotParents } from '@/lib/hotspots';
 import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
-import { hotspotMeterFill, localDay } from '@/lib/hotspotProgress';
+import { hotspotMeterFill, localDay, pickHotspotParent } from '@/lib/hotspotProgress';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { Stamp } from '@/components/hotspots/HotspotsCard';
-
-// Prefer an event running today; else the first parent.
-function pickParent(events: Venue[]): Venue | null {
-  const today = localDay(new Date().toISOString());
-  const running = events.find((e) => {
-    const s = e.event_date?.slice(0, 10);
-    if (!s) return false;
-    const end = (e.event_end_date ?? e.event_date)!.slice(0, 10);
-    return today >= s && today <= end;
-  });
-  return running ?? events[0] ?? null;
-}
 
 // Screen 4: shown on a venue that is a hotspot of some event.
 export default function HotspotStrip({
@@ -29,9 +17,15 @@ export default function HotspotStrip({
 
   useEffect(() => {
     let cancelled = false;
+    setParent(null); // don't show the previous venue's parent while loading
     fetchHotspotParents(locationId)
-      .then((events) => { if (!cancelled) setParent(pickParent(events)); })
-      .catch((e) => console.error('Failed to load hotspot parents:', e));
+      .then((events) => {
+        if (!cancelled) setParent(pickHotspotParent(events, localDay(new Date().toISOString())));
+      })
+      .catch((e) => {
+        if (!cancelled) setParent(null);
+        console.error('Failed to load hotspot parents:', e);
+      });
     return () => { cancelled = true; };
   }, [locationId]);
 

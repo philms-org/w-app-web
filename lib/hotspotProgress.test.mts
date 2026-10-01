@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeHotspotProgress, localDay, hotspotMeterFill } from './hotspotProgress.ts';
+import { computeHotspotProgress, localDay, hotspotMeterFill, pickHotspotParent } from './hotspotProgress.ts';
 
 const hs = (location_id: string, created_at = '2026-01-01T00:00:00Z') => ({
   id: `h-${location_id}`, event_id: 'ev', location_id, note: null, sort_order: 0, created_at, place: null,
@@ -109,4 +109,24 @@ test('all rewards reached → target falls back to hotspot total', () => {
   assert.equal(p.target, 5);
   assert.equal(p.nextReward, null);
   assert.deepEqual(p.unlocked.map((r) => r.id), ['r']);
+});
+
+const ev = (id: string, event_date: string | null, event_end_date: string | null = null) => ({ id, event_date, event_end_date });
+
+test('pickHotspotParent: running event wins over undated', () => {
+  const p = pickHotspotParent([ev('trail', null), ev('fest', '2026-10-03', '2026-10-04')], '2026-10-04');
+  assert.equal(p?.id, 'fest');
+});
+
+test('pickHotspotParent: undated returned when none running', () => {
+  const p = pickHotspotParent([ev('past', '2026-09-01'), ev('trail', null)], '2026-10-04');
+  assert.equal(p?.id, 'trail');
+});
+
+test('pickHotspotParent: past-only → null', () => {
+  assert.equal(pickHotspotParent([ev('past', '2026-09-01', '2026-09-02')], '2026-10-04'), null);
+});
+
+test('pickHotspotParent: future-only → null', () => {
+  assert.equal(pickHotspotParent([ev('future', '2026-11-01')], '2026-10-04'), null);
 });
