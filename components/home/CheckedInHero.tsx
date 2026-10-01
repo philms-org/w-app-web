@@ -11,6 +11,7 @@ import {
   fetchVerificationTags,
   startConversation,
   fetchBanners,
+  hasOpenCheckin,
 } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
@@ -170,15 +171,37 @@ export default function CheckedInHero() {
   // check-out (handleBack) and when the location changes below.
   const checkInAttemptedFor = useRef<string | null>(null);
 
+  // Back goes Home without checking out, so re-opening a venue you're still
+  // checked in at must not check in (or fire the meter's check-in burst)
+  // again. Resolve that first; the geofence check-in waits for the answer.
+  const [openCheckin, setOpenCheckin] = useState<{ id: string; open: boolean } | null>(null);
+  const selectedId = selectedLocation?.id;
+  useEffect(() => {
+    if (!selectedId) return;
+    let cancelled = false;
+    setOpenCheckin(null);
+    hasOpenCheckin(selectedId)
+      .then((open) => { if (!cancelled) setOpenCheckin({ id: selectedId, open }); })
+      .catch(() => { if (!cancelled) setOpenCheckin({ id: selectedId, open: false }); });
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
   useEffect(() => {
     if (!selectedLocation) return;
 
     if (checkInAttemptedFor.current !== selectedLocation.id) {
       setCheckedIn(false);
     }
-    setSelectedAttendeeId(null);
+    if (openCheckin?.id !== selectedLocation.id) return;
+    if (checkInAttemptedFor.current === selectedLocation.id) return;
 
-    if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
+    if (openCheckin.open) {
+      checkInAttemptedFor.current = selectedLocation.id;
+      setCheckedIn(true);
+      return;
+    }
+
+    if (withinGeofence) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
         .then(() => {
@@ -191,6 +214,11 @@ export default function CheckedInHero() {
           console.error('Check-in failed:', err);
         });
     }
+  }, [selectedLocation, withinGeofence, openCheckin]);
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    setSelectedAttendeeId(null);
 
     loadPresence();
 
@@ -200,9 +228,15 @@ export default function CheckedInHero() {
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
 
-  }, [selectedLocation, withinGeofence, loadPresence]);
+  }, [selectedLocation, loadPresence]);
 
+  // Back returns Home and keeps you checked in (Home shows "You're at …" to
+  // come back in). Checking out is its own explicit action.
   const handleBack = () => {
+    setSelectedLocation(null);
+  };
+
+  const handleCheckOut = () => {
     if (selectedLocation && checkedIn) {
       checkOut(selectedLocation.id).catch((err) => console.error('Check-out failed:', err));
     }
@@ -257,7 +291,7 @@ export default function CheckedInHero() {
       />
 
       <div style={{ padding: '16px 20px 0' }}>
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
             <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
@@ -271,6 +305,27 @@ export default function CheckedInHero() {
                 Checked in
               </span>
             </div>
+          )}
+          {checkedIn && (
+            <button
+              type="button"
+              onClick={handleCheckOut}
+              style={{
+                marginLeft: 'auto',
+                minHeight: '32px',
+                padding: '0 14px',
+                borderRadius: '9999px',
+                border: `1px solid ${theme.divider}`,
+                backgroundColor: 'transparent',
+                color: theme.muted,
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'Montserrat, system-ui, sans-serif',
+              }}
+            >
+              Check out
+            </button>
           )}
         </div>
 
