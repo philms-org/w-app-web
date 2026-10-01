@@ -31,6 +31,7 @@ import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
 import TagBadge from '@/components/shared/TagBadge';
+import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters } from '@/lib/geo';
 
@@ -392,6 +393,9 @@ export default function CheckedInHero() {
             </p>
           </div>
         )}
+
+        {/* Kept by founder decision (2026-10-01); the picks card is not. */}
+        <TitleRosterCard locationId={selectedLocation.id} />
 
         <div style={{ marginBottom: '20px' }}>
           {showBroadcast && canManage && (
