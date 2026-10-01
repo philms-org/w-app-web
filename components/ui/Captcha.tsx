@@ -16,10 +16,14 @@ interface CaptchaProps {
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
+// Turnstile only works on domains registered in the Cloudflare dashboard.
+// Preview deployments use dynamic Vercel hostnames that can't be pre-registered,
+// so CAPTCHA is only active on the production deployment.
+const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+
 // Callers use this to decide whether a captchaToken is required before
-// submitting — false (no site key configured) means skip the check entirely,
-// so the app keeps working before Turnstile is set up.
-export const captchaEnabled = Boolean(SITE_KEY);
+// submitting — false means skip the check entirely (no key, or non-production).
+export const captchaEnabled = Boolean(SITE_KEY) && isProduction;
 
 const Captcha = forwardRef<TurnstileInstance | undefined, CaptchaProps>(
   ({ onVerify, onExpire, size = 'normal' }, ref) => {
