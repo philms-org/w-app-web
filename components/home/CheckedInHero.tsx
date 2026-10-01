@@ -21,6 +21,9 @@ import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
+import HotspotsCard from '@/components/hotspots/HotspotsCard';
+import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
+import { hotspotMeterFill } from '@/lib/hotspotProgress';
 import VenueFeed from '@/components/home/VenueFeed';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
@@ -54,6 +57,16 @@ export default function CheckedInHero() {
   const [venueHasZones, setVenueHasZones] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
+  const eventHotspots = useEventHotspots(selectedLocation?.id);
+  const reloadHotspots = eventHotspots.reload;
+  const hp = eventHotspots.progress;
+  const hotspotMeter = hp
+    ? {
+        value: hotspotMeterFill(hp),
+        label: `${hp.count} / ${hp.target} hotspots`,
+        rewardText: hp.nextReward ? `Visit ${hp.nextReward.min_hotspots} → ${hp.nextReward.name}` : null,
+      }
+    : undefined;
 
   useZoneTracking(checkedIn ? selectedLocation?.id ?? null : null);
 
@@ -173,7 +186,7 @@ export default function CheckedInHero() {
     if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
-        .then(() => setCheckedIn(true))
+        .then(() => { setCheckedIn(true); reloadHotspots(); })
         .catch((err) => {
           checkInAttemptedFor.current = null;
           console.error('Check-in failed:', err);
@@ -188,7 +201,7 @@ export default function CheckedInHero() {
       .then(setBanners)
       .catch((err) => console.error('Failed to load banners:', err));
 
-  }, [selectedLocation, withinGeofence, loadPresence]);
+  }, [selectedLocation, withinGeofence, loadPresence, reloadHotspots]);
 
   const handleBack = () => {
     if (selectedLocation && checkedIn) {
@@ -426,7 +439,14 @@ export default function CheckedInHero() {
           )}
         </div>
 
-        {checkedIn && <ActivityMeterCard locationId={selectedLocation.id} />}
+        {checkedIn && <ActivityMeterCard locationId={selectedLocation.id} hotspotMeter={hotspotMeter} />}
+        <HotspotsCard
+          hotspots={eventHotspots.hotspots}
+          progress={hp}
+          loading={eventHotspots.loading}
+          error={eventHotspots.error}
+          onRetry={reloadHotspots}
+        />
 
         {selectedLocation && <TitleRosterCard locationId={selectedLocation.id} />}
 
