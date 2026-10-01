@@ -14,7 +14,7 @@ import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
   Camera, Edit2, Shield, Link2, Award,
-  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard
+  LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard, ShieldCheck
 } from 'lucide-react';
 
 export default function ProfileTab() {
@@ -63,6 +63,7 @@ export default function ProfileTab() {
   };
 
   const menuItems = [
+    ...(user?.isMasterAdmin ? [{ id: 'admin', label: 'W Staff Admin', icon: ShieldCheck, action: () => router.push('/admin') }] : []),
     ...(isOrganizer ? [{ id: 'organizer', label: 'Organizer Dashboard', icon: LayoutDashboard, action: () => router.push('/main/organizer') }] : []),
     { id: 'connections', label: 'My Connections', icon: Users, action: () => router.push('/main/connections') },
     { id: 'links', label: 'My Links', icon: Link2, action: () => router.push('/main/connect/links') },
