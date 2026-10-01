@@ -32,7 +32,8 @@ import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal'
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
-import { haversineMeters } from '@/lib/geo';
+import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import HotspotStrip from '@/components/hotspots/HotspotStrip';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
 // banner) plus a "Connections" card built from VenueFeed (posts + presence,
@@ -252,6 +253,19 @@ export default function CheckedInHero() {
       <HeroCarousel images={bannerImages} links={bannerLinks} title={selectedLocation.name} onBack={handleBack} />
 
       <div style={{ padding: '16px 20px 0' }}>
+        <HotspotStrip
+          locationId={selectedLocation.id}
+          checkedIn={checkedIn}
+          onOpenEvent={(ev) => {
+            handleBack();
+            setSelectedLocation({
+              id: ev.id, name: ev.name, description: ev.description ?? '',
+              latitude: ev.lat as number, longitude: ev.lng as number,
+              radius: ev.geofence_radius_meters ?? DEFAULT_RADIUS_METERS, count: 0, category: 'venue', isHot: false,
+              banner_image: ev.banner_image ?? null,
+            });
+          }}
+        />
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
