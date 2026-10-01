@@ -43,7 +43,28 @@ export default function MainPage() {
     // gate (components/LandingLocationGate.tsx) on the very first visit,
     // which silently disabled this prompt for every session after that.
     if (!currentLocation && !locationPermissionAsked) {
-      setShowLocationPrompt(true);
+      // Already granted in the browser: fetch quietly instead of asking again
+      // on every app open. Falls back to the prompt where the Permissions API
+      // is missing or the answer is "prompt"/"denied".
+      let cancelled = false;
+      const showPrompt = () => { if (!cancelled) setShowLocationPrompt(true); };
+      if (navigator.permissions?.query) {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then((status) => {
+            if (cancelled) return;
+            if (status.state === 'granted') {
+              setLocationPermissionAsked(true);
+              requestLocation();
+            } else {
+              showPrompt();
+            }
+          })
+          .catch(showPrompt);
+      } else {
+        showPrompt();
+      }
+      return () => { cancelled = true; };
     }
   }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
 
