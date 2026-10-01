@@ -36,13 +36,12 @@ function matchesFilter(
     case 'all': return true;
     case 'posted': return !!row.post;
     case 'noteam': return !teamMemberIds.has(p.id);
-    case 'dating': return !!p.dating_id;
     case 'networking': return !!p.networking_id;
     case 'socialising': return !!p.socialising_id;
   }
 }
 
-const FILTER_KEYS: FeedFilter[] = ['all', 'posted', 'noteam', 'networking', 'socialising', 'dating'];
+const FILTER_KEYS: FeedFilter[] = ['all', 'posted', 'noteam', 'networking', 'socialising'];
 
 const EMPTY_COPY: Record<FeedFilter, string> = {
   all: 'No one else is checked in yet',
@@ -50,7 +49,6 @@ const EMPTY_COPY: Record<FeedFilter, string> = {
   noteam: 'Everyone here is on a team',
   networking: 'No one here is networking yet',
   socialising: 'No one here is socialising yet',
-  dating: 'No one here is dating yet',
 };
 
 type PostRow = { id: string; location_id: string; author_id: string; body: string; created_at: string };
