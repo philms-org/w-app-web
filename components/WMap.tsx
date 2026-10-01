@@ -5,6 +5,16 @@ import dynamic from 'next/dynamic';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Popup HTML is built from venue data; escape it so names/descriptions
+// can't inject markup or script.
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 // Custom location marker icon
 const createLocationIcon = (count: number, isHot: boolean = false) => {
   const color = isHot ? '#EC2C91' : '#17BFD9';
@@ -145,15 +155,15 @@ export default function WMap({
 
       marker.bindPopup(`
         <div style="font-family: Montserrat, system-ui, sans-serif; min-width: 200px;">
-          <h3 style="font-weight: 600; margin-bottom: 4px; color: #231E20;">${location.name}</h3>
-          <p style="color: #6B6B70; font-size: 14px; margin-bottom: 8px;">${location.description}</p>
+          <h3 style="font-weight: 600; margin-bottom: 4px; color: #231E20;">${escapeHtml(location.name)}</h3>
+          <p style="color: #6B6B70; font-size: 14px; margin-bottom: 8px;">${escapeHtml(location.description)}</p>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="color: #17BFD9; font-weight: 600;">${location.count} ${location.count === 1 ? 'person' : 'people'}</span>
+            <span style="color: #17BFD9; font-weight: 600;">${escapeHtml(location.count)} ${location.count === 1 ? 'person' : 'people'}</span>
             <span style="color: #6B6B70;">•</span>
-            <span style="color: #6B6B70;">${location.radius}m radius</span>
+            <span style="color: #6B6B70;">${escapeHtml(location.radius)}m radius</span>
           </div>
           <button
-            onclick="window.wSelectLocation('${location.id}')"
+            onclick="window.wSelectLocation(${escapeHtml(JSON.stringify(String(location.id)))})"
             style="
               width: 100%;
               background-color: #17BFD9;
