@@ -190,6 +190,8 @@ function VenueHotspotsInner() {
               onMapClick={(lat, lng) => setPin({ lat, lng })}
               center={mapCenter}
               zoom={16}
+              height="100%"
+              showUserMarker={false}
             />
           </div>
           <p style={{ color: theme.muted, fontSize: 12, margin: 0 }}>{pin ? 'Pin dropped. Tap the map to move it.' : 'Tap the map to drop a pin.'}</p>

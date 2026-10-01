@@ -77,6 +77,8 @@ interface WMapProps {
   zoom?: number;
   // False when center is a fallback (no location): don't draw "Your Location" there.
   showUserMarker?: boolean;
+  // CSS height of the map box; the Map tab fills the screen, embeds pass e.g. '100%'.
+  height?: string;
 }
 
 export default function WMap({
@@ -86,6 +88,7 @@ export default function WMap({
   center = { lat: 40.7128, lng: -74.0060 },
   zoom = 13,
   showUserMarker = true,
+  height = '100vh',
 }: WMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -228,7 +231,7 @@ export default function WMap({
       <div
         ref={mapRef}
         style={{
-          height: '100vh',
+          height,
           width: '100%',
           zIndex: 1
         }}
