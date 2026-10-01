@@ -225,7 +225,7 @@ function VenueMembersPageInner() {
           <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading members...</p>
         ) : filtered.length === 0 ? (
           <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            {members.length === 0 ? 'No one has checked in here yet.' : 'No members match that search.'}
+            {members.length === 0 ? 'No one has checked in or joined by invite link yet.' : 'No members match that search.'}
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -276,7 +276,9 @@ function VenueMembersPageInner() {
                     {m.profile.display_name ?? 'Someone'}
                   </p>
                   <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-                    First visit {formatDate(m.firstCheckinAt)} · Last visit {formatDate(m.lastCheckinAt)}
+                    {m.checkinCount > 0
+                      ? `First visit ${formatDate(m.firstCheckinAt)} · Last visit ${formatDate(m.lastCheckinAt)}`
+                      : `Joined by invite link ${formatDate(m.joinedByInviteAt)} · not checked in yet`}
                   </p>
                   {canGovern ? (
                     <button

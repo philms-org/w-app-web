@@ -256,6 +256,9 @@ export interface VenueMember {
   checkinCount: number;
   firstCheckinAt: string | null;
   lastCheckinAt: string | null;
+  // Set when they joined via the venue's invite link (venue_early_access,
+  // migration 0035). Invitees who haven't arrived yet have checkinCount 0.
+  joinedByInviteAt: string | null;
   tags: VerificationTag[];
 }
 

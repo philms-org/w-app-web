@@ -773,6 +773,16 @@ export async function fetchVenueMembers(locationId: string): Promise<VenueMember
   if (optOutError) throw optOutError;
   const optedOutIds = new Set((optOuts ?? []).map((r: { user_id: string }) => r.user_id));
 
+  // People who joined by invite link before arriving never get a
+  // location_checkins row until they check in, so without this the roster
+  // stays empty for a pre-event venue. RLS (0035) lets managers read these.
+  const { data: inviteRows, error: inviteError } = await supabase
+    .from('venue_early_access')
+    .select(`user_id, granted_at, profiles:${PUBLIC_PROFILE}!user_id(*)`)
+    .eq('location_id', locationId)
+    .order('granted_at', { ascending: true });
+  if (inviteError) throw inviteError;
+
   const { data: tagRows, error: tagError } = await supabase
     .from('verification_tags')
     .select('*, verification_tag_types(*)')
@@ -802,12 +812,30 @@ export async function fetchVenueMembers(locationId: string): Promise<VenueMember
         checkinCount: 1,
         firstCheckinAt: row.checked_in_at,
         lastCheckinAt: row.checked_in_at,
+        joinedByInviteAt: null,
+        tags: tagsByUser.get(row.user_id) ?? [],
+      });
+    }
+  }
+  for (const row of (inviteRows ?? []) as unknown as { user_id: string; granted_at: string; profiles: Profile }[]) {
+    if (!row.profiles || optedOutIds.has(row.user_id)) continue;
+    const existing = byUser.get(row.user_id);
+    if (existing) {
+      existing.joinedByInviteAt = row.granted_at;
+    } else {
+      byUser.set(row.user_id, {
+        profile: row.profiles,
+        checkinCount: 0,
+        firstCheckinAt: null,
+        lastCheckinAt: null,
+        joinedByInviteAt: row.granted_at,
         tags: tagsByUser.get(row.user_id) ?? [],
       });
     }
   }
   // Rows arrive oldest-first, so the last time we see a user_id is their
-  // most recent visit — sort the roster most-visits-first for the UI.
+  // most recent visit — sort the roster most-visits-first for the UI
+  // (invitees who haven't arrived yet land at the bottom).
   return Array.from(byUser.values()).sort((a, b) => b.checkinCount - a.checkinCount);
 }
 
