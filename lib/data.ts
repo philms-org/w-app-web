@@ -2498,3 +2498,18 @@ export async function fetchCheckedInUserIds(locationId: string): Promise<string[
   if (error) throw error;
   return Array.from(new Set((data ?? []).map((r: { user_id: string }) => r.user_id)));
 }
+
+// People checked in right now at every venue, keyed by location id (map pins).
+export async function fetchCheckedInCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('location_id, user_id')
+    .is('checked_out_at', null);
+  if (error) throw error;
+  const users = new Map<string, Set<string>>();
+  for (const r of (data ?? []) as { location_id: string; user_id: string }[]) {
+    if (!users.has(r.location_id)) users.set(r.location_id, new Set());
+    users.get(r.location_id)!.add(r.user_id);
+  }
+  return Object.fromEntries(Array.from(users, ([id, set]) => [id, set.size]));
+}

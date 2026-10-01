@@ -43,6 +43,9 @@ import { haversineMeters } from '@/lib/geo';
 export default function CheckedInHero() {
   const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
+  // People checked in right now. presenceProfiles also holds past attendees,
+  // and selectedLocation.count is a 0 placeholder from the venue pickers.
+  const [hereNowCount, setHereNowCount] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -123,6 +126,7 @@ export default function CheckedInHero() {
       .then((rows) => {
         const profiles = rows.map((row) => row.profiles).filter((p): p is Profile => !!p);
         setPresenceProfiles(profiles);
+        setHereNowCount(new Set(rows.map((row) => row.user_id)).size);
       })
       .catch((err) => console.error('Failed to load presence:', err));
 
@@ -257,7 +261,7 @@ export default function CheckedInHero() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
             <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              {selectedLocation.count} {selectedLocation.count === 1 ? 'person' : 'people'} here
+              {hereNowCount} {hereNowCount === 1 ? 'person' : 'people'} here
             </span>
           </div>
           {checkedIn && (
