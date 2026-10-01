@@ -1,5 +1,6 @@
 'use client';
 
+import { contribute } from '@/lib/meter';
 import { useState } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
@@ -13,17 +14,20 @@ export default function VenueFeedComposer({
   onSubmit,
   docked = false,
   placeholder = "What's up?",
+  disabledReason,
 }: {
   avatarUrl?: string | null;
   onSubmit: (body: string) => Promise<void>;
   docked?: boolean;
   placeholder?: string;
+  /** When set, posting is off and this says why (for example, not checked in). */
+  disabledReason?: string;
 }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
+  const submit = async (el?: Element) => {
     const body = text.trim();
     if (!body || busy) return;
     setBusy(true);
@@ -31,6 +35,7 @@ export default function VenueFeedComposer({
     setText('');
     try {
       await onSubmit(body);
+      contribute('post', el);
     } catch (err) {
       console.error('Failed to post to venue feed:', err);
       setText(body);
@@ -46,7 +51,7 @@ export default function VenueFeedComposer({
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); submit(); }}
+      onSubmit={(e) => { e.preventDefault(); submit(e.currentTarget); }}
       style={docked ? {
         position: 'fixed', left: 0, right: 0, bottom: 'calc(64px + env(safe-area-inset-bottom))', zIndex: 45,
         padding: '8px 12px', background: 'color-mix(in srgb, var(--surface) 78%, transparent)',
@@ -69,7 +74,8 @@ export default function VenueFeedComposer({
         <input
           value={text}
           onChange={(e) => { setText(e.target.value); if (error) setError(null); }}
-          placeholder={placeholder}
+          placeholder={disabledReason ?? placeholder}
+          disabled={!!disabledReason}
           maxLength={280}
           aria-label="Post an update"
           style={{
@@ -81,7 +87,7 @@ export default function VenueFeedComposer({
         <button
           type="submit"
           aria-label="Post"
-          disabled={!text.trim() || busy}
+          disabled={!text.trim() || busy || !!disabledReason}
           style={{
             flexShrink: 0, width: 44, height: 44, borderRadius: 999, border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',

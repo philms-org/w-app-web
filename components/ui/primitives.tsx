@@ -391,7 +391,10 @@ export function LockedOverlay({
 }) {
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' }} aria-hidden>
+      {/* minHeight: children can be empty (no one here yet) or absolutely
+          positioned (FeedBlurBackdrop); without it the wrapper collapses to 0
+          and the absolute overlay spills up over whatever sits above it. */}
+      <div style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none', minHeight: 200 }} aria-hidden>
         {children}
       </div>
       <div

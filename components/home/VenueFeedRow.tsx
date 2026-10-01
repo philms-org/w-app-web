@@ -1,7 +1,8 @@
 'use client';
 
+import { contribute } from '@/lib/meter';
 import { useCallback, useState } from 'react';
-import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, Reply, Trash2 } from 'lucide-react';
+import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, MoreHorizontal, Send, Trash2 } from 'lucide-react';
 import { reportVenueContent } from '@/lib/data';
 import PostComments from './PostComments';
 import InlineReport from './InlineReport';
@@ -62,6 +63,7 @@ export default function VenueFeedRow({
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const handleCount = useCallback((n: number) => setCommentCount(n), []);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -142,20 +144,15 @@ export default function VenueFeedRow({
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 -8px -14px', opacity: pending ? 0.6 : 1 }}>
                 <button
                   type="button"
-                  onClick={() => onReply(profile)}
-                  aria-label={`Reply to ${profile.display_name ?? 'this post'}`}
-                  style={{ ...iconButton, color: theme.accent }}
-                >
-                  <Reply size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleLike?.(post.id)}
+                  onClick={(e) => {
+                    onToggleLike?.(post.id);
+                    if (!post.liked_by_me) contribute('like', e.currentTarget);
+                  }}
                   disabled={pending}
                   aria-label={post.liked_by_me ? 'Unlike' : 'Like'}
                   style={{ ...iconButton, color: post.liked_by_me ? theme.accent2 : theme.muted }}
                 >
-                  <Heart size={16} fill={post.liked_by_me ? theme.accent2 : 'none'} />
+                  <Heart size={18} fill={post.liked_by_me ? theme.accent2 : 'none'} />
                   {!!post.like_count && <span style={{ fontSize: 12, fontWeight: 700 }}>{post.like_count}</span>}
                 </button>
                 <button
@@ -166,30 +163,54 @@ export default function VenueFeedRow({
                   aria-label={showComments ? 'Hide comments' : 'Show comments'}
                   style={{ ...iconButton, color: showComments ? theme.text : theme.muted }}
                 >
-                  <MessageSquare size={16} />
+                  <MessageSquare size={18} />
                   {!!(commentCount ?? post.comment_count) && (
                     <span style={{ fontSize: 12, fontWeight: 700 }}>{commentCount ?? post.comment_count}</span>
                   )}
                 </button>
-                <span style={{ marginLeft: 'auto' }} />
-                {(isMine || canModerate) && onDelete && !pending && (
+                {!isMine && (
                   <button
                     type="button"
-                    onClick={() => { setDeleteError(false); setConfirmingDelete(true); }}
-                    aria-label={isMine ? 'Delete your post' : 'Remove this post'}
-                    style={{ ...iconButton, color: theme.muted }}
+                    onClick={() => onReply(profile)}
+                    aria-label={`Message ${profile.display_name ?? 'them'} privately`}
+                    style={{ ...iconButton, padding: '0 10px', color: theme.muted, fontSize: 13, fontWeight: 600 }}
                   >
-                    <Trash2 size={16} />
+                    <Send size={16} aria-hidden />
+                    Message
                   </button>
                 )}
-                {!isMine && !pending && (
+                <span style={{ marginLeft: 'auto' }} />
+                {!pending && (!isMine || ((isMine || canModerate) && onDelete)) && (
                   <button
                     type="button"
-                    onClick={() => setReporting((v) => !v)}
-                    aria-label="Report this post"
+                    onClick={() => setMenuOpen((v) => !v)}
+                    aria-expanded={menuOpen}
+                    aria-label="More options"
                     style={{ ...iconButton, color: theme.muted }}
                   >
-                    <Flag size={16} />
+                    <MoreHorizontal size={18} />
+                  </button>
+                )}
+              </div>
+            )}
+            {menuOpen && !confirmingDelete && (
+              <div role="group" aria-label="Post options" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '10px 0 2px' }}>
+                {!isMine && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setReporting(true); }}
+                    style={{ ...iconButton, padding: '0 14px', borderRadius: 999, border: `1px solid ${theme.glassBorder}`, color: theme.text, fontSize: 13, fontWeight: 600 }}
+                  >
+                    <Flag size={15} aria-hidden /> Report
+                  </button>
+                )}
+                {(isMine || canModerate) && onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setDeleteError(false); setConfirmingDelete(true); }}
+                    style={{ ...iconButton, padding: '0 14px', borderRadius: 999, border: `1px solid ${theme.glassBorder}`, color: theme.accent2, fontSize: 13, fontWeight: 600 }}
+                  >
+                    <Trash2 size={15} aria-hidden /> {isMine ? 'Delete' : 'Remove'}
                   </button>
                 )}
               </div>
@@ -220,8 +241,14 @@ export default function VenueFeedRow({
           <button
             type="button"
             onClick={() => onReply(profile)}
-            style={{ background: 'none', border: 'none', padding: 0, minHeight: 44, margin: '-8px 0 -12px', color: theme.muted, fontFamily: 'inherit', fontSize: typeTokens.caption.fontSize, fontWeight: 600, cursor: 'pointer' }}
+            aria-label={`Say hi to ${profile.display_name ?? 'them'}`}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, minHeight: 44, padding: '0 16px',
+              borderRadius: 999, border: `1px solid ${theme.glassBorder}`, background: 'transparent',
+              color: theme.text, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
           >
+            <Send size={15} aria-hidden />
             Say hi
           </button>
         )}

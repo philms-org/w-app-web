@@ -1,5 +1,6 @@
 'use client';
 
+import { contribute } from '@/lib/meter';
 import { useCallback, useEffect, useState } from 'react';
 import { Flag, Trash2 } from 'lucide-react';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
@@ -63,6 +64,7 @@ export default function PostComments({
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
+    const formEl = e.currentTarget;
     const body = text.trim();
     if (!body || sending) return;
     setSending(true);
@@ -71,6 +73,7 @@ export default function PostComments({
       const c = await createPostComment(postId, body);
       setText('');
       setComments((prev) => (prev?.some((x) => x.id === c.id) ? prev : [...(prev ?? []), c]));
+      contribute('comment', formEl);
     } catch (err) {
       console.error('Failed to comment:', err);
       setError("Couldn't post that comment. You need to be checked in at this venue.");

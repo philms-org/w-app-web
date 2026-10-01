@@ -6,7 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { LockedOverlay } from '@/components/ui/primitives';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { getFreshPosition } from '@/lib/geolocation';
-import { canAnnounceAt, createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchVenuePosts, toggleLike } from '@/lib/data';
+import { canAnnounceAt, createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchTeams, fetchVenuePosts, toggleLike } from '@/lib/data';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
+import { Search } from 'lucide-react';
 import type { Profile, VenuePost } from '@/lib/types';
 import VenueFeedRow from './VenueFeedRow';
 import VenueFeedComposer from './VenueFeedComposer';
@@ -24,12 +26,32 @@ export class FeedPostError extends Error {
 }
 const TEMP_PREFIX = 'temp-';
 
-function matchesFilter(profile: Profile, filter: FeedFilter): boolean {
-  if (filter === 'all') return true;
-  if (filter === 'dating') return !!profile.dating_id;
-  if (filter === 'networking') return !!profile.networking_id;
-  return !!profile.socialising_id;
+function matchesFilter(
+  row: { profile: Profile; post?: VenuePost },
+  filter: FeedFilter,
+  teamMemberIds: Set<string>,
+): boolean {
+  const p = row.profile;
+  switch (filter) {
+    case 'all': return true;
+    case 'posted': return !!row.post;
+    case 'noteam': return !teamMemberIds.has(p.id);
+    case 'dating': return !!p.dating_id;
+    case 'networking': return !!p.networking_id;
+    case 'socialising': return !!p.socialising_id;
+  }
 }
+
+const FILTER_KEYS: FeedFilter[] = ['all', 'posted', 'noteam', 'networking', 'socialising', 'dating'];
+
+const EMPTY_COPY: Record<FeedFilter, string> = {
+  all: 'No one else is checked in yet',
+  posted: 'No posts yet',
+  noteam: 'Everyone here is on a team',
+  networking: 'No one here is networking yet',
+  socialising: 'No one here is socialising yet',
+  dating: 'No one here is dating yet',
+};
 
 type PostRow = { id: string; location_id: string; author_id: string; body: string; created_at: string };
 type LikeRow = { post_id: string; user_id: string };
@@ -56,6 +78,16 @@ export default function VenueFeed({
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
   const { canManage: canModerate } = useIsOrganizer(locationId);
   const [canAnnounce, setCanAnnounce] = useState(false);
+  const [teamMemberIds, setTeamMemberIds] = useState<Set<string>>(new Set());
+
+  // Who is already on a team, for the "Needs a team" pill. Teams are optional:
+  // if they can't load, everyone simply counts as not on a team.
+  const loadTeams = useCallback(() => {
+    fetchTeams(locationId)
+      .then((teams) => setTeamMemberIds(new Set(teams.flatMap((t) => t.members.map((m) => m.user_id)))))
+      .catch(() => {});
+  }, [locationId]);
+  useTableSubscription({ table: 'team_members', filter: `location_id=eq.${locationId}`, onEvent: loadTeams });
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +116,9 @@ export default function VenueFeed({
     return () => { cancelled = true; };
   }, []);
 
-  const unlocked = connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS;
+  // Checked in: you see everyone in the room. Only a preview from outside the
+  // venue stays locked behind the connections gate.
+  const unlocked = checkedIn || (connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS);
 
   // Keeps optimistic (temp-*) posts that the server hasn't confirmed yet, so a
   // refetch racing an in-flight post doesn't make it flicker out.
@@ -192,7 +226,7 @@ export default function VenueFeed({
     };
   }, [unlocked, locationId, loadPosts]);
 
-  const rows = useMemo(() => {
+  const allRows = useMemo(() => {
     const postedByAuthor = new Map<string, VenuePost>();
     for (const post of posts) {
       if (!postedByAuthor.has(post.author_id)) postedByAuthor.set(post.author_id, post);
@@ -206,8 +240,19 @@ export default function VenueFeed({
       .filter((p) => p.id !== myUserId && !postedByAuthor.has(p.id))
       .map((profile) => ({ profile, post: undefined as VenuePost | undefined }));
 
-    return [...posted, ...silent].filter((r) => matchesFilter(r.profile, filter));
-  }, [posts, presenceProfiles, myUserId, filter]);
+    return [...posted, ...silent];
+  }, [posts, presenceProfiles, myUserId]);
+
+  const counts = useMemo(() => {
+    const c = {} as Record<FeedFilter, number>;
+    for (const k of FILTER_KEYS) c[k] = allRows.filter((r) => matchesFilter(r, k, teamMemberIds)).length;
+    return c;
+  }, [allRows, teamMemberIds]);
+
+  const rows = useMemo(
+    () => allRows.filter((r) => matchesFilter(r, filter, teamMemberIds)),
+    [allRows, filter, teamMemberIds],
+  );
 
   const handleToggleLike = (postId: string) => {
     if (postId.startsWith(TEMP_PREFIX)) return;
@@ -277,7 +322,7 @@ export default function VenueFeed({
     }
   };
 
-  if (connectionCount === null) return null;
+  if (connectionCount === null && !checkedIn) return null;
 
   if (!unlocked) {
     return (
@@ -296,11 +341,30 @@ export default function VenueFeed({
 
   return (
     <div style={{ fontFamily: typeTokens.family }}>
-      <VenueFeedFilters value={filter} onChange={setFilter} />
+      <VenueFeedFilters value={filter} onChange={setFilter} counts={counts} />
       {rows.length === 0 ? (
-        <p style={{ color: theme.muted, fontSize: typeTokens.body.fontSize }}>
-          No one to connect with here yet
-        </p>
+        <div style={{ textAlign: 'center', padding: '24px 12px' }}>
+          <Search size={28} aria-hidden="true" style={{ color: theme.muted }} />
+          <p style={{ margin: '8px 0 4px', color: theme.text, fontSize: typeTokens.body.fontSize, fontWeight: 700 }}>
+            {EMPTY_COPY[filter]}
+          </p>
+          <p style={{ margin: 0, color: theme.muted, fontSize: typeTokens.caption.fontSize }}>
+            {filter === 'all' ? 'Post something and people will see it when they check in.' : 'Try another filter.'}
+          </p>
+          {filter !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              style={{
+                marginTop: 12, minHeight: 44, padding: '0 18px', borderRadius: 999, cursor: 'pointer',
+                background: 'transparent', color: theme.text, border: `1px solid ${theme.glassBorder}`,
+                fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+              }}
+            >
+              Show everyone
+            </button>
+          )}
+        </div>
       ) : (
         rows.map(({ profile, post }) => (
           <VenueFeedRow
@@ -322,6 +386,7 @@ export default function VenueFeed({
         avatarUrl={myAvatarUrl}
         onSubmit={handlePost}
         placeholder={canAnnounce ? 'Post an announcement…' : "What's up?"}
+        disabledReason={checkedIn || canAnnounce ? undefined : 'Check in at the venue to post'}
       />
       {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>

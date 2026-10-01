@@ -32,19 +32,19 @@ export default function HomeTab() {
     {
       id: 'history',
       label: 'History',
-      icon: <Clock style={{ width: '24px', height: '24px', color: activePanel === 'history' ? theme.onAccent : theme.text }} />,
+      icon: <Clock style={{ width: '30px', height: '30px', color: activePanel === 'history' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('history')
     },
     {
       id: 'rewards',
       label: 'Rewards',
-      icon: <Trophy style={{ width: '24px', height: '24px', color: activePanel === 'rewards' ? theme.onAccent : theme.text }} />,
+      icon: <Trophy style={{ width: '30px', height: '30px', color: activePanel === 'rewards' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('rewards')
     },
     {
       id: 'connect',
       label: 'Connect',
-      icon: <QrCode style={{ width: '24px', height: '24px', color: activePanel === 'connect' ? theme.onAccent : theme.text }} />,
+      icon: <QrCode style={{ width: '30px', height: '30px', color: activePanel === 'connect' ? theme.onAccent : theme.text }} />,
       onClick: () => togglePanel('connect')
     }
   ];
@@ -63,7 +63,7 @@ export default function HomeTab() {
       {activePanel === 'rewards' && <RewardsPanel />}
       {activePanel === 'connect' && <ConnectSheet />}
       {activePanel === null && <ConnectionsPosts excludeLocationId={selectedLocation?.id} />}
-      {activePanel === null && <FriendsActivityFeed />}
+      {activePanel === null && <FriendsActivityFeed onAddFriends={() => setActivePanel('connect')} />}
     </div>
   );
 }

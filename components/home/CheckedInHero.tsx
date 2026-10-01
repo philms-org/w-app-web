@@ -18,14 +18,17 @@ import { useZoneTracking } from '@/lib/hooks/useZoneTracking';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
-import { Users, MapPin, AlertCircle } from 'lucide-react';
+import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import ActivityMeterCard from '@/components/home/ActivityMeterCard';
 import HotspotsCard from '@/components/hotspots/HotspotsCard';
 import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
 import { hotspotMeterFill } from '@/lib/hotspotProgress';
 import VenueFeed from '@/components/home/VenueFeed';
+import TeamsView from '@/components/teams/TeamsView';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
+import RoomMeter from '@/components/home/RoomMeter';
+import { contribute, contributeCarousel } from '@/lib/meter';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
@@ -56,6 +59,7 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
+  const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
   const eventHotspots = useEventHotspots(selectedLocation?.id);
@@ -187,7 +191,12 @@ export default function CheckedInHero() {
     if (withinGeofence && checkInAttemptedFor.current !== selectedLocation.id) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
-        .then(() => { setCheckedIn(true); reloadHotspots(); })
+        .then(() => {
+          setCheckedIn(true);
+          reloadHotspots();
+          // Give the meter a moment to mount, then celebrate the check-in.
+          setTimeout(() => contribute('checkin', null), 900);
+        })
         .catch((err) => {
           checkInAttemptedFor.current = null;
           console.error('Check-in failed:', err);
@@ -250,7 +259,13 @@ export default function CheckedInHero() {
 
   return (
     <div>
-      <HeroCarousel images={bannerImages} links={bannerLinks} title={selectedLocation.name} onBack={handleBack} />
+      <HeroCarousel
+        images={bannerImages}
+        links={bannerLinks}
+        title={selectedLocation.name}
+        onBack={handleBack}
+        onEngage={(el) => checkedIn && contributeCarousel(selectedLocation.id, el)}
+      />
 
       <div style={{ padding: '16px 20px 0' }}>
         <HotspotStrip
@@ -273,12 +288,14 @@ export default function CheckedInHero() {
               {selectedLocation.count} {selectedLocation.count === 1 ? 'person' : 'people'} here
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin style={{ width: '18px', height: '18px', color: theme.accent }} />
-            <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-              {selectedLocation.radius}m radius
-            </span>
-          </div>
+          {checkedIn && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 style={{ width: '18px', height: '18px', color: theme.green }} />
+              <span style={{ color: theme.text, fontWeight: 500, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                Checked in
+              </span>
+            </div>
+          )}
         </div>
 
         {checkedIn && venueHasZones && (
@@ -322,134 +339,49 @@ export default function CheckedInHero() {
           <Link
             href={`/main/venue/chat?locationId=${selectedLocation.id}`}
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              minHeight: '44px',
               backgroundColor: theme.surface,
               color: theme.text,
               border: `1px solid ${theme.divider}`,
               borderRadius: '9999px',
-              padding: '8px 16px',
+              padding: '0 16px',
               fontSize: '13px',
               fontWeight: 600,
               fontFamily: 'Montserrat, system-ui, sans-serif',
               textDecoration: 'none',
             }}
           >
-            💬 Venue Chat
+            <MessageCircle aria-hidden style={{ width: '16px', height: '16px' }} />
+            Venue chat
           </Link>
+          {/* Organizer tools (members, announcements, reports, rewards, zones,
+              activities, titles) live in the organizer hub — one entry point
+              here instead of a row of seven pills above the feed. */}
           {canManage && (
-            <>
-              <Link
-                href={`/main/venue/members?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Members
-              </Link>
-              <Link
-                href={`/main/venue/announcements?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Announcements
-              </Link>
-              <Link
-                href={`/main/venue/reports?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Reports
-              </Link>
-              <Link
-                href={`/main/venue/rewards?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Rewards
-              </Link>
-              <Link
-                href={`/main/venue/zones?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Zones
-              </Link>
-              <Link
-                href={`/main/venue/activities?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Activities
-              </Link>
-              <Link
-                href={`/main/venue/titles?locationId=${selectedLocation.id}`}
-                style={{
-                  backgroundColor: theme.surface,
-                  color: theme.text,
-                  border: `1px solid ${theme.divider}`,
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'Montserrat, system-ui, sans-serif',
-                  textDecoration: 'none',
-                }}
-              >
-                Titles
-              </Link>
-            </>
+            <Link
+              href="/main/organizer"
+              style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              minHeight: '44px',
+              backgroundColor: theme.surface,
+              color: theme.text,
+              border: `1px solid ${theme.divider}`,
+              borderRadius: '9999px',
+              padding: '0 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              textDecoration: 'none',
+            }}
+            >
+              <Settings aria-hidden style={{ width: '16px', height: '16px' }} />
+              Manage venue
+            </Link>
           )}
         </div>
 
@@ -479,7 +411,7 @@ export default function CheckedInHero() {
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
-            }}>Connections</p>
+            }}>Who&apos;s here</p>
 
             {canManage && (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -580,14 +512,52 @@ export default function CheckedInHero() {
               sees announcements, even before unlocking who's here. */}
           <AnnouncementPill locationId={selectedLocation.id} venueName={selectedLocation.name} />
 
-          <VenueFeed
-            locationId={selectedLocation.id}
-            presenceProfiles={presenceProfiles}
-            myUserId={user?.id}
-            myAvatarUrl={user?.image}
-            onReply={(profile) => setSelectedAttendeeId(profile.id)}
-            checkedIn={checkedIn}
-          />
+          {checkedIn && <RoomMeter locationId={selectedLocation.id} />}
+
+          <div
+            role="tablist"
+            aria-label="Room view"
+            style={{
+              display: 'flex', padding: 4, marginBottom: 12, borderRadius: 9999,
+              backgroundColor: theme.surface2, border: `1px solid ${theme.divider}`,
+            }}
+          >
+            {(['people', 'teams'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={roomView === v}
+                onClick={() => setRoomView(v)}
+                style={{
+                  flex: 1, minHeight: 44, borderRadius: 9999, border: 'none', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 700, fontFamily: 'Montserrat, system-ui, sans-serif',
+                  backgroundColor: roomView === v ? theme.text : 'transparent',
+                  color: roomView === v ? theme.bg : theme.muted,
+                }}
+              >
+                {v === 'people' ? 'People' : 'Teams'}
+              </button>
+            ))}
+          </div>
+
+          {roomView === 'teams' ? (
+            <TeamsView
+              locationId={selectedLocation.id}
+              myUserId={user?.id}
+              roomProfiles={presenceProfiles}
+              checkedIn={checkedIn}
+            />
+          ) : (
+            <VenueFeed
+              locationId={selectedLocation.id}
+              presenceProfiles={presenceProfiles}
+              myUserId={user?.id}
+              myAvatarUrl={user?.image}
+              onReply={(profile) => setSelectedAttendeeId(profile.id)}
+              checkedIn={checkedIn}
+            />
+          )}
 
           {selectedAttendee && (
             <div style={{ marginTop: '14px' }}>
