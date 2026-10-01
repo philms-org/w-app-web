@@ -428,3 +428,35 @@ export interface LocationRequest {
   created_at: string;
   profiles?: { display_name: string } | null;
 }
+
+// ---- Teams (migration 0032) ----
+
+export const TEAM_NEEDS = ['developer', 'designer', 'business', 'data', 'marketing', 'other'] as const;
+export type TeamNeed = (typeof TEAM_NEEDS)[number];
+
+export interface Team {
+  id: string;
+  location_id: string;
+  name: string;
+  kind: 'team' | 'company';
+  idea: string | null;
+  needs: TeamNeed[];
+  max_size: number;
+  join_code: string;
+  owner_id: string;
+  created_at: string;
+}
+
+export interface TeamMember {
+  user_id: string;
+  role: 'owner' | 'member';
+  status: 'active' | 'requested';
+  profile: Profile | null;
+}
+
+// A team with its people. `members` are active; `requests` are pending asks
+// (only visible to the requester, the owner and venue managers).
+export interface TeamWithMembers extends Team {
+  members: TeamMember[];
+  requests: TeamMember[];
+}
