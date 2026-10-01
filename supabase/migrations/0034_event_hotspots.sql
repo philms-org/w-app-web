@@ -1,10 +1,10 @@
--- 0032_event_hotspots.sql
+-- 0034_event_hotspots.sql
 -- Event hotspots: organizer-recommended places attached to an event; visits
 -- are derived from location_checkins. See
 -- docs/superpowers/specs/2026-09-30-event-hotspots-design.md.
 -- FOUNDER-GATED: do not apply until the founder approves. Then, on QA only:
 --   supabase link --project-ref ducadjakxmkfcvrteoqz
---   supabase db query --linked < supabase/migrations/0032_event_hotspots.sql
+--   supabase db query --linked < supabase/migrations/0034_event_hotspots.sql
 
 create table if not exists event_hotspots (
   id uuid primary key default gen_random_uuid(),
@@ -26,10 +26,45 @@ drop policy if exists event_hotspots_select on event_hotspots;
 create policy event_hotspots_select on event_hotspots for select to authenticated
   using (true);
 
+-- Split per command so any manager (co-organizer, master admin) can edit or
+-- delete a hotspot someone else added; only inserts pin created_by.
 drop policy if exists event_hotspots_write on event_hotspots;
-create policy event_hotspots_write on event_hotspots for all to authenticated
-  using (is_venue_manager(event_hotspots.event_id, auth.uid()))
+drop policy if exists event_hotspots_insert on event_hotspots;
+drop policy if exists event_hotspots_update on event_hotspots;
+drop policy if exists event_hotspots_delete on event_hotspots;
+create policy event_hotspots_insert on event_hotspots for insert to authenticated
   with check (is_venue_manager(event_hotspots.event_id, auth.uid()) and (created_by is null or created_by = auth.uid()));
+create policy event_hotspots_update on event_hotspots for update to authenticated
+  using (is_venue_manager(event_hotspots.event_id, auth.uid()))
+  with check (is_venue_manager(event_hotspots.event_id, auth.uid()));
+create policy event_hotspots_delete on event_hotspots for delete to authenticated
+  using (is_venue_manager(event_hotspots.event_id, auth.uid()));
+
+-- Server-owned columns: created_at drives the visit-count clamp, so clients
+-- must not backdate it, and created_by/event_id/location_id are immutable.
+-- Updates may only change note and sort_order. (create_hotspot_place is
+-- security definer, but auth.uid() is still the caller there.)
+create or replace function public.event_hotspots_guard()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    new.created_at := now();
+    new.created_by := coalesce(auth.uid(), new.created_by);
+  else
+    new.created_at := old.created_at;
+    new.created_by := old.created_by;
+    new.event_id := old.event_id;
+    new.location_id := old.location_id;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists event_hotspots_guard on event_hotspots;
+create trigger event_hotspots_guard before insert or update on event_hotspots
+  for each row execute function public.event_hotspots_guard();
 
 -- Reward unlock by distinct hotspots visited. Covered by rewards_write (0009).
 alter table rewards add column if not exists min_hotspots int

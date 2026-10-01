@@ -30,7 +30,7 @@ system — duplicates geofence and check-in logic.
 
 ## 1. Data model
 
-Migration `supabase/migrations/0032_event_hotspots.sql`.
+Migration `supabase/migrations/0034_event_hotspots.sql`.
 
 ### `event_hotspots`
 
@@ -51,10 +51,15 @@ Index on `event_id`.
 
 - `event_hotspots_select`: `for select to authenticated using (true)` — same
   visibility as venues.
-- `event_hotspots_write`: `for all to authenticated using
-  (is_venue_manager(event_id, auth.uid())) with check
-  (is_venue_manager(event_id, auth.uid()))` — same pattern as `venue_zones`
-  (0011) and `rewards` (0009).
+- `event_hotspots_insert`: `with check (is_venue_manager(event_id, auth.uid()) and
+  (created_by is null or created_by = auth.uid()))`.
+- `event_hotspots_update` / `event_hotspots_delete`: `is_venue_manager(event_id,
+  auth.uid())` — any manager of the event (co-organizers, master admins) can edit,
+  reorder or remove any of its hotspots.
+- Trigger `event_hotspots_guard` (before insert/update): `created_at` is set to
+  `now()` on insert and frozen afterwards (it drives the visit-count clamp), and
+  `created_by`, `event_id`, `location_id` are immutable. Updates may only change
+  `note` and `sort_order`.
 
 ### Rewards
 
@@ -97,7 +102,11 @@ A visit = a `location_checkins` row by the user at a hotspot's `location_id`.
 - No `event_date` (ongoing venue trail): check-ins at or after the hotspot's
   `created_at` count.
 
-Visit count = number of **distinct hotspots** visited. Stamps are derived from
+Visit count = number of **distinct hotspots** visited.
+
+Stale check-ins: `checkIn()` closes the user's open check-in at a place if it is
+older than 12 hours and records a fresh one, so a forgotten open session never
+blocks a new visit (and its stamp). Stamps are derived from
 the same set — no new per-visit table.
 
 ## 2. Attendee experience
@@ -113,7 +122,8 @@ the same set — no new per-visit table.
   reward it unlocks. The "What are you here for?" chips stay. Target = the
   smallest active `min_hotspots` reward not yet reached; if none, the number of
   hotspots.
-- **Checked in at a hotspot:** a strip on that venue's view — "Hotspot for
+- **Checked in at a hotspot:** a strip on that venue's view (parent = the event
+  running today, else an undated trail; no strip for past/future dated events) — "Hotspot for
   {event} · stamp collected · 3 / 5" — links back to the event.
 - **Home:** an in-range hotspot's venue pill shows the flame marker.
 - **Reward unlocked:** appears in the existing Rewards panel.

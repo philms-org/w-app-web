@@ -14,7 +14,7 @@
 
 - Work only in worktree `/Users/sr/w-app-web/.worktrees/event-hotspots`, branch `feature/event-hotspots`. Never `git stash` bare; never touch other worktrees.
 - **Founder-gated (CLAUDE.md):** the migration file may be written and committed, but must NOT be applied to QA until the founder says so, and never to prod without explicit go-ahead. QA project ref: `ducadjakxmkfcvrteoqz`.
-- Migration number: `0032_event_hotspots.sql`.
+- Migration number: `0034_event_hotspots.sql`.
 - `note` max length: 140 characters. New-place default radius: 75 m.
 - Hotspot accent color: `#FF7A45` (flame); stamped-on-map color: `#3ECF6B`; gradient `#FF7A45 → #FF3D7F` for the meter/strip.
 - Organizer visitor counts are aggregates only — never user ids or names.
@@ -37,7 +37,7 @@
 
 | File | Responsibility |
 |---|---|
-| `supabase/migrations/0032_event_hotspots.sql` (create) | Table, RLS, `rewards.min_hotspots`, `hotspot_visit_counts`, `create_hotspot_place` |
+| `supabase/migrations/0034_event_hotspots.sql` (create) | Table, RLS, `rewards.min_hotspots`, `hotspot_visit_counts`, `create_hotspot_place` |
 | `lib/types.ts` (modify) | `EventHotspot`, `HotspotCheckin`; `Reward.min_hotspots` |
 | `lib/hotspotProgress.ts` (create) | Pure progress math — only `import type` |
 | `lib/hotspotProgress.test.mts` (create) | Node built-in tests for the pure module |
@@ -58,10 +58,10 @@
 
 ---
 
-### Task 1: Migration `0032_event_hotspots.sql`
+### Task 1: Migration `0034_event_hotspots.sql`
 
 **Files:**
-- Create: `supabase/migrations/0032_event_hotspots.sql`
+- Create: `supabase/migrations/0034_event_hotspots.sql`
 
 **Interfaces:**
 - Produces: table `event_hotspots(id, event_id, location_id, note, sort_order, created_by, created_at)`; column `rewards.min_hotspots int`; RPC `hotspot_visit_counts(p_event_id uuid) → table(location_id uuid, visitors bigint)`; RPC `create_hotspot_place(p_event_id uuid, p_name text, p_lat double precision, p_lng double precision, p_radius int default 75, p_note text default null) → uuid` (new place id).
@@ -69,13 +69,13 @@
 - [ ] **Step 1: Write the migration**
 
 ```sql
--- 0032_event_hotspots.sql
+-- 0034_event_hotspots.sql
 -- Event hotspots: organizer-recommended places attached to an event; visits
 -- are derived from location_checkins. See
 -- docs/superpowers/specs/2026-09-30-event-hotspots-design.md.
 -- FOUNDER-GATED: do not apply until the founder approves. Then, on QA only:
 --   supabase link --project-ref ducadjakxmkfcvrteoqz
---   supabase db query --linked < supabase/migrations/0032_event_hotspots.sql
+--   supabase db query --linked < supabase/migrations/0034_event_hotspots.sql
 
 create table if not exists event_hotspots (
   id uuid primary key default gen_random_uuid(),
@@ -187,7 +187,7 @@ grant execute on function public.create_hotspot_place(uuid, text, double precisi
 - [ ] **Step 2: Commit the file (do NOT apply it)**
 
 ```bash
-git add supabase/migrations/0032_event_hotspots.sql
+git add supabase/migrations/0034_event_hotspots.sql
 git commit -m "Hotspots: migration 0032 (not applied)"
 ```
 
@@ -197,7 +197,7 @@ git commit -m "Hotspots: migration 0032 (not applied)"
 
 ```bash
 supabase link --project-ref ducadjakxmkfcvrteoqz
-supabase db query --linked < supabase/migrations/0032_event_hotspots.sql
+supabase db query --linked < supabase/migrations/0034_event_hotspots.sql
 ```
 
 Then, as a non-manager test user on the QA app (token from `sb-ducadjakxmkfcvrteoqz-auth-token`, never the Zustand copy):
