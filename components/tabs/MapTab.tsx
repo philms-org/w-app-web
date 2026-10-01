@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
-import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
+import { fetchCheckedInCounts, fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -71,8 +71,9 @@ export default function MapTab() {
     requestLocation(300000);
 
     // Load real venues from Supabase
-    fetchVenues()
-      .then((venues) => {
+    // Counts are best-effort: a failed count query still shows the venues.
+    Promise.all([fetchVenues(), fetchCheckedInCounts().catch(() => ({} as Record<string, number>))])
+      .then(([venues, counts]) => {
         setNearbyLocations(
           venues
             .filter((v) => v.lat != null && v.lng != null)
@@ -83,7 +84,7 @@ export default function MapTab() {
               latitude: v.lat as number,
               longitude: v.lng as number,
               radius: v.geofence_radius_meters ?? 50,
-              count: 0,
+              count: counts[v.id] ?? 0,
               category: 'venue',
               isHot: false,
               banner_image: v.banner_image ?? null,
