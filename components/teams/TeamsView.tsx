@@ -45,7 +45,7 @@ export default function TeamsView({
   // The sign-up "Team idea or company" answer is stored as affiliation.
   useEffect(() => {
     if (!myUserId) return;
-    fetchProfile(myUserId).then((p) => setOwnAffiliation(p.affiliation ?? null)).catch(() => {});
+    fetchProfile(myUserId).then((p) => setOwnAffiliation(p.affiliation?.[0] ?? null)).catch(() => {});
   }, [myUserId]);
 
   const load = useCallback(() => {
