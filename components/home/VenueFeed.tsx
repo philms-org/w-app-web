@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { LockedOverlay } from '@/components/ui/primitives';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { getFreshPosition } from '@/lib/geolocation';
-import { canAnnounceAt, createVenuePost, deleteVenuePost, fetchMyConnectionCount, fetchTeams, fetchVenuePosts, toggleLike } from '@/lib/data';
+import { canAnnounceAt, canReadVenueFeed, createVenuePost, hasEarlyAccess, deleteVenuePost, fetchMyConnectionCount, fetchTeams, fetchVenuePosts, toggleLike } from '@/lib/data';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import { Search } from 'lucide-react';
 import type { Profile, VenuePost } from '@/lib/types';
@@ -116,9 +116,30 @@ export default function VenueFeed({
     return () => { cancelled = true; };
   }, []);
 
+  // Checked in here before, or joined by invite link while early access lasts:
+  // the server already lets you read this feed. Early access also lets you
+  // post / like / comment before you arrive (migration 0035).
+  const [hasFeedAccess, setHasFeedAccess] = useState(false);
+  const [earlyAccess, setEarlyAccess] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setHasFeedAccess(false);
+    setEarlyAccess(false);
+    if (checkedIn) return;
+    Promise.all([canReadVenueFeed(locationId), hasEarlyAccess(locationId)])
+      .then(([read, early]) => {
+        if (cancelled) return;
+        setHasFeedAccess(read);
+        setEarlyAccess(early);
+      })
+      .catch(() => { /* fall back to the connections gate */ });
+    return () => { cancelled = true; };
+  }, [locationId, checkedIn]);
+  const canEngage = checkedIn || earlyAccess;
+
   // Checked in: you see everyone in the room. Only a preview from outside the
-  // venue stays locked behind the connections gate.
-  const unlocked = checkedIn || (connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS);
+  // venue stays locked behind the connections gate (or an invite link).
+  const unlocked = checkedIn || hasFeedAccess || (connectionCount !== null && connectionCount >= REQUIRED_CONNECTIONS);
 
   // Keeps optimistic (temp-*) posts that the server hasn't confirmed yet, so a
   // refetch racing an in-flight post doesn't make it flicker out.
@@ -283,11 +304,14 @@ export default function VenueFeed({
       ...prev,
     ]);
     try {
-      let pos: { lat: number; lng: number };
-      try {
-        pos = await getFreshPosition();
-      } catch {
-        throw new FeedPostError("Couldn't get your location. Allow location access to post here.");
+      // Invitees posting before they arrive don't need a location fix.
+      let pos: { lat: number | null; lng: number | null } = { lat: null, lng: null };
+      if (!earlyAccess || checkedIn) {
+        try {
+          pos = await getFreshPosition();
+        } catch {
+          throw new FeedPostError("Couldn't get your location. Allow location access to post here.");
+        }
       }
       let saved: VenuePost;
       try {
@@ -322,7 +346,7 @@ export default function VenueFeed({
     }
   };
 
-  if (connectionCount === null && !checkedIn) return null;
+  if (connectionCount === null && !checkedIn && !hasFeedAccess) return null;
 
   if (!unlocked) {
     return (
@@ -376,7 +400,7 @@ export default function VenueFeed({
             onToggleLike={handleToggleLike}
             onDelete={handleDelete}
             myUserId={myUserId}
-            canComment={checkedIn}
+            canComment={canEngage}
             canModerate={canModerate}
           />
         ))
@@ -386,7 +410,7 @@ export default function VenueFeed({
         avatarUrl={myAvatarUrl}
         onSubmit={handlePost}
         placeholder={canAnnounce ? 'Post an announcement…' : "What's up?"}
-        disabledReason={checkedIn || canAnnounce ? undefined : 'Check in at the venue to post'}
+        disabledReason={canEngage || canAnnounce ? undefined : 'Check in at the venue to post'}
       />
       {showPhotoPrompt && <AddPhotoPrompt onClose={() => setShowPhotoPrompt(false)} />}
     </div>

@@ -2073,6 +2073,67 @@ export async function canAnnounceAt(locationId: string): Promise<boolean> {
   return !!data;
 }
 
+// ---- Pre-arrival feed access (migration 0035) ----------------------------
+
+/** Server's feed read rule: checked in here before, or joined by invite link while it's on. */
+export async function canReadVenueFeed(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_read_venue_feed', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+/** Joined by invite link and early access is still on (switch on, event not started). Can post/like/comment from anywhere. */
+export async function hasEarlyAccess(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_early_access', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+export type VenueInvite = { token: string; enabled: boolean; event_starts_at: string | null };
+
+/** Managers only (RLS): the venue's invite link state, or null if never set up. */
+export async function fetchVenueInvite(locationId: string): Promise<VenueInvite | null> {
+  const { data, error } = await supabase
+    .from('venue_invites')
+    .select('token, enabled, event_starts_at')
+    .eq('location_id', locationId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Turn pre-arrival access on/off. Early access ends at `eventStartsAt`
+ * (ISO string; null = only the switch ends it). `rotate` replaces the link.
+ * Returns the current token.
+ */
+export async function setVenueInvite(
+  locationId: string,
+  enabled: boolean,
+  eventStartsAt: string | null,
+  rotate = false,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_invite', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_event_starts_at: eventStartsAt,
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Redeem an invite link token; returns the venue id it opens. */
+export async function redeemVenueInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('redeem_venue_invite', { p_token: token });
+  if (error) throw error;
+  return data as string;
+}
+
+export function venueInviteUrl(token: string): string {
+  return `${window.location.origin}/join/${token}`;
+}
+
 export async function fetchVenueAnnouncerIds(locationId: string): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('venue_announcers')
@@ -2135,11 +2196,12 @@ export async function fetchConnectionsPosts(limit = 20): Promise<VenuePost[]> {
 // real id (and recognise the realtime INSERT echo of its own post).
 // Goes through create_venue_post() (0030), which re-checks on the server that
 // the caller is checked in AND within the venue's radius at (lat, lng).
+// Invitees with early access (0035) skip that check, so they pass nulls.
 export async function createVenuePost(
   locationId: string,
   body: string,
-  lat: number,
-  lng: number,
+  lat: number | null,
+  lng: number | null,
 ): Promise<VenuePost> {
   const { data, error } = await supabase.rpc('create_venue_post', {
     p_location_id: locationId,

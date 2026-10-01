@@ -13,6 +13,7 @@ import ProfileTab from '@/components/tabs/ProfileTab';
 import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
+import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
@@ -20,6 +21,7 @@ export default function MainPage() {
   const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
+  const [inviteError, dismissInviteError] = usePendingVenueInvite();
 
   useEffect(() => {
     // Wait for the persisted store to rehydrate before deciding — otherwise
@@ -99,6 +101,22 @@ export default function MainPage() {
       />
 
       <ProfileSetupPrompt />
+
+      {inviteError && (
+        <div
+          role="alert"
+          onClick={dismissInviteError}
+          style={{
+            position: 'fixed', left: 16, right: 16, bottom: 'calc(80px + env(safe-area-inset-bottom))',
+            zIndex: 9998, maxWidth: 420, margin: '0 auto', padding: '12px 16px', borderRadius: 12,
+            backgroundColor: theme.surface, color: theme.text, boxShadow: elevation.glass,
+            fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 14, fontWeight: 600, textAlign: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          {inviteError}
+        </div>
+      )}
 
       {/* Location Permission Prompt */}
       {showLocationPrompt && (
