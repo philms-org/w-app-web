@@ -10,6 +10,8 @@ import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
+import HotspotBadge from '@/components/hotspots/HotspotBadge';
+import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 // Teal outline from the founder's Home mock (2026-09-30) — the location card's
@@ -24,7 +26,9 @@ const NEARBY_LIMIT = 5;
 //   - not recognized / location off: "We don't recognize where you are —
 //     add this location/event or search", over a faded map
 export default function NearbyBanner() {
-  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation } = useStore();
+  const { currentLocation, locationDenied, locationPermissionBlocked, selectedLocation, setSelectedLocation } = useStore();
+  // Flame / check marker on pills for places that are hotspots right now.
+  const activeHotspots = useActiveHotspotPlaces(selectedLocation?.id);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -167,11 +171,16 @@ export default function NearbyBanner() {
     </div>
   );
 
-  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => (
+  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => {
+    const hotspot = activeHotspots.get(venue.id);
+    const hotspotLabel = hotspot
+      ? `, hotspot for ${hotspot.eventName}${hotspot.stamped ? ', stamped' : ''}`
+      : '';
+    return (
     <button
       key={venue.id}
       onClick={() => (action === 'checkin' ? handleCheckIn(venue) : setPeekVenue(venue))}
-      aria-label={action === 'checkin' ? `Check in at ${venue.name}` : `Peek at ${venue.name}`}
+      aria-label={`${action === 'checkin' ? 'Check in at' : 'Peek at'} ${venue.name}${hotspotLabel}`}
       style={{
         position: 'relative', flexShrink: 0, width: '100%', minHeight: 48, borderRadius: 9999,
         border: '1.5px solid rgba(0,0,0,0.55)', overflow: 'hidden', cursor: 'pointer',
@@ -186,9 +195,11 @@ export default function NearbyBanner() {
       }}
     >
       {action === 'peek' && <Eye aria-hidden style={{ width: 14, height: 14, flexShrink: 0 }} />}
+      {hotspot && <HotspotBadge stamped={hotspot.stamped} />}
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{venue.name}</span>
     </button>
-  );
+    );
+  };
 
   // ---------------------------------------------------------- venues detected
   if (hasRealLocation && !loading && inRange.length > 0) {

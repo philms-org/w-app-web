@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchCheckedInCounts, fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
-import { fetchActiveHotspots, fetchMyCheckinsAt } from '@/lib/hotspots';
-import { visitedHotspotIds, localDay } from '@/lib/hotspotProgress';
+import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
+import { DEFAULT_RADIUS_METERS } from '@/lib/geo';
 import HotspotPinSheet from '@/components/hotspots/HotspotPinSheet';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { Search, List, MapPin, Users, Navigation, X } from 'lucide-react';
@@ -92,34 +92,17 @@ export default function MapTab() {
     location.description.toLowerCase().includes(searchQuery.toLowerCase())
   ), [nearbyLocations, searchQuery]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- map locations are untyped here, like nearbyLocations
-  const [hotspotPins, setHotspotPins] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [hotspotSheet, setHotspotSheet] = useState<any | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const today = localDay(new Date().toISOString());
-    fetchActiveHotspots(today, selectedLocation?.id ?? null)
-      .then(async (rows) => {
-        const checkins = await fetchMyCheckinsAt([...new Set(rows.map((r) => r.location_id))]);
-        const byEvent = new Map<string, typeof rows>();
-        for (const r of rows) byEvent.set(r.event_id, [...(byEvent.get(r.event_id) ?? []), r]);
-        const pins = rows.map((r) => {
-          const visited = visitedHotspotIds(byEvent.get(r.event_id)!, checkins, r.event);
-          return {
-            id: r.place!.id, name: r.place!.name, description: r.place!.description ?? '',
-            latitude: r.place!.lat as number, longitude: r.place!.lng as number,
-            radius: r.place!.geofence_radius_meters ?? 50, count: 0, category: 'venue', isHot: false,
-            banner_image: r.place!.banner_image ?? null,
-            hotspot: { stamped: visited.has(r.location_id), eventName: r.event.name, note: r.note },
-          };
-        });
-        if (!cancelled) setHotspotPins(pins);
-      })
-      .catch((err) => console.error('Failed to load hotspots:', err));
-    return () => { cancelled = true; };
-  }, [selectedLocation?.id]);
+  const activeHotspots = useActiveHotspotPlaces(selectedLocation?.id);
+  const hotspotPins = useMemo(() => [...activeHotspots.values()].map(({ place, stamped, eventName, note }) => ({
+    id: place.id, name: place.name, description: place.description ?? '',
+    latitude: place.lat as number, longitude: place.lng as number,
+    radius: place.geofence_radius_meters ?? DEFAULT_RADIUS_METERS, count: 0, category: 'venue', isHot: false,
+    banner_image: place.banner_image ?? null,
+    hotspot: { stamped, eventName, note },
+  })), [activeHotspots]);
 
   const mapLocations = useMemo(() => {
     const hotspotIds = new Set(hotspotPins.map((p) => p.id));
