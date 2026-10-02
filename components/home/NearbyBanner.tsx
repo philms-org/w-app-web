@@ -5,11 +5,13 @@ import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
-import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import { haversineMeters, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
+import HotspotBadge from '@/components/hotspots/HotspotBadge';
+import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 // Teal outline from the founder's Home mock (2026-09-30) — the location card's
@@ -23,8 +25,14 @@ const NEARBY_LIMIT = 5;
 //     peek at nearby ones), with an add-location pin in the corner
 //   - not recognized / location off: "We don't recognize where you are —
 //     add this location/event or search", over a faded map
-export default function NearbyBanner() {
-  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation } = useStore();
+export default function NearbyBanner({ checkedInVenueId = null }: {
+  // The venue you're still checked in at (back keeps you checked in), so its
+  // hotspots get marked on the pills even when it isn't a dated event.
+  checkedInVenueId?: string | null;
+} = {}) {
+  const { currentLocation, locationDenied, locationPermissionBlocked, selectedLocation, setSelectedLocation } = useStore();
+  // Flame / check marker on pills for places that are hotspots right now.
+  const activeHotspots = useActiveHotspotPlaces(selectedLocation?.id ?? checkedInVenueId);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -89,18 +97,7 @@ export default function NearbyBanner() {
     // Same Venue -> store Location conversion MapTab.tsx uses for its own
     // "Check In Here" button — CheckedInHero's geofence math depends on this
     // exact shape (latitude/longitude/radius, not lat/lng/geofence_radius_meters).
-    setSelectedLocation({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description ?? '',
-      latitude: venue.lat as number,
-      longitude: venue.lng as number,
-      radius: venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS,
-      count: 0,
-      category: 'venue',
-      isHot: false,
-      banner_image: venue.banner_image ?? null,
-    });
+    setSelectedLocation(venueToLocation(venue));
   };
 
   // Without a real fix, picking a venue sets it as your location (the old
@@ -167,11 +164,16 @@ export default function NearbyBanner() {
     </div>
   );
 
-  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => (
+  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => {
+    const hotspot = activeHotspots.get(venue.id);
+    const hotspotLabel = hotspot
+      ? `, hotspot for ${hotspot.eventName}${hotspot.stamped ? ', stamped' : ''}`
+      : '';
+    return (
     <button
       key={venue.id}
       onClick={() => (action === 'checkin' ? handleCheckIn(venue) : setPeekVenue(venue))}
-      aria-label={action === 'checkin' ? `Check in at ${venue.name}` : `Peek at ${venue.name}`}
+      aria-label={`${action === 'checkin' ? 'Check in at' : 'Peek at'} ${venue.name}${hotspotLabel}`}
       style={{
         position: 'relative', flexShrink: 0, width: '100%', minHeight: 48, borderRadius: 9999,
         border: '1.5px solid rgba(0,0,0,0.55)', overflow: 'hidden', cursor: 'pointer',
@@ -186,9 +188,11 @@ export default function NearbyBanner() {
       }}
     >
       {action === 'peek' && <Eye aria-hidden style={{ width: 14, height: 14, flexShrink: 0 }} />}
+      {hotspot && <HotspotBadge stamped={hotspot.stamped} />}
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{venue.name}</span>
     </button>
-  );
+    );
+  };
 
   // ---------------------------------------------------------- venues detected
   if (hasRealLocation && !loading && inRange.length > 0) {

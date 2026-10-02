@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
-import { fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
+import { fetchCheckedInCounts, fetchVenues, requestLocation as submitLocationRequest } from '@/lib/data';
+import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
+import { DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import HotspotPinSheet from '@/components/hotspots/HotspotPinSheet';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
-import { Search, Filter, MapPin, Users, Navigation, X } from 'lucide-react';
+import { Search, List, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme, elevation } from '@/lib/theme';
 
@@ -41,10 +44,9 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const [newLocationDescription, setNewLocationDescription] = useState('');
@@ -54,16 +56,6 @@ export default function MapTab() {
   const [requestSent, setRequestSent] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  const categories = [
-    { id: 'all', label: 'All', icon: '📍' },
-    { id: 'cafe', label: 'Cafes', icon: '☕' },
-    { id: 'bar', label: 'Bars', icon: '🍺' },
-    { id: 'restaurant', label: 'Restaurants', icon: '🍽️' },
-    { id: 'workspace', label: 'Workspaces', icon: '💼' },
-    { id: 'event', label: 'Events', icon: '🎉' },
-    { id: 'custom', label: 'Custom', icon: '📌' },
-  ];
-
   useEffect(() => {
     // Request location permission with high accuracy. 5-minute maximumAge:
     // a mount-time fetch doesn't need to force a brand-new fix the way a
@@ -71,8 +63,9 @@ export default function MapTab() {
     requestLocation(300000);
 
     // Load real venues from Supabase
-    fetchVenues()
-      .then((venues) => {
+    // Counts are best-effort: a failed count query still shows the venues.
+    Promise.all([fetchVenues(), fetchCheckedInCounts().catch(() => ({} as Record<string, number>))])
+      .then(([venues, counts]) => {
         setNearbyLocations(
           venues
             .filter((v) => v.lat != null && v.lng != null)
@@ -83,7 +76,7 @@ export default function MapTab() {
               latitude: v.lat as number,
               longitude: v.lng as number,
               radius: v.geofence_radius_meters ?? 50,
-              count: 0,
+              count: counts[v.id] ?? 0,
               category: 'venue',
               isHot: false,
               banner_image: v.banner_image ?? null,
@@ -93,14 +86,36 @@ export default function MapTab() {
       .catch((err) => console.error('Failed to load venues:', err));
   }, [setNearbyLocations]);
 
-  const filteredLocations = useMemo(() => nearbyLocations.filter(location => {
-    const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          location.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || location.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  }), [nearbyLocations, searchQuery, selectedCategory]);
+  // Venues have no category column, so there are no category chips: search only.
+  const filteredLocations = useMemo(() => nearbyLocations.filter(location =>
+    location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    location.description.toLowerCase().includes(searchQuery.toLowerCase())
+  ), [nearbyLocations, searchQuery]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [hotspotSheet, setHotspotSheet] = useState<any | null>(null);
+
+  const activeHotspots = useActiveHotspotPlaces(selectedLocation?.id);
+  const hotspotPins = useMemo(() => [...activeHotspots.values()].map(({ place, stamped, eventName, note }) => ({
+    id: place.id, name: place.name, description: place.description ?? '',
+    latitude: place.lat as number, longitude: place.lng as number,
+    radius: place.geofence_radius_meters ?? DEFAULT_RADIUS_METERS, count: 0, category: 'venue', isHot: false,
+    banner_image: place.banner_image ?? null,
+    hotspot: { stamped, eventName, note },
+  })), [activeHotspots]);
+
+  const mapLocations = useMemo(() => {
+    const hotspotIds = new Set(hotspotPins.map((p) => p.id));
+    // A hotspot pin replaces the venue pin for the same place; keep its live count.
+    const countById = new Map(nearbyLocations.map((l) => [l.id, l.count]));
+    return [
+      ...filteredLocations.filter((l) => !hotspotIds.has(l.id)),
+      ...hotspotPins.map((p) => ({ ...p, count: countById.get(p.id) ?? p.count })),
+    ];
+  }, [filteredLocations, hotspotPins, nearbyLocations]);
 
   const handleLocationSelect = useCallback((location: any) => {
+    if (location.hotspot) { setHotspotSheet(location); return; }
     setSelectedLocation(location);
     setActiveTab('home');
   }, [setSelectedLocation, setActiveTab]);
@@ -118,8 +133,11 @@ export default function MapTab() {
   addModeRef.current = addMode;
 
   const mapCenter = useMemo(
-    () => currentLocation || { lat: 40.7128, lng: -74.0060 },
-    [currentLocation]
+    // No location (skipped or blocked): center on the venues, not a made-up city.
+    () => currentLocation
+      ?? (nearbyLocations[0] && { lat: nearbyLocations[0].latitude, lng: nearbyLocations[0].longitude })
+      ?? { lat: 40.7128, lng: -74.0060 },
+    [currentLocation, nearbyLocations]
   );
 
   const handleAddLocation = () => {
@@ -160,7 +178,9 @@ export default function MapTab() {
           position: 'absolute',
           bottom: '96px',
           left: '16px',
-          right: '16px',
+          // Stop short of the add-location / list buttons (right: 16px, 48px wide),
+          // which this notice used to cover and make untappable.
+          right: '80px',
           zIndex: 1100,
           backgroundColor: 'rgba(35, 30, 32, 0.92)',
           color: 'white',
@@ -261,50 +281,17 @@ export default function MapTab() {
               </button>
             )}
           </div>
-
-          {/* Categories */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            paddingBottom: '8px',
-            margin: '0 -16px',
-            padding: '0 16px'
-          }}>
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 12px',
-                  borderRadius: '9999px',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s ease',
-                  backgroundColor: selectedCategory === category.id ? theme.accent : theme.surface2,
-                  color: selectedCategory === category.id ? theme.onAccent : theme.muted,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'Montserrat, system-ui, sans-serif'
-                }}
-              >
-                <span>{category.icon}</span>
-                <span style={{ fontSize: '14px' }}>{category.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* Real Interactive Map */}
       <div style={{ position: 'relative', height: '100vh' }}>
         <WMap
-          locations={filteredLocations}
+          locations={mapLocations}
           onLocationSelect={handleLocationSelect}
           onMapClick={handleMapClick}
           center={mapCenter}
+          showUserMarker={!!currentLocation}
           zoom={13}
         />
       </div>
@@ -312,6 +299,7 @@ export default function MapTab() {
       {/* Toggle List Button */}
       <button
         onClick={() => setShowList(!showList)}
+        aria-label={showList ? 'Hide venue list' : 'Show venue list'}
         style={{
           position: 'absolute',
           bottom: '80px',
@@ -325,7 +313,7 @@ export default function MapTab() {
           zIndex: 1000
         }}
       >
-        <Filter style={{ width: '24px', height: '24px', color: theme.accent }} />
+        <List style={{ width: '24px', height: '24px', color: theme.accent }} />
       </button>
 
       {/* Add Location Button (explicit opt-in; tap the map after arming) */}
@@ -742,6 +730,30 @@ export default function MapTab() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+      {hotspotPins.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: locationDenied ? 'calc(170px + env(safe-area-inset-bottom))' : 'calc(80px + env(safe-area-inset-bottom))',
+          left: 76, zIndex: 1000,
+          display: 'flex', gap: 10, alignItems: 'center', padding: '6px 10px', borderRadius: 10,
+          backgroundColor: 'rgba(12,12,14,0.9)', color: '#F5F5F7', fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 12,
+        }}>
+          <span style={{ color: '#FF7A45' }} aria-hidden>●</span> Hotspot
+          <span style={{ color: '#3ECF6B' }} aria-hidden>●</span> Stamped
+        </div>
+      )}
+      {hotspotSheet && (
+        <HotspotPinSheet
+          location={hotspotSheet}
+          onClose={() => setHotspotSheet(null)}
+          onCheckIn={() => {
+            const place = { ...hotspotSheet };
+            delete place.hotspot;
+            setHotspotSheet(null);
+            setSelectedLocation(place);
+            setActiveTab('home');
+          }}
+        />
+      )}
     </div>
   );
 }
