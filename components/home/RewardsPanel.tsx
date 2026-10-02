@@ -25,7 +25,7 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
   const [checkinCount, setCheckinCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const { progress: hp, loading: hpLoading, error: hpError } = useEventHotspots(selectedLocation?.id);
+  const { progress: hp, loading: hpLoading, error: hpError, paused: hpPaused } = useEventHotspots(selectedLocation?.id);
   const hotspotCount = hp?.count ?? 0;
   // No progress yet (loading or failed): keep hotspot rewards locked but
   // don't claim "0/N".
@@ -132,7 +132,9 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
                   <p style={HINT}>
                     {hpPending
                       ? (hpLoading ? 'Checking hotspot progress…' : "Couldn't load hotspot progress")
-                      : `Visit ${reward.min_hotspots} hotspots to unlock (${hotspotCount}/${reward.min_hotspots})`}
+                      : hpPaused
+                        ? `Hotspot trail is paused (${hotspotCount}/${reward.min_hotspots})`
+                        : `Visit ${reward.min_hotspots} ${reward.min_hotspots === 1 ? 'hotspot' : 'hotspots'} to unlock (${hotspotCount}/${reward.min_hotspots})`}
                   </p>
                 )}
                 {!locked && reward.min_hotspots != null && hp && (

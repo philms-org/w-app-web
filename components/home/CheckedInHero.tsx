@@ -73,7 +73,8 @@ export default function CheckedInHero() {
   const eventHotspots = useEventHotspots(selectedLocation?.id);
   const reloadHotspots = eventHotspots.reload;
   const hp = eventHotspots.progress;
-  const hotspotMeter = hp
+  // A paused trail (0038) is hidden from attendees: no card, no bar.
+  const hotspotMeter = hp && !eventHotspots.paused
     ? {
         value: hotspotMeterFill(hp),
         label: `${hp.count} / ${hp.target} hotspots`,
@@ -492,7 +493,7 @@ export default function CheckedInHero() {
         {/* Event hotspots: the progress bar lives in this card now that the
             picks card is gone from the venue screen (founder, 2026-10-01). */}
         <HotspotsCard
-          hotspots={eventHotspots.hotspots}
+          hotspots={eventHotspots.paused ? [] : eventHotspots.hotspots}
           progress={hp}
           loading={eventHotspots.loading}
           error={eventHotspots.error}

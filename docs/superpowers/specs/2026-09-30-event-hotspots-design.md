@@ -189,3 +189,25 @@ Out of scope for v1: push notifications, suggested routes, leaderboards.
    founder-gated).
 3. Code ships in its own PR (separate from PR #20, the Home main-feed layout).
 4. Prod migration only on founder go-ahead.
+
+## 5. Follow-ups (founder decisions 2026-10-02)
+
+- **Hotspot places stay until removed.** Places created as hotspots remain
+  ordinary (ownerless) venues after the hotspot link is removed. No change.
+- **Undated trails can be turned off** (migration `0038_hotspot_trail_pauses.sql`).
+  `hotspot_trail_pauses(event_id, started_at, ended_at)`: a pause is open
+  while `ended_at` is null; at most one open pause per event; no deletes.
+  Guard trigger sets `started_at = now()` on insert and `ended_at = now()`
+  when a pause is closed (once); times can't be backdated. Write access:
+  `is_venue_manager(event_id)`; read: any signed-in user.
+  - Organizer Hotspots page shows an on/off switch for events with no
+    `event_date` (dated events end on their own). Off: add buttons and the
+    list dim, counts show "(paused)".
+  - While paused, attendees don't see the trail: no map pins, Home pill
+    badges, Hotspots card/bar or stamp strip, and no room-meter hotspot
+    events. Check-ins inside any pause window never count — for stamps or
+    for `hotspot_visit_counts` — even after the trail is turned back on.
+    Stamps earned before a pause stay, so unlocked rewards stay unlocked;
+    a not-yet-earned hotspot reward says "Hotspot trail is paused (x/N)".
+- **Flame pins follow the map search** like every other pin. A hotspot place
+  hidden by the search is not shown as a plain venue pin instead.
