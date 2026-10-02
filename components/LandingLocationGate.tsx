@@ -113,7 +113,9 @@ export default function LandingLocationGate() {
 
   const handleDeny = () => {
     localStorage.setItem(ASKED_KEY, 'true');
-    useStore.getState().setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+    // No made-up position: a fake NYC fix here made /main think it already
+    // had a location, so it never asked again and check-in couldn't work.
+    useStore.getState().setCurrentLocation(null);
     useStore.getState().setLocationDenied(true);
     setPhase('idle');
   };

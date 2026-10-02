@@ -26,8 +26,14 @@ export default function MainPage() {
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
   const locationDenied = useStore((s) => s.locationDenied);
-  // Once we have a real fix, keep following it so walking into a venue registers.
-  useLiveLocation(!!currentLocation && !locationDenied);
+  const locationPermissionBlocked = useStore((s) => s.locationPermissionBlocked);
+  // Set once location is granted (or the user tapped Allow). A first fix that
+  // times out indoors leaves us with no position, so the watch has to start
+  // from the grant itself, not from having a fix — otherwise one slow GPS
+  // read stranded people on "Location's off" until they pulled to refresh.
+  const [liveWanted, setLiveWanted] = useState(false);
+  // Keep following the device so walking into a venue registers.
+  useLiveLocation(!locationPermissionBlocked && (liveWanted || (!!currentLocation && !locationDenied)));
   // Location blocked: pick up a fix made in Settings as soon as they're back.
   useLocationRecovery();
 
@@ -63,6 +69,7 @@ export default function MainPage() {
             if (cancelled) return;
             if (status.state === 'granted') {
               setLocationPermissionAsked(true);
+              setLiveWanted(true);
               requestLocation();
             } else {
               showPrompt();
@@ -80,6 +87,7 @@ export default function MainPage() {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
     setShowLocationPrompt(false);
+    setLiveWanted(true);
     requestLocation();
   };
 
