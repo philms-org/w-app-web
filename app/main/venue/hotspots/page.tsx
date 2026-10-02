@@ -71,7 +71,7 @@ function VenueHotspotsInner() {
       .catch((e) => { console.error(e); setCountsFailed(true); });
     fetchTrailPauses([eventId])
       .then((p) => setPaused(isTrailPaused(p)))
-      .catch((e) => console.error(e));
+      .catch((e) => { console.error(e); setError("Couldn't load the trail's on/off state — try again"); });
   }, [eventId]);
 
   useEffect(() => { load(); }, [load]);
@@ -153,13 +153,16 @@ function VenueHotspotsInner() {
         <span style={{ marginLeft: 'auto', color: theme.muted, fontSize: 13, paddingRight: 8 }}>{event?.name}</span>
       </header>
 
-      {/* Off switch for a trail with no end date (0038). Dated events end on their own. */}
-      {event && !event.event_date && (
+      {/* Off switch for a trail with no end date (0038). Dated events end on
+          their own — but a paused trail always shows it, so a pause made
+          before the event got a date can still be turned back on. */}
+      {event && (!event.event_date || paused) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 16px 0', padding: '12px 14px',
           borderRadius: 14, backgroundColor: theme.surface, border: `1px solid ${theme.divider}` }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <b id="trail-switch-label" style={{ fontSize: 14 }}>{paused ? 'Hotspot trail is off' : 'Hotspot trail is on'}</b>
-            <div style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>
+            <b id="trail-switch-label" style={{ fontSize: 14 }}>Hotspot trail</b>
+            <div id="trail-switch-desc" style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>
+              {paused ? 'Off. ' : 'On. '}
               {paused
                 ? "Hidden from attendees. Visits aren't counted. Turn on anytime."
                 : 'No end date — runs until you turn it off.'}
@@ -169,9 +172,15 @@ function VenueHotspotsInner() {
             role="switch"
             aria-checked={!paused}
             aria-labelledby="trail-switch-label"
+            aria-describedby="trail-switch-desc"
             disabled={busy}
-            onClick={() => { if (!paused) setMode('none'); run(paused ? resumeTrail(eventId) : pauseTrail(eventId),
-              paused ? "Couldn't turn the trail on — try again" : "Couldn't turn the trail off — try again"); }}
+            onClick={() => {
+              const next = !paused;
+              if (next) setMode('none');
+              run(next ? pauseTrail(eventId) : resumeTrail(eventId),
+                next ? "Couldn't turn the trail off — try again" : "Couldn't turn the trail on — try again")
+                .then((ok) => { if (ok) setPaused(next); });
+            }}
             style={{ width: 52, height: 44, padding: 0, border: 'none', background: 'none', cursor: 'pointer', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
@@ -187,11 +196,11 @@ function VenueHotspotsInner() {
       <div style={{ display: 'flex', gap: 8, padding: 16, opacity: paused ? 0.45 : 1 }}>
         <button disabled={paused} onClick={() => setMode(mode === 'search' ? 'none' : 'search')} aria-expanded={mode === 'search'} style={{
           flex: 1, minHeight: 44, borderRadius: 12, border: 'none', backgroundColor: theme.accent, color: theme.onAccent,
-          fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', fontFamily: FONT,
+          fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: paused ? 'default' : 'pointer', fontFamily: FONT,
         }}><Search size={16} aria-hidden /> Add place</button>
         <button disabled={paused} onClick={() => setMode(mode === 'new' ? 'none' : 'new')} aria-expanded={mode === 'new'} style={{
           flex: 1, minHeight: 44, borderRadius: 12, border: `1px solid ${theme.glassHighlight}`, background: 'none', color: theme.text,
-          fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', fontFamily: FONT,
+          fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: paused ? 'default' : 'pointer', fontFamily: FONT,
         }}><MapPinPlus size={16} aria-hidden /> New place</button>
       </div>
 
@@ -251,7 +260,7 @@ function VenueHotspotsInner() {
         </p>
       )}
 
-      <section aria-label="This event's hotspots" style={{ margin: '0 16px', backgroundColor: theme.surface, borderRadius: 14, border: `1px solid ${theme.divider}`, opacity: paused ? 0.5 : 1 }}>
+      <section aria-label="This event's hotspots" style={{ margin: '0 16px', backgroundColor: theme.surface, borderRadius: 14, border: `1px solid ${theme.divider}`, opacity: paused ? 0.75 : 1 }}>
         {hotspots.length === 0 ? (
           <p style={{ padding: 16, color: theme.muted, fontSize: 14 }}>No hotspots yet. Add a place people should visit.</p>
         ) : hotspots.map((h, i) => (

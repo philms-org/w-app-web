@@ -31,7 +31,7 @@ export default function HotspotStrip({
     return () => { cancelled = true; };
   }, [locationId]);
 
-  const { progress, reload, paused } = useEventHotspots(parent?.id);
+  const { progress, reload, paused, event: loadedEvent } = useEventHotspots(parent?.id);
   useEffect(() => { if (checkedIn) reload(); }, [checkedIn, reload]);
 
   // Feed the room meter (0033): being checked in at a hotspot of a running
@@ -39,7 +39,8 @@ export default function HotspotStrip({
   // five minutes and the server ignores it unless you're checked in here.
   // Not while the trail is paused (0038) — wait until that's known.
   const parentId = parent?.id;
-  const trailLive = !!progress && !paused;
+  // Only once the hook has loaded *this* parent (not the previous venue's).
+  const trailLive = !!progress && !paused && loadedEvent?.id === parentId;
   useEffect(() => {
     if (checkedIn && parentId && trailLive) reportHotspotVisit(locationId, stripRef.current);
   }, [checkedIn, parentId, trailLive, locationId]);

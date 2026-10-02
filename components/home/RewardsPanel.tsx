@@ -134,7 +134,7 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
                       ? (hpLoading ? 'Checking hotspot progress…' : "Couldn't load hotspot progress")
                       : hpPaused
                         ? `Hotspot trail is paused (${hotspotCount}/${reward.min_hotspots})`
-                        : `Visit ${reward.min_hotspots} hotspots to unlock (${hotspotCount}/${reward.min_hotspots})`}
+                        : `Visit ${reward.min_hotspots} ${reward.min_hotspots === 1 ? 'hotspot' : 'hotspots'} to unlock (${hotspotCount}/${reward.min_hotspots})`}
                   </p>
                 )}
                 {!locked && reward.min_hotspots != null && hp && (

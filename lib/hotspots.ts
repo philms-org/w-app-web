@@ -130,6 +130,9 @@ export async function fetchTrailPauses(eventIds: string[]): Promise<HotspotTrail
     .from('hotspot_trail_pauses')
     .select('event_id, started_at, ended_at')
     .in('event_id', eventIds);
+  // Table not there yet (0038 not applied on this database): no pauses, so
+  // hotspots keep working exactly as before the off switch existed.
+  if (error && (error.code === 'PGRST205' || error.code === '42P01')) return [];
   if (error) throw error;
   return (data ?? []) as HotspotTrailPause[];
 }
