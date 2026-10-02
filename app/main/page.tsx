@@ -14,6 +14,7 @@ import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
+import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
@@ -22,6 +23,9 @@ export default function MainPage() {
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
+  const locationDenied = useStore((s) => s.locationDenied);
+  // Once we have a real fix, keep following it so walking into a venue registers.
+  useLiveLocation(!!currentLocation && !locationDenied);
 
   useEffect(() => {
     // Wait for the persisted store to rehydrate before deciding — otherwise

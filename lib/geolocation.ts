@@ -42,7 +42,11 @@ export function requestLocation(maximumAge = 0): Promise<void> {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
         setLocationDenied(false);
         setLocationPermissionBlocked(false);
         resolve();

@@ -37,7 +37,7 @@ import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal'
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
-import { haversineMeters, venueToLocation } from '@/lib/geo';
+import { haversineMeters, isWithinGeofence, venueToLocation } from '@/lib/geo';
 import HotspotStrip from '@/components/hotspots/HotspotStrip';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
@@ -122,7 +122,8 @@ export default function CheckedInHero() {
     );
   }, [selectedLocation, currentLocation]);
 
-  const withinGeofence = distanceMeters !== null && distanceMeters <= (selectedLocation?.radius ?? 0);
+  const withinGeofence =
+    distanceMeters !== null && isWithinGeofence(distanceMeters, selectedLocation?.radius ?? 0, currentLocation?.accuracy);
 
   const tagsByUserId = useMemo(() => {
     const map = new Map<string, VerificationTag[]>();
@@ -268,7 +269,7 @@ export default function CheckedInHero() {
   const outsideFixes = useRef(0);
   useVenuePositionWatch(selectedLocation?.id ?? null, (fix) => {
     if (!selectedLocation) return;
-    useStore.getState().setCurrentLocation({ lat: fix.lat, lng: fix.lng });
+    useStore.getState().setCurrentLocation({ lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy });
     const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
     const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
     outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;

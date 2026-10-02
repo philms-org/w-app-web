@@ -5,7 +5,7 @@ import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
-import { haversineMeters, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
+import { haversineMeters, isWithinGeofence, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
@@ -87,7 +87,7 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
     const nearbyList: Venue[] = [];
     for (const { venue, distance } of withDistance) {
       const radius = venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS;
-      if (distance <= radius) inRangeList.push(venue);
+      if (isWithinGeofence(distance, radius, currentLocation.accuracy)) inRangeList.push(venue);
       else nearbyList.push(venue);
     }
     return { inRange: inRangeList, nearby: nearbyList };
