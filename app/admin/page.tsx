@@ -8,6 +8,7 @@ import { fetchVenues, fetchPublicProfile, fetchAllProfilesForAdmin, setMasterAdm
 import { theme } from '@/lib/theme';
 import PersonPicker from '@/components/shared/PersonPicker';
 import type { Venue, Profile } from '@/lib/types';
+import { venueCoordsProblem } from '@/lib/geo';
 
 interface VenueRow {
   venue: Venue;
@@ -143,6 +144,11 @@ export default function AdminPage() {
     const radius = parseInt(venueForm.radius, 10);
     if (!venueForm.name.trim() || Number.isNaN(lat) || Number.isNaN(lng) || Number.isNaN(radius)) {
       setCreateVenueError('Name, latitude, longitude, and radius are required.');
+      return;
+    }
+    const coordsProblem = venueCoordsProblem(lat, lng, `${venueForm.address} ${venueForm.city}`);
+    if (coordsProblem) {
+      setCreateVenueError(coordsProblem);
       return;
     }
     setCreatingVenue(true);
