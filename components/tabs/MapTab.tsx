@@ -6,7 +6,8 @@ import { fetchCheckedInCounts, fetchVenues, requestLocation as submitLocationReq
 import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 import { DEFAULT_RADIUS_METERS } from '@/lib/geo';
 import HotspotPinSheet from '@/components/hotspots/HotspotPinSheet';
-import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
+import { requestLocation } from '@/lib/geolocation';
+import LocationFixSheet from '@/components/shared/LocationFixSheet';
 import { Search, List, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme, elevation } from '@/lib/theme';
@@ -54,6 +55,7 @@ export default function MapTab() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSent, setRequestSent] = useState(false);
+  const [showLocationFix, setShowLocationFix] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -195,30 +197,29 @@ export default function MapTab() {
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.4 }}>
             {locationPermissionBlocked
-              ? `Location is blocked for this site. ${locationSettingsInstructions()}`
+              ? 'Location is blocked for this site.'
               : 'Location is off — showing a default area, not where you are.'}
           </span>
-          {!locationPermissionBlocked && (
-            <button
-              onClick={() => requestLocation()}
-              style={{
-                backgroundColor: theme.accent,
-                color: theme.onAccent,
-                border: 'none',
-                borderRadius: '9999px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Turn on
-            </button>
-          )}
+          <button
+            onClick={() => (locationPermissionBlocked ? setShowLocationFix(true) : requestLocation())}
+            style={{
+              backgroundColor: theme.accent,
+              color: theme.onAccent,
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {locationPermissionBlocked ? 'Fix it' : 'Turn on'}
+          </button>
         </div>
       )}
+      {showLocationFix && <LocationFixSheet onClose={() => setShowLocationFix(false)} />}
       {/* Header */}
       <div style={{
         position: 'absolute',

@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
+import { requestLocation } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
 import { haversineMeters, isWithinGeofence, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
+import LocationFixSheet from '@/components/shared/LocationFixSheet';
 import HotspotBadge from '@/components/hotspots/HotspotBadge';
 import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 
@@ -41,6 +42,7 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
   const [query, setQuery] = useState('');
   const [peekVenue, setPeekVenue] = useState<Venue | null>(null);
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [showLocationFix, setShowLocationFix] = useState(false);
   const comingSoonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A denied/timed-out/unsupported geolocation request still writes a
@@ -281,9 +283,16 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
         </p>
 
         {locationPermissionBlocked && (
-          <p style={{ fontSize: 12, lineHeight: 1.5, color: '#4A4D55', margin: '8px 8px 0' }}>
-            {locationSettingsInstructions()}
-          </p>
+          <button
+            onClick={() => setShowLocationFix(true)}
+            style={{
+              marginTop: 10, minHeight: 36, padding: '8px 16px', borderRadius: 999, border: 'none',
+              backgroundColor: '#15161A', color: '#fff', fontSize: 13, fontWeight: 700,
+              fontFamily: FONT, cursor: 'pointer',
+            }}
+          >
+            Show me how to turn it on
+          </button>
         )}
 
         {showSearch && (
@@ -344,6 +353,7 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
       </section>
       {comingSoonNote}
       {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
+      {showLocationFix && <LocationFixSheet onClose={() => setShowLocationFix(false)} />}
     </div>
   );
 }

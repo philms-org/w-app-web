@@ -15,6 +15,7 @@ import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
 import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
+import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
@@ -26,6 +27,8 @@ export default function MainPage() {
   const locationDenied = useStore((s) => s.locationDenied);
   // Once we have a real fix, keep following it so walking into a venue registers.
   useLiveLocation(!!currentLocation && !locationDenied);
+  // Location blocked: pick up a fix made in Settings as soon as they're back.
+  useLocationRecovery();
 
   useEffect(() => {
     // Wait for the persisted store to rehydrate before deciding — otherwise
