@@ -31,10 +31,9 @@ import TeamsView from '@/components/teams/TeamsView';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
 import RoomMeter from '@/components/home/RoomMeter';
 import { contribute, contributeCarousel } from '@/lib/meter';
-import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
+import SayHiSheet from '@/components/home/SayHiSheet';
 import CreateGroupModal from '@/components/organizer/CreateGroupModal';
 import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal';
-import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters, isWithinGeofence, venueToLocation } from '@/lib/geo';
@@ -610,35 +609,16 @@ export default function CheckedInHero() {
             />
           )}
 
-          {selectedAttendee && (
-            <div style={{ marginTop: '14px' }}>
-              <InlineMessageComposer
-                recipient={selectedAttendee}
-                onSent={() => setSelectedAttendeeId(null)}
-              />
-            </div>
-          )}
-
-          {selectedAttendee && (
-            <div
-              style={{
-                marginTop: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <span style={{ color: theme.text, fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-                {selectedAttendee.display_name ?? 'Someone'}
-              </span>
-              {selectedAttendeeTags.map((t) => (
-                <TagBadge key={t.id} tag={t} size="md" />
-              ))}
-            </div>
-          )}
         </div>
       </div>
+
+      {selectedAttendee && (
+        <SayHiSheet
+          recipient={selectedAttendee}
+          tags={selectedAttendeeTags}
+          onClose={() => setSelectedAttendeeId(null)}
+        />
+      )}
 
       {showOrganizerSheet && canManage && (
         <div
