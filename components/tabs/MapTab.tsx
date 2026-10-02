@@ -44,7 +44,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
@@ -374,30 +374,10 @@ export default function MapTab() {
           cursor: 'pointer',
           zIndex: 1000
         }}
-        onClick={() => {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const newLocation = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-                };
-                setCurrentLocation(newLocation);
-              },
-              (error) => {
-                console.error('Location error:', error);
-                alert('Unable to get your location. Please enable location services.');
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
-              }
-            );
-          } else {
-            alert('Geolocation is not supported by this browser.');
-          }
-        }}
+        // Shared helper: on failure it sets locationDenied/Blocked, which the
+        // notice above turns into platform-specific fix-it steps — the old
+        // alert() here just said "enable location services" on top of it.
+        onClick={() => { requestLocation(60000); }}
       >
         <Navigation style={{ width: '24px', height: '24px', color: theme.accent }} />
       </button>

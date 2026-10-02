@@ -8,8 +8,24 @@ import { useStore } from '@/lib/store';
 export function locationSettingsInstructions(): string {
   if (typeof navigator === 'undefined') return 'Enable location for this site in your browser settings, then refresh.';
   const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) {
-    return 'Open Settings → Safari → Location, set it to "Ask" or "Allow", then come back and refresh this page.';
+  // iPadOS reports a Mac UA; touch support tells it apart from a real Mac.
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    // Other iOS browsers each get their own row under Location Services.
+    const otherBrowser = /CriOS/.test(ua) ? 'Chrome' : /FxiOS/.test(ua) ? 'Firefox' : /EdgiOS/.test(ua) ? 'Edge' : null;
+    if (otherBrowser) {
+      return `Open Settings → Privacy & Security → Location Services → ${otherBrowser}, choose "While Using the App", then come back and refresh this page.`;
+    }
+    // In-app browsers (Instagram, LinkedIn, Slack, …) are WKWebViews that
+    // inherit the host app's location permission, which usually isn't
+    // granted — no settings change in Safari fixes that.
+    if (!/Safari\//.test(ua) || /FBAN|FBAV|Instagram|LinkedInApp|Line\//.test(ua)) {
+      return 'This in-app browser can\'t share your location. Open this page in Safari (tap ••• or the share icon → Open in Safari).';
+    }
+    // The most common block is the system-wide switch, not Safari's
+    // per-site setting: Location Services → Safari Websites = "Never"
+    // denies every site instantly without ever showing a prompt.
+    return 'Open Settings → Privacy & Security → Location Services → Safari Websites and choose "While Using the App". Also check Settings → Apps → Safari → Location is "Ask" or "Allow". Then come back and refresh this page.';
   }
   if (/Android/.test(ua)) {
     return 'Tap the lock icon next to the address bar → Permissions → Location → Allow, then refresh this page.';
