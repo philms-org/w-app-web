@@ -27,7 +27,7 @@ export default function MainPage() {
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
   const locationDenied = useStore((s) => s.locationDenied);
   const locationPermissionBlocked = useStore((s) => s.locationPermissionBlocked);
-  // Set once location is granted (or the user tapped Allow). A first fix that
+  // Set once the location request has been answered. A first fix that
   // times out indoors leaves us with no position, so the watch has to start
   // from the grant itself, not from having a fix — otherwise one slow GPS
   // read stranded people on "Location's off" until they pulled to refresh.
@@ -69,8 +69,7 @@ export default function MainPage() {
             if (cancelled) return;
             if (status.state === 'granted') {
               setLocationPermissionAsked(true);
-              setLiveWanted(true);
-              requestLocation();
+              requestLocation().then(() => setLiveWanted(true));
             } else {
               showPrompt();
             }
@@ -87,8 +86,9 @@ export default function MainPage() {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
     setShowLocationPrompt(false);
-    setLiveWanted(true);
-    requestLocation();
+    // Start watching only once the browser's prompt has been answered, so
+    // the watch can never raise a second prompt of its own.
+    requestLocation().then(() => setLiveWanted(true));
   };
 
   const handleDenyLocation = () => {
