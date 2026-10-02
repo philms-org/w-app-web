@@ -52,7 +52,8 @@ interface AppState {
   isAuthenticated: boolean;
   
   // Location State
-  currentLocation: { lat: number; lng: number } | null;
+  // accuracy = the fix's reported error radius in meters, when known.
+  currentLocation: { lat: number; lng: number; accuracy?: number } | null;
   // True when the user denied geolocation (or it's unsupported) and we're
   // showing a fallback map center instead of their real position.
   locationDenied: boolean;
@@ -87,7 +88,7 @@ interface AppState {
   setToken: (token: string | null) => void;
   logout: () => void;
   setHasHydrated: (value: boolean) => void;
-  setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
+  setCurrentLocation: (location: { lat: number; lng: number; accuracy?: number } | null) => void;
   setLocationDenied: (denied: boolean) => void;
   setLocationPermissionBlocked: (blocked: boolean) => void;
   setSelectedLocation: (location: Location | null) => void;
