@@ -109,7 +109,7 @@ export default function HomeTab() {
         </button>
       )}
 
-      <NearbyBanner />
+      <NearbyBanner checkedInVenueId={checkedInVenue?.id ?? null} />
 
       <QuickAccessRow items={quickAccessItems} activeId={activePanel} />
 

@@ -23,6 +23,9 @@ import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
+import HotspotsCard from '@/components/hotspots/HotspotsCard';
+import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
+import { hotspotMeterFill } from '@/lib/hotspotProgress';
 import VenueFeed from '@/components/home/VenueFeed';
 import TeamsView from '@/components/teams/TeamsView';
 import AnnouncementPill from '@/components/home/AnnouncementPill';
@@ -34,7 +37,8 @@ import OrganizerWelcomeModal from '@/components/organizer/OrganizerWelcomeModal'
 import TagBadge from '@/components/shared/TagBadge';
 import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
-import { haversineMeters } from '@/lib/geo';
+import { haversineMeters, venueToLocation } from '@/lib/geo';
+import HotspotStrip from '@/components/hotspots/HotspotStrip';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
 // banner) plus a "Connections" card built from VenueFeed (posts + presence,
@@ -66,6 +70,16 @@ export default function CheckedInHero() {
   const [showOrganizerSheet, setShowOrganizerSheet] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
+  const eventHotspots = useEventHotspots(selectedLocation?.id);
+  const reloadHotspots = eventHotspots.reload;
+  const hp = eventHotspots.progress;
+  const hotspotMeter = hp
+    ? {
+        value: hotspotMeterFill(hp),
+        label: `${hp.count} / ${hp.target} hotspots`,
+        rewardText: hp.nextReward ? `Visit ${hp.nextReward.min_hotspots} → ${hp.nextReward.name}` : null,
+      }
+    : undefined;
 
   useZoneTracking(checkedIn ? selectedLocation?.id ?? null : null);
 
@@ -221,6 +235,7 @@ export default function CheckedInHero() {
       checkIn(selectedLocation.id)
         .then(() => {
           setCheckedIn(true);
+          reloadHotspots();
           // Give the meter a moment to mount, then celebrate the check-in.
           setTimeout(() => contribute('checkin', null), 900);
         })
@@ -229,7 +244,7 @@ export default function CheckedInHero() {
           console.error('Check-in failed:', err);
         });
     }
-  }, [selectedLocation, withinGeofence, openCheckin]);
+  }, [selectedLocation, withinGeofence, openCheckin, reloadHotspots]);
 
   useEffect(() => {
     if (!selectedLocation) return;
@@ -351,6 +366,11 @@ export default function CheckedInHero() {
           bar, then the pills and feed get the rest of the screen. Organizer
           tools live in a bottom sheet behind the button on the right. */}
       <div style={{ padding: '8px 20px 0' }}>
+        <HotspotStrip
+          locationId={selectedLocation.id}
+          checkedIn={checkedIn}
+          onOpenEvent={(ev) => setSelectedLocation(venueToLocation(ev))}
+        />
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', minHeight: '44px' }}>
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.green, flexShrink: 0 }} />
           <span style={{ color: theme.text, fontWeight: 600, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
@@ -468,6 +488,16 @@ export default function CheckedInHero() {
 
         {/* Kept by founder decision (2026-10-01); the picks card is not. */}
         <TitleRosterCard locationId={selectedLocation.id} />
+        {/* Event hotspots: the progress bar lives in this card now that the
+            picks card is gone from the venue screen (founder, 2026-10-01). */}
+        <HotspotsCard
+          hotspots={eventHotspots.hotspots}
+          progress={hp}
+          loading={eventHotspots.loading}
+          error={eventHotspots.error}
+          onRetry={reloadHotspots}
+          meter={hotspotMeter}
+        />
 
         <div style={{ marginBottom: '20px' }}>
           {showBroadcast && canManage && (

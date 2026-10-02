@@ -6,6 +6,8 @@ import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Reward } from '@/lib/types';
 import { Trophy, Gift, Lock } from 'lucide-react';
+import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
+import { Stamp } from '@/components/hotspots/HotspotsCard';
 
 // Rewards are scoped to a location (fetchRewards takes a locationId), and
 // MainFeedTab never had real rewards UI (just a "Coming Soon" stub) — so
@@ -22,6 +24,14 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [checkinCount, setCheckinCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const { progress: hp, loading: hpLoading, error: hpError } = useEventHotspots(selectedLocation?.id);
+  const hotspotCount = hp?.count ?? 0;
+  // No progress yet (loading or failed): keep hotspot rewards locked but
+  // don't claim "0/N".
+  const hpPending = !hp && (hpLoading || hpError);
+
+  const HINT: React.CSSProperties = { color: theme.warm1, fontSize: '11px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' };
 
   useEffect(() => {
     if (!selectedLocation) {
@@ -80,7 +90,9 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
       {selectedLocation && !loading && rewards.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           {rewards.map((reward) => {
-            const locked = reward.min_checkins != null && checkinCount < reward.min_checkins;
+            const lockedByVisits = reward.min_checkins != null && checkinCount < reward.min_checkins;
+            const lockedByHotspots = reward.min_hotspots != null && (hpPending || hotspotCount < reward.min_hotspots);
+            const locked = lockedByVisits || lockedByHotspots;
             return (
               <div key={reward.id} style={{
                 backgroundColor: theme.surface2,
@@ -113,10 +125,20 @@ export default function RewardsPanel({ locationId }: { locationId?: string } = {
                     {reward.deal_text}
                   </p>
                 )}
-                {locked && (
-                  <p style={{ color: theme.warm1, fontSize: '11px', marginTop: '6px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-                    Unlocks at {reward.min_checkins} visits ({checkinCount}/{reward.min_checkins})
+                {lockedByVisits && (
+                  <p style={HINT}>Unlocks at {reward.min_checkins} visits ({checkinCount}/{reward.min_checkins})</p>
+                )}
+                {lockedByHotspots && (
+                  <p style={HINT}>
+                    {hpPending
+                      ? (hpLoading ? 'Checking hotspot progress…' : "Couldn't load hotspot progress")
+                      : `Visit ${reward.min_hotspots} hotspots to unlock (${hotspotCount}/${reward.min_hotspots})`}
                   </p>
+                )}
+                {!locked && reward.min_hotspots != null && hp && (
+                  <div aria-label={`${hp.count} hotspot stamps`} style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                    {Array.from({ length: hp.count }).map((_, i) => <Stamp key={i} on size={22} />)}
+                  </div>
                 )}
               </div>
             );
