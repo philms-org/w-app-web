@@ -6,20 +6,33 @@ import { useStore } from '@/lib/store';
 // Keeps the store's currentLocation following the device while the app is
 // open. requestLocation() only takes one fix at launch, so someone who opened
 // the app before walking into a venue stayed "not here" until they pulled to
-// refresh. Only runs once we already have a real fix (permission granted), so
-// it never triggers a permission prompt of its own.
+// refresh. Only enable it once permission is granted (or just requested), so
+// it never triggers a permission prompt of its own. Every fix it gets also
+// clears a "location's off" left behind by a timed-out one-shot request.
 export function useLiveLocation(enabled: boolean) {
   useEffect(() => {
     if (!enabled || typeof navigator === 'undefined' || !navigator.geolocation) return;
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        useStore.getState().setCurrentLocation({
+        const store = useStore.getState();
+        store.setCurrentLocation({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
         });
+        store.setLocationDenied(false);
+        store.setLocationPermissionBlocked(false);
       },
-      () => { /* transient errors: keep the last good fix */ },
+      (err) => {
+        // Blocked in Settings: hand over to useLocationRecovery. Anything
+        // else is transient — keep the last good fix and keep watching.
+        if (err.code === err.PERMISSION_DENIED) {
+          const store = useStore.getState();
+          store.setCurrentLocation(null);
+          store.setLocationDenied(true);
+          store.setLocationPermissionBlocked(true);
+        }
+      },
       { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
     );
     return () => navigator.geolocation.clearWatch(id);

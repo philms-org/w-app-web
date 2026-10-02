@@ -104,8 +104,17 @@ export function requestLocation(maximumAge = 0): Promise<void> {
       },
       (error) => {
         console.error('Location error:', error);
-        if (error.code === error.PERMISSION_DENIED) setCurrentLocation(null);
-        setLocationDenied(true);
+        if (error.code === error.PERMISSION_DENIED) {
+          setCurrentLocation(null);
+          setLocationDenied(true);
+        } else if (!useStore.getState().currentLocation) {
+          // Timed out / no signal with nothing to fall back on. Permission is
+          // fine, so the live watch keeps trying and clears this on its fix.
+          setLocationDenied(true);
+        }
+        // else: a slow refresh with a real fix already in hand isn't "off" —
+        // flagging it denied hid the in-range venues and stopped the live
+        // watch, so check-in silently stopped working after one slow read.
         // code 1 = PERMISSION_DENIED: the browser has this site blocked and
         // will keep failing instantly on every retry until the user changes
         // it in their browser's site settings — no in-app retry can fix it.
