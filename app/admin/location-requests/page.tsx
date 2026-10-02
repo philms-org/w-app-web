@@ -67,7 +67,7 @@ export default function LocationRequestsPage() {
         alignItems: 'center',
         gap: '12px',
       }}>
-        <Link href="/admin" style={{ color: theme.text, display: 'flex' }}>
+        <Link href="/admin" replace style={{ color: theme.text, display: 'flex' }}>
           <ChevronLeft style={{ width: '24px', height: '24px' }} />
         </Link>
         <h1 style={{
