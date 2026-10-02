@@ -6,7 +6,8 @@ import { fetchCheckedInCounts, fetchVenues, requestLocation as submitLocationReq
 import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 import { DEFAULT_RADIUS_METERS } from '@/lib/geo';
 import HotspotPinSheet from '@/components/hotspots/HotspotPinSheet';
-import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
+import { requestLocation } from '@/lib/geolocation';
+import LocationFixSheet from '@/components/shared/LocationFixSheet';
 import { Search, List, MapPin, Users, Navigation, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { theme, elevation } from '@/lib/theme';
@@ -44,7 +45,7 @@ const WMap = dynamic(() => import('@/components/WMap'), {
 
 // Placeholder for Google Maps - will need API key to fully implement
 export default function MapTab() {
-  const { currentLocation, setCurrentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
+  const { currentLocation, locationDenied, locationPermissionBlocked, nearbyLocations, setNearbyLocations, selectedLocation, setSelectedLocation, setActiveTab } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showList, setShowList] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
@@ -54,6 +55,7 @@ export default function MapTab() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSent, setRequestSent] = useState(false);
+  const [showLocationFix, setShowLocationFix] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -199,30 +201,29 @@ export default function MapTab() {
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.4 }}>
             {locationPermissionBlocked
-              ? `Location is blocked for this site. ${locationSettingsInstructions()}`
+              ? 'Location is blocked for this site.'
               : 'Location is off — showing a default area, not where you are.'}
           </span>
-          {!locationPermissionBlocked && (
-            <button
-              onClick={() => requestLocation()}
-              style={{
-                backgroundColor: theme.accent,
-                color: theme.onAccent,
-                border: 'none',
-                borderRadius: '9999px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'Montserrat, system-ui, sans-serif',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Turn on
-            </button>
-          )}
+          <button
+            onClick={() => (locationPermissionBlocked ? setShowLocationFix(true) : requestLocation())}
+            style={{
+              backgroundColor: theme.accent,
+              color: theme.onAccent,
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat, system-ui, sans-serif',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {locationPermissionBlocked ? 'Fix it' : 'Turn on'}
+          </button>
         </div>
       )}
+      {showLocationFix && <LocationFixSheet onClose={() => setShowLocationFix(false)} />}
       {/* Header */}
       <div style={{
         position: 'absolute',
@@ -378,30 +379,10 @@ export default function MapTab() {
           cursor: 'pointer',
           zIndex: 1000
         }}
-        onClick={() => {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const newLocation = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-                };
-                setCurrentLocation(newLocation);
-              },
-              (error) => {
-                console.error('Location error:', error);
-                alert('Unable to get your location. Please enable location services.');
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
-              }
-            );
-          } else {
-            alert('Geolocation is not supported by this browser.');
-          }
-        }}
+        // Shared helper: on failure it sets locationDenied/Blocked, which the
+        // notice above turns into platform-specific fix-it steps — the old
+        // alert() here just said "enable location services" on top of it.
+        onClick={() => { requestLocation(60000); }}
       >
         <Navigation style={{ width: '24px', height: '24px', color: theme.accent }} />
       </button>

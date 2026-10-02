@@ -1,20 +1,71 @@
 import { useStore } from '@/lib/store';
 
+export interface LocationFixSteps {
+  steps: string[];
+  // A fallback for when the main steps weren't enough.
+  extra?: string;
+  // In-app browsers can't be fixed from Settings; the way out is Safari.
+  openInSafari?: boolean;
+}
+
 // "Enable it in your browser settings" tells a blocked user THAT something
 // needs fixing but not HOW — the actual steps differ enough by platform
-// (no universal "reset this site's permission" API exists) that a vague
+// (no web page can open Settings or reset its own permission) that a vague
 // pointer just strands people. This gives the concrete path for their
-// platform instead.
-export function locationSettingsInstructions(): string {
-  if (typeof navigator === 'undefined') return 'Enable location for this site in your browser settings, then refresh.';
+// platform instead, shown step by step in LocationFixSheet.
+export function locationFixSteps(): LocationFixSteps {
+  const back = "Come back here — we'll pick it up automatically.";
+  if (typeof navigator === 'undefined') {
+    return { steps: ['Allow location for this site in your browser settings.', back] };
+  }
   const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) {
-    return 'Open Settings → Safari → Location, set it to "Ask" or "Allow", then come back and refresh this page.';
+  // iPadOS reports a Mac UA; touch support tells it apart from a real Mac.
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    // Other iOS browsers each get their own row under Location Services.
+    const otherBrowser = /CriOS/.test(ua) ? 'Chrome' : /FxiOS/.test(ua) ? 'Firefox' : /EdgiOS/.test(ua) ? 'Edge' : null;
+    // In-app browsers (Instagram, LinkedIn, Slack, …) are WKWebViews that
+    // inherit the host app's location permission, which usually isn't
+    // granted — no settings change in Safari fixes that.
+    if (!otherBrowser && (!/Safari\//.test(ua) || /FBAN|FBAV|Instagram|LinkedInApp|Line\//.test(ua))) {
+      return {
+        openInSafari: true,
+        steps: [
+          "This in-app browser can't share your location.",
+          'Tap ••• or the share icon, then "Open in Safari" (or copy the link below and paste it into Safari).',
+        ],
+      };
+    }
+    // The most common block is the system-wide switch, not Safari's
+    // per-site setting: Location Services → Safari Websites = "Never"
+    // denies every site instantly without ever showing a prompt.
+    return {
+      steps: [
+        'Open the Settings app.',
+        'Tap Privacy & Security → Location Services, and make sure it\'s on.',
+        `Scroll down to ${otherBrowser ?? 'Safari Websites'} and choose "While Using the App".`,
+        back,
+      ],
+      extra: otherBrowser ? undefined : 'Still blocked? Settings → Apps → Safari → Location → "Ask".',
+    };
   }
   if (/Android/.test(ua)) {
-    return 'Tap the lock icon next to the address bar → Permissions → Location → Allow, then refresh this page.';
+    return {
+      steps: [
+        'Tap the icon at the left of the address bar.',
+        'Tap Permissions → Location → Allow.',
+        back,
+      ],
+      extra: "Still blocked? Make sure Location is on in your phone's quick settings.",
+    };
   }
-  return 'Click the lock icon in your address bar → Site settings → Location → Allow, then refresh this page.';
+  return {
+    steps: [
+      'Click the icon at the left of the address bar.',
+      'Open Site settings → Location → Allow.',
+      back,
+    ],
+  };
 }
 
 // On failure we never invent a position (this used to write NYC, which put
