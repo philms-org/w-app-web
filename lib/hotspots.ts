@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { getCurrentUserId } from './auth';
-import type { EventHotspot, HotspotCheckin, Venue } from './types';
+import type { EventHotspot, HotspotCheckin, HotspotTrailPause, Venue } from './types';
 
 // event_hotspots has two FKs to locations, so embeds name the constraint.
 const HOTSPOT_SELECT =
@@ -120,4 +120,32 @@ export async function fetchHotspotVisitCounts(eventId: string): Promise<Record<s
     out[row.location_id] = Number(row.visitors);
   }
   return out;
+}
+
+// ---- Trail off switch (0038) ----
+
+export async function fetchTrailPauses(eventIds: string[]): Promise<HotspotTrailPause[]> {
+  if (eventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('hotspot_trail_pauses')
+    .select('event_id, started_at, ended_at')
+    .in('event_id', eventIds);
+  if (error) throw error;
+  return (data ?? []) as HotspotTrailPause[];
+}
+
+// The database sets the times (guard trigger), so these just open/close a pause.
+export async function pauseTrail(eventId: string): Promise<void> {
+  const { error } = await supabase.from('hotspot_trail_pauses').insert({ event_id: eventId });
+  // 23505 = an open pause already exists (double tap): already paused.
+  if (error && error.code !== '23505') throw error;
+}
+
+export async function resumeTrail(eventId: string): Promise<void> {
+  const { error } = await supabase
+    .from('hotspot_trail_pauses')
+    .update({ ended_at: new Date().toISOString() })
+    .eq('event_id', eventId)
+    .is('ended_at', null);
+  if (error) throw error;
 }

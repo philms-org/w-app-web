@@ -173,6 +173,14 @@ export interface HotspotCheckin {
   checked_in_at: string;
 }
 
+// Hotspot trail off switch (0038): while ended_at is null the event's trail is
+// paused; check-ins in [started_at, ended_at) never count.
+export interface HotspotTrailPause {
+  event_id: string;
+  started_at: string;
+  ended_at: string | null;
+}
+
 export interface Conversation {
   id: string;
   is_group: boolean;

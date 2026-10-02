@@ -87,10 +87,11 @@ export default function MapTab() {
   }, [setNearbyLocations]);
 
   // Venues have no category column, so there are no category chips: search only.
-  const filteredLocations = useMemo(() => nearbyLocations.filter(location =>
+  // Every pin follows the search box, hotspot (flame) pins included.
+  const matchesSearch = useCallback((location: { name: string; description: string }) =>
     location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    location.description.toLowerCase().includes(searchQuery.toLowerCase())
-  ), [nearbyLocations, searchQuery]);
+    location.description.toLowerCase().includes(searchQuery.toLowerCase()), [searchQuery]);
+  const filteredLocations = useMemo(() => nearbyLocations.filter(matchesSearch), [nearbyLocations, matchesSearch]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [hotspotSheet, setHotspotSheet] = useState<any | null>(null);
@@ -104,15 +105,18 @@ export default function MapTab() {
     hotspot: { stamped, eventName, note },
   })), [activeHotspots]);
 
+  const visibleHotspotPins = useMemo(() => hotspotPins.filter(matchesSearch), [hotspotPins, matchesSearch]);
   const mapLocations = useMemo(() => {
+    // Hotspot places are left out of the plain pins even when search hides
+    // their flame, so a search never shows them as an ordinary venue instead.
     const hotspotIds = new Set(hotspotPins.map((p) => p.id));
     // A hotspot pin replaces the venue pin for the same place; keep its live count.
     const countById = new Map(nearbyLocations.map((l) => [l.id, l.count]));
     return [
       ...filteredLocations.filter((l) => !hotspotIds.has(l.id)),
-      ...hotspotPins.map((p) => ({ ...p, count: countById.get(p.id) ?? p.count })),
+      ...visibleHotspotPins.map((p) => ({ ...p, count: countById.get(p.id) ?? p.count })),
     ];
-  }, [filteredLocations, hotspotPins, nearbyLocations]);
+  }, [filteredLocations, hotspotPins, visibleHotspotPins, nearbyLocations]);
 
   const handleLocationSelect = useCallback((location: any) => {
     if (location.hotspot) { setHotspotSheet(location); return; }
@@ -730,7 +734,7 @@ export default function MapTab() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
-      {hotspotPins.length > 0 && (
+      {visibleHotspotPins.length > 0 && (
         <div style={{
           position: 'absolute', bottom: locationDenied ? 'calc(170px + env(safe-area-inset-bottom))' : 'calc(80px + env(safe-area-inset-bottom))',
           left: 76, zIndex: 1000,

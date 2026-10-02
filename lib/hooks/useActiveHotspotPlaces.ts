@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchActiveHotspots, fetchMyCheckinsAt } from '@/lib/hotspots';
-import { visitedHotspotIds, localDay } from '@/lib/hotspotProgress';
+import { fetchActiveHotspots, fetchMyCheckinsAt, fetchTrailPauses } from '@/lib/hotspots';
+import { visitedHotspotIds, localDay, isTrailPaused } from '@/lib/hotspotProgress';
 import type { Venue } from '@/lib/types';
 
 export interface ActiveHotspotPlace {
@@ -15,7 +15,8 @@ export interface ActiveHotspotPlace {
 // Places that are hotspots of an event running today, plus every hotspot of
 // `includeEventId` (the event you're at). Keyed by place id, so a place that
 // is a hotspot of two running events appears once (stamped if either counts).
-// Shared by the Map tab's flame pins and Home's venue pills.
+// Shared by the Map tab's flame pins and Home's venue pills. Paused trails
+// (off switch, 0038) are left out entirely.
 export function useActiveHotspotPlaces(includeEventId: string | null | undefined) {
   const [places, setPlaces] = useState<Map<string, ActiveHotspotPlace>>(new Map());
 
@@ -23,14 +24,17 @@ export function useActiveHotspotPlaces(includeEventId: string | null | undefined
     let cancelled = false;
     const today = localDay(new Date().toISOString());
     fetchActiveHotspots(today, includeEventId ?? null)
-      .then(async (rows) => {
+      .then(async (all) => {
+        const pauses = await fetchTrailPauses([...new Set(all.map((r) => r.event_id))]);
+        const pausesOf = (eventId: string) => pauses.filter((p) => p.event_id === eventId);
+        const rows = all.filter((r) => !isTrailPaused(pausesOf(r.event_id)));
         const checkins = await fetchMyCheckinsAt([...new Set(rows.map((r) => r.location_id))]);
         const byEvent = new Map<string, typeof rows>();
         for (const r of rows) byEvent.set(r.event_id, [...(byEvent.get(r.event_id) ?? []), r]);
         const next = new Map<string, ActiveHotspotPlace>();
         for (const r of rows) {
           if (!r.place) continue;
-          const stamped = visitedHotspotIds(byEvent.get(r.event_id)!, checkins, r.event).has(r.location_id);
+          const stamped = visitedHotspotIds(byEvent.get(r.event_id)!, checkins, r.event, pausesOf(r.event_id)).has(r.location_id);
           const prev = next.get(r.location_id);
           if (prev) {
             prev.stamped = prev.stamped || stamped;

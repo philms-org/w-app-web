@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchRewards, fetchVenue } from '@/lib/data';
-import { fetchEventHotspots, fetchMyCheckinsAt } from '@/lib/hotspots';
-import { computeHotspotProgress, type HotspotProgress } from '@/lib/hotspotProgress';
+import { fetchEventHotspots, fetchMyCheckinsAt, fetchTrailPauses } from '@/lib/hotspots';
+import { computeHotspotProgress, isTrailPaused, type HotspotProgress } from '@/lib/hotspotProgress';
 import type { EventHotspot, Venue } from '@/lib/types';
 
 // One event's hotspots + the signed-in user's progress. `progress` stays null
 // for events without hotspots so callers render exactly what they did before.
+// `paused` (trail off switch, 0038): attendee surfaces hide the trail, but
+// progress still reflects stamps earned before the pause (rewards stay).
 export function useEventHotspots(eventId: string | null | undefined) {
   const [hotspots, setHotspots] = useState<EventHotspot[]>([]);
   const [event, setEvent] = useState<Venue | null>(null);
   const [progress, setProgress] = useState<HotspotProgress | null>(null);
+  const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(!!eventId);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -24,6 +27,7 @@ export function useEventHotspots(eventId: string | null | undefined) {
       setHotspots([]);
       setEvent(null);
       setProgress(null);
+      setPaused(false);
       lastIdRef.current = eventId;
     }
 
@@ -43,16 +47,19 @@ export function useEventHotspots(eventId: string | null | undefined) {
         if (list.length === 0) {
           setEvent(null);
           setProgress(null);
+          setPaused(false);
           return;
         }
-        const [ev, rewards, checkins] = await Promise.all([
+        const [ev, rewards, checkins, pauses] = await Promise.all([
           fetchVenue(eventId),
           fetchRewards(eventId),
           fetchMyCheckinsAt(list.map((h) => h.location_id)),
+          fetchTrailPauses([eventId]),
         ]);
         if (cancelled) return;
         setEvent(ev);
-        setProgress(computeHotspotProgress({ hotspots: list, checkins, window: ev, rewards }));
+        setPaused(isTrailPaused(pauses));
+        setProgress(computeHotspotProgress({ hotspots: list, checkins, window: ev, rewards, pauses }));
       } catch (e) {
         console.error('Failed to load hotspots:', e);
         if (!cancelled) setError(true);
@@ -63,5 +70,5 @@ export function useEventHotspots(eventId: string | null | undefined) {
     return () => { cancelled = true; };
   }, [eventId, nonce]);
 
-  return { hotspots, progress, event, loading, error, reload };
+  return { hotspots, progress, event, paused, loading, error, reload };
 }

@@ -1,7 +1,7 @@
 // Pure hotspot-progress math. Dependency-free on purpose (type-only imports)
 // so `node --test` can run it directly. See
 // docs/superpowers/specs/2026-09-30-event-hotspots-design.md → "Visit rule".
-import type { EventHotspot, HotspotCheckin, Reward } from './types';
+import type { EventHotspot, HotspotCheckin, HotspotTrailPause, Reward } from './types';
 
 export type EventWindow = { event_date?: string | null; event_end_date?: string | null };
 
@@ -23,10 +23,24 @@ export function localDay(iso: string): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+// Trail off switch (0038): paused while any pause is still open.
+export function isTrailPaused(pauses: HotspotTrailPause[]): boolean {
+  return pauses.some((p) => p.ended_at == null);
+}
+
+// Check-ins in [started_at, ended_at) of any pause never count.
+function inPause(iso: string, pauses: HotspotTrailPause[]): boolean {
+  const t = new Date(iso).getTime();
+  return pauses.some((p) =>
+    t >= new Date(p.started_at).getTime() &&
+    (p.ended_at == null || t < new Date(p.ended_at).getTime()));
+}
+
 export function visitedHotspotIds(
   hotspots: EventHotspot[],
   checkins: HotspotCheckin[],
-  window: EventWindow
+  window: EventWindow,
+  pauses: HotspotTrailPause[] = []
 ): Set<string> {
   const byPlace = new Map(hotspots.map((h) => [h.location_id, h]));
   const start = window.event_date ? window.event_date.slice(0, 10) : null;
@@ -35,6 +49,7 @@ export function visitedHotspotIds(
   for (const c of checkins) {
     const h = byPlace.get(c.location_id);
     if (!h) continue;
+    if (inPause(c.checked_in_at, pauses)) continue;
     if (start && end) {
       const day = localDay(c.checked_in_at);
       if (day >= start && day <= end) visited.add(h.location_id);
@@ -50,8 +65,9 @@ export function computeHotspotProgress(input: {
   checkins: HotspotCheckin[];
   window: EventWindow;
   rewards: Reward[];
+  pauses?: HotspotTrailPause[];
 }): HotspotProgress {
-  const visited = visitedHotspotIds(input.hotspots, input.checkins, input.window);
+  const visited = visitedHotspotIds(input.hotspots, input.checkins, input.window, input.pauses ?? []);
   const count = visited.size;
   const total = input.hotspots.length;
   const tiers = input.rewards

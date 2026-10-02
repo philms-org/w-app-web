@@ -130,3 +130,51 @@ test('pickHotspotParent: past-only → null', () => {
 test('pickHotspotParent: future-only → null', () => {
   assert.equal(pickHotspotParent([ev('future', '2026-11-01')], '2026-10-04'), null);
 });
+
+// ---- Trail off switch (0038) ----
+import { isTrailPaused } from './hotspotProgress.ts';
+
+const pause = (started_at: string, ended_at: string | null) => ({ event_id: 'ev', started_at, ended_at });
+
+test('check-ins inside a closed pause window do not count', () => {
+  const trail = [hs('a', '2026-05-01T00:00:00Z'), hs('b', '2026-05-01T00:00:00Z'), hs('c', '2026-05-01T00:00:00Z')];
+  const p = computeHotspotProgress({
+    hotspots: trail, window: {}, rewards: [],
+    pauses: [pause('2026-05-10T00:00:00Z', '2026-05-12T00:00:00Z')],
+    checkins: [
+      { location_id: 'a', checked_in_at: '2026-05-09T12:00:00Z' }, // before pause → counts
+      { location_id: 'b', checked_in_at: '2026-05-11T12:00:00Z' }, // during pause → no
+      { location_id: 'c', checked_in_at: '2026-05-12T00:00:00Z' }, // at resume instant → counts
+    ],
+  });
+  assert.deepEqual([...p.visited].sort(), ['a', 'c']);
+});
+
+test('an open pause excludes every check-in after it started', () => {
+  const trail = [hs('a', '2026-05-01T00:00:00Z'), hs('b', '2026-05-01T00:00:00Z')];
+  const p = computeHotspotProgress({
+    hotspots: trail, window: {}, rewards: [],
+    pauses: [pause('2026-05-10T00:00:00Z', null)],
+    checkins: [
+      { location_id: 'a', checked_in_at: '2026-05-09T12:00:00Z' },
+      { location_id: 'b', checked_in_at: '2026-06-01T12:00:00Z' },
+    ],
+  });
+  assert.deepEqual([...p.visited], ['a']);
+});
+
+test('stamps earned before a pause stay earned (rewards stay unlocked)', () => {
+  const trail = [hs('a', '2026-05-01T00:00:00Z')];
+  const p = computeHotspotProgress({
+    hotspots: trail, window: {}, rewards: [reward('r', 1)],
+    pauses: [pause('2026-05-10T00:00:00Z', null)],
+    checkins: [{ location_id: 'a', checked_in_at: '2026-05-02T12:00:00Z' }],
+  });
+  assert.deepEqual(p.unlocked.map((r) => r.id), ['r']);
+});
+
+test('isTrailPaused is true only while a pause is open', () => {
+  assert.equal(isTrailPaused([]), false);
+  assert.equal(isTrailPaused([pause('2026-05-10T00:00:00Z', '2026-05-12T00:00:00Z')]), false);
+  assert.equal(isTrailPaused([pause('2026-05-10T00:00:00Z', '2026-05-12T00:00:00Z'), pause('2026-06-01T00:00:00Z', null)]), true);
+});
