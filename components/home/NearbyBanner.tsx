@@ -20,6 +20,12 @@ const FONT = 'Montserrat, system-ui, sans-serif';
 const CARD_EDGE = '#4FD1C5';
 // How many of the nearest out-of-range venues to list under the in-range ones.
 const NEARBY_LIMIT = 5;
+// A fix less precise than this is an estimate (Wi-Fi/IP), not GPS.
+const APPROXIMATE_METERS = 500;
+
+function formatDistance(meters: number): string {
+  return meters < 1000 ? `${Math.round(meters)} m` : `${Math.round(meters / 1000)} km`;
+}
 
 // Top-of-Home location card. Two states, per the founder's mock:
 //   - venues detected: a stacked menu of venue pills (tap to check in, or
@@ -236,13 +242,21 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
   const searchable = (hasRealLocation ? nearby : venues.filter((v) => v.lat != null && v.lng != null))
     .filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()));
 
+  // Laptops (and phones with Precise Location off) estimate position from
+  // Wi-Fi/IP, often miles off — saying "we don't recognize where you are"
+  // then reads like the app is broken, so name the real cause instead.
+  const accuracy = currentLocation?.accuracy;
+  const approximate = hasRealLocation && accuracy != null && accuracy > APPROXIMATE_METERS;
+
   const eyebrow = locationPermissionBlocked
     ? 'Location is blocked for this site'
     : !hasRealLocation
       ? "Location's off"
-      : loading
-        ? 'Finding venues near you…'
-        : "We don't recognize where you are";
+      : approximate
+        ? `Your location is approximate (±${formatDistance(accuracy)})`
+        : loading
+          ? 'Finding venues near you…'
+          : "We don't recognize where you are";
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -281,6 +295,13 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
             search <Search aria-hidden style={{ width: 18, height: 18 }} />
           </button>
         </p>
+
+        {approximate && (
+          <p style={{ fontSize: 12, lineHeight: 1.5, color: '#4A4D55', margin: '8px 8px 0' }}>
+            Your device is guessing from Wi-Fi, not GPS. Open the app on your phone with Precise
+            Location on, or search for your event.
+          </p>
+        )}
 
         {locationPermissionBlocked && (
           <button

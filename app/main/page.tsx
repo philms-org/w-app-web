@@ -16,6 +16,7 @@ import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
 import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
 import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
+import LocationDebug from '@/components/shared/LocationDebug';
 import { MapPin } from 'lucide-react';
 
 export default function MainPage() {
@@ -114,6 +115,7 @@ export default function MainPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
+      <LocationDebug />
       {activeTab === 'home' && <AppHeader />}
 
       {/* Main content */}
