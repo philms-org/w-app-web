@@ -118,7 +118,7 @@ export default function HeroCarousel({ images, title, onBack, links, onEngage }:
           <span style={{ color: theme.accent }}>W</span>
           {title}
         </h1>
-        {many && (
+        {many && images.length <= 8 && (
           <div aria-hidden="true" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             {images.map((_, i) => (
               <span
