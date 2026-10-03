@@ -15,7 +15,7 @@
 --
 -- Only the service role can call these; /api/account/delete checks the
 -- caller's token and passes their own id. Never grant to authenticated.
--- FOUNDER-GATED: apply to QA, then prod, only on founder go-ahead.
+-- Applied to QA and prod 2026-10-03 (founder go-ahead).
 --   supabase db query --linked < supabase/migrations/0039_delete_account.sql
 
 create or replace function public.account_deletion_blockers(p_user uuid)

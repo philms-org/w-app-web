@@ -104,6 +104,11 @@ export default function PrivacyPage() {
             records already collected during a past check-in; those age out on the normal 48-hour
             schedule.
           </p>
+          <p style={bodyStyle}>
+            You can permanently delete your account at any time from Profile → Delete account. This
+            removes your profile, posts, comments, messages, connections, check-ins and badges.
+            Organizers and team owners must hand off their venue or team first.
+          </p>
         </div>
 
         <p style={{ ...bodyStyle, fontSize: '12px', marginTop: '8px' }}>
