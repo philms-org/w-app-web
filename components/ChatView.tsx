@@ -8,11 +8,14 @@ import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import TagBadge from '@/components/shared/TagBadge';
 import type { Message, VerificationTag } from '@/lib/types';
 import { theme } from '@/lib/theme';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 
 export interface ChatConversation {
   id: string;
+  // The other person in a 1:1 chat (unset for groups).
+  userId?: string;
   userName: string;
   userImage?: string;
   isGroup: boolean;
@@ -197,6 +200,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
         >
           <ArrowLeft style={{ width: '24px', height: '24px', color: theme.text }} />
         </button>
+        <ProfileAvatarButton userId={conversation.isGroup ? null : conversation.userId} name={conversation.userName}>
         <div style={{
           width: '40px',
           height: '40px',
@@ -217,6 +221,7 @@ export default function ChatView({ conversation, onClose, tagsByUserId }: ChatVi
             </span>
           )}
         </div>
+        </ProfileAvatarButton>
         <h2 style={{
           fontSize: '18px',
           fontWeight: 600,

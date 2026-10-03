@@ -7,6 +7,7 @@ import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import ChatView, { type ChatConversation } from '@/components/ChatView';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 export default function MessagesTab() {
   const { setActiveChat, setActiveTab } = useStore();
@@ -70,6 +71,7 @@ export default function MessagesTab() {
     setActiveChat(message.id);
     setOpenChat({
       id: message.id,
+      userId: message.isGroup ? undefined : message.userId,
       userName: message.userName,
       userImage: message.userImage,
       isGroup: message.isGroup,
@@ -219,6 +221,7 @@ export default function MessagesTab() {
             >
               {/* Profile Image */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
+                <ProfileAvatarButton nested userId={message.isGroup ? null : message.userId} name={message.userName}>
                 <div style={{
                   width: '56px',
                   height: '56px',
@@ -237,6 +240,7 @@ export default function MessagesTab() {
                     {message.userName.charAt(0)}
                   </span>
                 </div>
+                </ProfileAvatarButton>
                 {message.online && (
                   <div style={{
                     position: 'absolute',

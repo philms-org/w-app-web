@@ -6,6 +6,7 @@ import { fetchConnectionsPosts } from '@/lib/data';
 import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/theme';
 import { SectionHeader } from '@/components/ui/primitives';
 import type { VenuePost } from '@/lib/types';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 function timeAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -48,6 +49,7 @@ export default function ConnectionsPosts({ excludeLocationId }: { excludeLocatio
             display: 'flex', gap: 12, padding: '14px 0',
             borderBottom: i < posts.length - 1 ? `1px solid ${theme.divider}` : 'none',
           }}>
+            <ProfileAvatarButton userId={p.author_id} name={p.author?.display_name}>
             <div style={{
               width: 40, height: 40, borderRadius: 999, overflow: 'hidden', flexShrink: 0, background: theme.pill,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -59,6 +61,7 @@ export default function ConnectionsPosts({ excludeLocationId }: { excludeLocatio
                 <span style={{ fontWeight: 700, color: theme.text }}>{(p.author?.display_name ?? '?').charAt(0).toUpperCase()}</span>
               )}
             </div>
+            </ProfileAvatarButton>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 700, color: theme.text, fontSize: typeTokens.body.fontSize }}>
