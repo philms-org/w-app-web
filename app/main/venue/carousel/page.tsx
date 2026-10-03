@@ -19,6 +19,7 @@ import {
   addLocationManager,
   removeLocationManager,
   fetchAllProfiles,
+  fetchAllProfilesForAdmin,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import type { Venue, Banner, LocationManager, Profile } from '@/lib/types';
@@ -107,7 +108,11 @@ function VenueCarouselPageInner() {
   }, [selectedVenueId, paramLocationId]);
 
   const loadManagers = (locationId: string) => {
-    Promise.all([fetchLocationManagers(locationId), fetchAllProfiles()])
+    // Master admins get the base-table directory, which carries email, so the
+    // picker can find people by email as well as display name. The public view
+    // everyone else reads has no email column.
+    const loadPeople = isMasterAdmin ? fetchAllProfilesForAdmin : fetchAllProfiles;
+    Promise.all([fetchLocationManagers(locationId), loadPeople()])
       .then(([mgrs, profiles]) => {
         setManagers(mgrs);
         setAllProfiles(profiles);
@@ -117,7 +122,7 @@ function VenueCarouselPageInner() {
 
   useEffect(() => {
     if (venue) loadManagers(venue.id);
-  }, [venue]);
+  }, [venue, isMasterAdmin]);
 
   const handleAddManager = (person: Profile) => {
     if (!venue) return;
@@ -546,7 +551,7 @@ function VenueCarouselPageInner() {
               </div>
             )}
 
-            <PersonPicker people={allProfiles} onPick={handleAddManager} placeholder="Add a co-owner by name…" />
+            <PersonPicker people={allProfiles} onPick={handleAddManager} placeholder={isMasterAdmin ? 'Add a co-owner by name or email…' : 'Add a co-owner by name…'} />
           </div>
         )}
       </div>
