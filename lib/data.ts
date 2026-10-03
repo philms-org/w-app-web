@@ -2280,13 +2280,21 @@ export async function createVenuePost(
   body: string,
   lat: number | null,
   lng: number | null,
+  accuracy: number | null = null,
 ): Promise<VenuePost> {
-  const { data, error } = await supabase.rpc('create_venue_post', {
+  const args = {
     p_location_id: locationId,
     p_body: body.trim(),
     p_lat: lat,
     p_lng: lng,
-  });
+  };
+  let { data, error } = await supabase.rpc('create_venue_post', { ...args, p_accuracy: accuracy });
+  // Before migration 0039 is applied the function has no p_accuracy, and
+  // PostgREST can't find a match (PGRST202). Fall back to the old call so
+  // posting never breaks on deploy order.
+  if (error?.code === 'PGRST202') {
+    ({ data, error } = await supabase.rpc('create_venue_post', args));
+  }
   if (error) throw error;
   return data as VenuePost;
 }

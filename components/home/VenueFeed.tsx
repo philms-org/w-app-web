@@ -326,7 +326,7 @@ export default function VenueFeed({
     ]);
     try {
       // Invitees posting before they arrive don't need a location fix.
-      let pos: { lat: number | null; lng: number | null } = { lat: null, lng: null };
+      let pos: { lat: number | null; lng: number | null; accuracy: number | null } = { lat: null, lng: null, accuracy: null };
       if (!earlyAccess || checkedIn) {
         try {
           pos = await getFreshPosition();
@@ -336,7 +336,7 @@ export default function VenueFeed({
       }
       let saved: VenuePost;
       try {
-        saved = await createVenuePost(locationId, body, pos.lat, pos.lng);
+        saved = await createVenuePost(locationId, body, pos.lat, pos.lng, pos.accuracy);
       } catch (err) {
         const msg = (err as { message?: string })?.message ?? '';
         if (/geofence/.test(msg)) throw new FeedPostError("You need to be at the venue to post. Move closer and try again.");
