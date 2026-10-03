@@ -2280,12 +2280,14 @@ export async function createVenuePost(
   body: string,
   lat: number | null,
   lng: number | null,
+  accuracy: number | null = null,
 ): Promise<VenuePost> {
   const { data, error } = await supabase.rpc('create_venue_post', {
     p_location_id: locationId,
     p_body: body.trim(),
     p_lat: lat,
     p_lng: lng,
+    p_accuracy: accuracy,
   });
   if (error) throw error;
   return data as VenuePost;
