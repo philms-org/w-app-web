@@ -5,6 +5,7 @@ import { fetchVenueTitleRoster, tagIconPublicUrl } from '@/lib/data';
 import type { Profile, VerificationTagType } from '@/lib/types';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { resolveTagIcon } from '@/lib/tagIcons';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 export default function TitleRosterCard({ locationId }: { locationId: string }) {
   const [groups, setGroups] = useState<{ type: VerificationTagType; people: Profile[] }[]>([]);
@@ -43,13 +44,15 @@ export default function TitleRosterCard({ locationId }: { locationId: string }) 
               <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 2 }}>
                 {people.map((p) => (
                   <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 56, flexShrink: 0 }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: '50%', backgroundColor: theme.pill,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: theme.text, fontWeight: 700, fontSize: 15,
-                    }}>
-                      {(p.display_name ?? '?').charAt(0).toUpperCase()}
-                    </div>
+                    <ProfileAvatarButton userId={p.id} name={p.display_name}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: '50%', backgroundColor: theme.pill,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: theme.text, fontWeight: 700, fontSize: 15,
+                      }}>
+                        {(p.display_name ?? '?').charAt(0).toUpperCase()}
+                      </div>
+                    </ProfileAvatarButton>
                     <span style={{
                       fontSize: 10, color: theme.text, textAlign: 'center', width: '100%',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

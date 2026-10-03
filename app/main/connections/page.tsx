@@ -7,6 +7,7 @@ import { fetchMyConnections, removeConnection, fetchContactMethods } from '@/lib
 import type { MyConnection, ContactMethod } from '@/lib/types';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import ContactGrid from '@/components/connect/ContactGrid';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 export default function ConnectionsPage() {
   const router = useRouter();
@@ -69,9 +70,11 @@ export default function ConnectionsPage() {
                 padding: '12px', borderBottom: `1px solid ${theme.divider}`,
               }}
             >
-              <div style={{ width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: theme.surface2, flexShrink: 0, overflow: 'hidden' }}>
-                {r.avatar_url && <img src={r.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-              </div>
+              <ProfileAvatarButton userId={r.other_user_id} name={r.display_name}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: theme.surface2, flexShrink: 0, overflow: 'hidden' }}>
+                  {r.avatar_url && <img src={r.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                </div>
+              </ProfileAvatarButton>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {r.display_name ?? 'Someone'}

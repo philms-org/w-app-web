@@ -10,6 +10,7 @@ import GuestBadge from './GuestBadge';
 import { AvatarWithLight } from './InRoomStrip';
 import { theme, type as typeTokens } from '@/lib/theme';
 import type { Profile, VenuePost } from '@/lib/types';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 function computeAge(dob?: string | null): number | null {
   if (!dob) return null;
@@ -99,7 +100,9 @@ export default function VenueFeedRow({
 
   return (
     <div style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: `1px solid ${theme.divider}`, fontFamily: typeTokens.family }}>
-      <AvatarWithLight profile={profile} size={44} inRoom={inRoom} ring={theme.bg} />
+      <ProfileAvatarButton userId={profile.id} name={profile.display_name}>
+        <AvatarWithLight profile={profile} size={44} inRoom={inRoom} ring={theme.bg} />
+      </ProfileAvatarButton>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

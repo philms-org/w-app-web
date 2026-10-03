@@ -878,6 +878,21 @@ export async function fetchVerificationTags(locationId: string): Promise<Verific
   });
 }
 
+// Every title someone holds, across venues (for the profile sheet).
+export async function fetchUserVerificationTags(userId: string): Promise<VerificationTag[]> {
+  const { data, error } = await supabase
+    .from('verification_tags')
+    .select('*, verification_tag_types(*)')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return (data ?? []).map((r) => {
+    const { verification_tag_types, ...rest } = r as VerificationTag & {
+      verification_tag_types: VerificationTagType | null;
+    };
+    return { ...rest, type: verification_tag_types ?? undefined } as VerificationTag;
+  });
+}
+
 export async function assignVerificationTagFreeform(
   userId: string,
   locationId: string,
@@ -1849,6 +1864,19 @@ export async function fetchConnection(connectionId: string): Promise<Connection 
     .maybeSingle();
   if (error) throw error;
   return (data as Connection) ?? null;
+}
+
+export async function isConnectedTo(otherId: string): Promise<boolean> {
+  const uid = await getCurrentUserId();
+  if (!uid) return false;
+  const { data, error } = await supabase
+    .from('friendships')
+    .select('friend_id')
+    .eq('user_id', uid)
+    .eq('friend_id', otherId)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
 }
 
 // The /main/connections list: every person I'm connected to, plus where/when.
