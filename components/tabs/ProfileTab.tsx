@@ -13,6 +13,7 @@ import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
 import RolePass from '@/components/profile/RolePass';
 import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
 import {
   Camera, Edit2, Shield, Link2, Award,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard, ShieldCheck
@@ -22,6 +23,7 @@ export default function ProfileTab() {
   const router = useRouter();
   const { user, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [shareCheckins, setShareCheckins] = useState(false);
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
@@ -432,7 +434,7 @@ export default function ProfileTab() {
             // carries the destructive colour, and a confirm step follows.
             color: theme.text,
             fontWeight: '600',
-            marginBottom: '32px',
+            marginBottom: '20px',
             border: 'none',
             cursor: 'pointer',
             fontSize: '16px',
@@ -442,7 +444,36 @@ export default function ProfileTab() {
           <LogOut style={{ width: '20px', height: '20px', color: theme.accent2 }} />
           <span>Logout</span>
         </button>
+
+        {/* Delete account: deliberately quiet; the sheet does the warning. */}
+        <button
+          onClick={() => setShowDeleteAccount(true)}
+          style={{
+            display: 'block',
+            margin: '0 auto 40px',
+            padding: '8px 12px',
+            background: 'none',
+            border: 'none',
+            color: '#FF6B5B',
+            fontSize: '14px',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}
+        >
+          Delete account
+        </button>
       </div>
+
+      {showDeleteAccount && (
+        <DeleteAccountSheet
+          onClose={() => setShowDeleteAccount(false)}
+          onDeleted={() => {
+            logout();
+            router.replace('/auth/login');
+          }}
+        />
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
