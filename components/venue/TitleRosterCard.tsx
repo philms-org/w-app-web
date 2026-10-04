@@ -7,9 +7,9 @@ import type { Profile, VerificationTagType } from '@/lib/types';
 import { theme, type as typeTokens, radius } from '@/lib/theme';
 import { resolveTagIcon } from '@/lib/tagIcons';
 
-// Compact roster: one sliding row of title pills (same style as the venue
-// feed filters) and a single sliding row of the people holding the selected
-// title. Tapping the selected pill again collapses the people row.
+// Compact roster: just a sliding row of title pills, styled like the venue
+// feed filters. Tapping a pill reveals a sliding row of the people holding
+// that title; tapping it again collapses it.
 export default function TitleRosterCard({ locationId }: { locationId: string }) {
   const [groups, setGroups] = useState<{ type: VerificationTagType; people: Profile[] }[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function TitleRosterCard({ locationId }: { locationId: string }) 
       .then((g) => {
         if (cancelled) return;
         setGroups(g);
-        setSelectedId(g[0]?.type.id ?? null);
+        setSelectedId(null);
       })
       .catch((e) => console.error('Failed to load title roster:', e));
     return () => { cancelled = true; };
@@ -31,13 +31,10 @@ export default function TitleRosterCard({ locationId }: { locationId: string }) 
   const selected = groups.find((g) => g.type.id === selectedId) ?? null;
 
   return (
-    <div style={{ marginBottom: 20, fontFamily: typeTokens.family }}>
-      <h3 style={{ fontSize: typeTokens.label.fontSize, fontWeight: 700, color: theme.text, marginBottom: 4 }}>
-        Titles at this venue
-      </h3>
+    <div style={{ marginBottom: 12, fontFamily: typeTokens.family }}>
       <div
         role="group"
-        aria-label="Filter by title"
+        aria-label="Titles at this venue"
         style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 0 8px', margin: '0 -2px', scrollbarWidth: 'none' }}
       >
         {groups.map(({ type, people }) => {
