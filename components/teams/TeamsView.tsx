@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Users, KeyRound } from 'lucide-react';
+import { Plus, Users, KeyRound, MessageCircle } from 'lucide-react';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
 import { fetchProfile, fetchTeams, joinTeamByCode, requestToJoinTeam } from '@/lib/data';
@@ -231,7 +231,11 @@ export default function TeamsView({
               >
                 <span style={{ display: 'block', fontSize: 16, fontWeight: 700, color: theme.text }}>{t.name}</span>
                 <span style={{ display: 'block', fontSize: 13, color: theme.muted }}>
-                  {t.members.length} of {t.max_size} · {t.members.length === 0 ? 'No one yet' : t.members[0]?.profile?.display_name ?? 'Owner'}
+                  {t.members.length} of {t.max_size}
+                  {t.kind === 'company' ? ' · Company' : ''}
+                </span>
+                <span style={{ display: 'block', fontSize: 13, color: theme.text, marginTop: 2 }}>
+                  {t.members.length === 0 ? 'No one yet' : t.members.map((m) => (m.user_id === myUserId ? 'You' : m.profile?.display_name ?? 'Someone')).join(', ')}
                 </span>
                 {t.idea && <span style={{ display: 'block', fontSize: 15, marginTop: 6, color: theme.text }}>{t.idea}</span>}
               </button>
@@ -248,6 +252,10 @@ export default function TeamsView({
                 {mine ? (
                   <Button variant="secondary" style={{ minHeight: 44 }} onClick={() => setOpenId(t.id)}>Open your team</Button>
                 ) : (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button variant="secondary" style={{ minHeight: 44 }} onClick={() => setOpenId(t.id)}>
+                    <MessageCircle size={14} />&nbsp;See members &amp; message
+                  </Button>
                   <Button
                     variant="secondary"
                     style={{ minHeight: 44 }}
@@ -258,6 +266,7 @@ export default function TeamsView({
                   >
                     {full ? 'Team is full' : requested ? 'Requested' : myTeam ? 'You’re on a team' : 'Ask to join'}
                   </Button>
+                  </div>
                 )}
               </div>
             </div>

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import QRCode from 'qrcode';
-import { X, Copy, Check, UserPlus } from 'lucide-react';
+import { X, Copy, Check, UserPlus, MessageCircle } from 'lucide-react';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
+import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 import {
   createTeam,
   updateTeam,
@@ -13,6 +14,7 @@ import {
   deleteTeam,
   respondToJoinRequest,
   requestToJoinTeam,
+  startConversation,
 } from '@/lib/data';
 import { TEAM_NEEDS, type Profile, type Team, type TeamNeed, type TeamWithMembers } from '@/lib/types';
 
@@ -235,6 +237,24 @@ export function TeamDetailSheet({
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
+  // Whose inline composer is open: a member's user id, or 'team' for the group chat.
+  const [composeTo, setComposeTo] = useState<string | null>(null);
+  const [teamText, setTeamText] = useState('');
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const teammates = team.members.filter((m) => m.user_id !== myUserId);
+
+  const sent = (key: string) => {
+    setComposeTo(null);
+    setSentTo(key);
+    setTimeout(() => setSentTo((cur) => (cur === key ? null : cur)), 2000);
+  };
+
+  const messageTeam = () =>
+    run('team', async () => {
+      await startConversation(teammates.map((m) => m.user_id), team.name, true, teamText.trim());
+      setTeamText('');
+      sent('team');
+    });
 
   const link = typeof window === 'undefined' ? '' : `${window.location.origin}/main?teamCode=${team.join_code}`;
 
@@ -328,18 +348,63 @@ export function TeamDetailSheet({
         </div>
       )}
 
+      {isMember && teammates.length > 0 && (
+        <div style={{ margin: '0 0 12px' }}>
+          {composeTo === 'team' ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Input
+                aria-label={`Message ${team.name}`}
+                value={teamText}
+                autoFocus
+                onChange={(e) => setTeamText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && teamText.trim() && busy === null) messageTeam(); }}
+                placeholder={`Message everyone on ${team.name}`}
+              />
+              <Button style={{ minHeight: 48 }} disabled={busy !== null || !teamText.trim()} onClick={messageTeam}>
+                {busy === 'team' ? '…' : 'Send'}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="secondary" fullWidth style={{ minHeight: 48 }} onClick={() => setComposeTo('team')}>
+              {sentTo === 'team' ? <><Check size={16} />&nbsp;Sent to your team</> : <><MessageCircle size={16} />&nbsp;Message your team</>}
+            </Button>
+          )}
+        </div>
+      )}
+
       <div>
-        {team.members.map((m) => (
-          <div key={m.user_id} style={row}>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: theme.text }}>{m.profile?.display_name ?? 'Someone'}{m.user_id === myUserId ? ' (you)' : ''}</span>
-              <span style={{ display: 'block', fontSize: 12.5, color: theme.muted }}>{m.role === 'owner' ? 'Owner' : 'Member'}{m.profile?.role ? ` · ${m.profile.role}` : ''}</span>
-            </span>
-            {canRun && m.user_id !== myUserId && (
-              <Button variant="secondary" style={small} disabled={busy !== null} onClick={() => run(`r${m.user_id}`, () => removeTeamMember(team.id, m.user_id))}>Remove</Button>
-            )}
-          </div>
-        ))}
+        {team.members.map((m) => {
+          const me = m.user_id === myUserId;
+          return (
+            <div key={m.user_id} style={{ borderTop: `1px solid ${theme.divider}` }}>
+              <div style={{ ...row, borderTop: 'none' }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: theme.text }}>{m.profile?.display_name ?? 'Someone'}{me ? ' (you)' : ''}</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: theme.muted }}>{m.role === 'owner' ? 'Owner' : 'Member'}{m.profile?.role ? ` · ${m.profile.role}` : ''}</span>
+                </span>
+                {!me && myUserId && (
+                  <Button
+                    variant="secondary"
+                    style={small}
+                    aria-expanded={composeTo === m.user_id}
+                    aria-label={`Message ${m.profile?.display_name ?? 'this person'}`}
+                    onClick={() => setComposeTo(composeTo === m.user_id ? null : m.user_id)}
+                  >
+                    {sentTo === m.user_id ? <><Check size={14} />&nbsp;Sent</> : <><MessageCircle size={14} />&nbsp;Message</>}
+                  </Button>
+                )}
+                {canRun && !me && (
+                  <Button variant="secondary" style={small} disabled={busy !== null} onClick={() => run(`r${m.user_id}`, () => removeTeamMember(team.id, m.user_id))}>Remove</Button>
+                )}
+              </div>
+              {composeTo === m.user_id && m.profile && (
+                <div style={{ paddingBottom: 10 }}>
+                  <InlineMessageComposer recipient={m.profile} onSent={() => sent(m.user_id)} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {canRun && !full && (
