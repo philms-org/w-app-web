@@ -8,6 +8,7 @@ import { createPostComment, deletePostComment, fetchPostComments, reportVenueCon
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import type { VenuePostComment } from '@/lib/types';
 import InlineReport from './InlineReport';
+import LinkifiedText from '@/components/shared/LinkifiedText';
 
 const iconButton: React.CSSProperties = {
   background: 'none', border: 'none', padding: 0, minWidth: 44, minHeight: 44, cursor: 'pointer',
@@ -109,7 +110,7 @@ export default function PostComments({
                   <strong>{c.author?.display_name ?? 'Someone'}</strong>{' '}
                   <span style={{ color: theme.muted }}>· {timeAgo(c.created_at)}</span>
                   <br />
-                  {c.body}
+                  <LinkifiedText text={c.body} />
                 </p>
                 {(mine || canModerate) && (
                   <button type="button" aria-label="Delete comment" onClick={() => setConfirmDeleteId(c.id)} style={iconButton}>

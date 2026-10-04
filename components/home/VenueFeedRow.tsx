@@ -6,6 +6,7 @@ import { BadgeCheck, Flag, Heart, Megaphone, MessageSquare, MoreHorizontal, Send
 import { reportVenueContent } from '@/lib/data';
 import PostComments from './PostComments';
 import InlineReport from './InlineReport';
+import LinkifiedText from '@/components/shared/LinkifiedText';
 import GuestBadge from './GuestBadge';
 import { AvatarWithLight } from './InRoomStrip';
 import { theme, type as typeTokens } from '@/lib/theme';
@@ -127,7 +128,7 @@ export default function VenueFeedRow({
               </span>
             )}
             <p style={{ margin: '4px 0 0', color: theme.text, fontSize: typeTokens.body.fontSize, wordBreak: 'break-word' }}>
-              {post.body}
+              <LinkifiedText text={post.body} />
             </p>
             {confirmingDelete ? (
               <div role="group" aria-label="Delete this post?" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
