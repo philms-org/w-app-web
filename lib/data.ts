@@ -2238,6 +2238,34 @@ export async function setVenueAnnouncer(locationId: string, userId: string, on: 
   }
 }
 
+// ---- Removing someone from a venue (migration 0041) ----------------------
+
+export type VenueRemoval = { profile: Profile; removedAt: string };
+
+/** Managers only (RLS): people removed from this venue, newest first. */
+export async function fetchVenueRemovals(locationId: string): Promise<VenueRemoval[]> {
+  const { data, error } = await supabase
+    .from('venue_removals')
+    .select(`removed_at, profiles:${PUBLIC_PROFILE}!user_id(*)`)
+    .eq('location_id', locationId)
+    .order('removed_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as { removed_at: string; profiles: Profile | null }[])
+    .filter((r) => r.profiles)
+    .map((r) => ({ profile: r.profiles as Profile, removedAt: r.removed_at }));
+}
+
+/** Checks them out, drops invite/guest access and announcer role, blocks re-entry. */
+export async function removeFromVenue(locationId: string, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_from_venue', { p_location_id: locationId, p_user_id: userId });
+  if (error) throw error;
+}
+
+export async function restoreToVenue(locationId: string, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('restore_to_venue', { p_location_id: locationId, p_user_id: userId });
+  if (error) throw error;
+}
+
 // Recent posts by my connections, from any venue, for Home. RLS
 // (venue_posts_select_connections, 0030) only returns authors who have
 // "Share check-ins with connections" on.

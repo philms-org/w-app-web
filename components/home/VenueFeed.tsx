@@ -325,9 +325,11 @@ export default function VenueFeed({
       ...prev,
     ]);
     try {
-      // Invitees posting before they arrive don't need a location fix.
+      // Invitees posting before they arrive don't need a location fix, and
+      // neither do managers / announcers (the server skips their geofence,
+      // 0031), e.g. a master admin in support mode.
       let pos: { lat: number | null; lng: number | null } = { lat: null, lng: null };
-      if (!earlyAccess || checkedIn) {
+      if (!canAnnounce && (!earlyAccess || checkedIn)) {
         try {
           pos = await getFreshPosition();
         } catch {
