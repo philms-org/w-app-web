@@ -14,7 +14,7 @@ export interface ContactTypeMeta {
 const digits = (v: string) => v.replace(/[^\d]/g, '');
 const stripAt = (v: string) => v.replace(/^@+/, '').trim();
 const stripHost = (v: string, host: string) =>
-  v.trim().replace(/^https?:\/\//i, '').replace(new RegExp(`^${host}/?`, 'i'), '').replace(/^@+/, '');
+  v.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(new RegExp(`^${host}/?`, 'i'), '').replace(/^@+/, '');
 
 export const CONTACT_TYPES: ContactTypeMeta[] = [
   { type: 'phone', label: 'Phone', icon: Phone, hint: '+1 555 123 4567',
