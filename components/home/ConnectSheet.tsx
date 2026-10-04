@@ -5,13 +5,17 @@ import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
-import { mintConnectToken } from '@/lib/data';
+import { mintConnectToken, fetchMyConnectionCount } from '@/lib/data';
 import { encodeConnectPayload, connectErrorMessage } from '@/lib/connect';
 import { Camera } from 'lucide-react';
 
-// Token TTL is 90s (migration 0019); re-mint every 60s so the code on screen
-// always has >= 30s of validity.
-const REMINT_MS = 60_000;
+// Token TTL is 90s (migration 0019) and SINGLE-USE: the first successful scan
+// deletes it, so a code left on screen fails for everyone after the first
+// scanner ("That code has expired"). With no realtime on connections, poll the
+// cheap connection count while the sheet is visible and re-mint the moment it
+// goes up; also re-mint on a short timer.
+const REMINT_MS = 20_000;
+const POLL_MS = 3_000;
 
 export default function ConnectSheet() {
   const { user } = useStore();
@@ -19,6 +23,7 @@ export default function ConnectSheet() {
   // Shown instead of an endless "LOADING" when minting fails (dropped
   // network, a session that lapsed while the phone slept, not signed in).
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [justConnected, setJustConnected] = useState(false);
   const cancelledRef = useRef(false);
   const refreshRef = useRef<() => Promise<void>>(async () => {});
 
@@ -78,17 +83,37 @@ export default function ConnectSheet() {
     };
     refreshRef.current = refresh;
 
+    let lastCount: number | null = null;
+    const poll = async () => {
+      if (document.hidden) return;
+      try {
+        const n = await fetchMyConnectionCount();
+        if (cancelledRef.current) return;
+        if (lastCount !== null && n > lastCount) {
+          setJustConnected(true);
+          setTimeout(() => { if (!cancelledRef.current) setJustConnected(false); }, 3000);
+          void refresh();
+        }
+        lastCount = n;
+      } catch {
+        // Best-effort; the timer re-mint still covers us.
+      }
+    };
+
     void refresh();
-    const id = setInterval(() => void refresh(), REMINT_MS);
+    void poll();
+    const id = setInterval(() => { if (!document.hidden) void refresh(); }, REMINT_MS);
+    const pollId = setInterval(() => void poll(), POLL_MS);
     // Timers are frozen while the phone is locked, so after unlocking the
     // code on screen could be past its 90s TTL. Re-mint as soon as we're back.
     const onVisibility = () => {
-      if (!document.hidden) void refresh();
+      if (!document.hidden) { void refresh(); void poll(); }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       cancelledRef.current = true;
       clearInterval(id);
+      clearInterval(pollId);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
@@ -121,7 +146,12 @@ export default function ConnectSheet() {
         overflow: 'hidden',
       }}>
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt="Your connect code" style={{ width: '164px', height: '164px', display: 'block' }} />
+          <img
+            src={qrDataUrl}
+            alt="Your connect code. Tap for a fresh one."
+            onClick={() => void refreshRef.current()}
+            style={{ width: '164px', height: '164px', display: 'block', cursor: 'pointer' }}
+          />
         ) : loadError ? (
           <div style={{ padding: '0 14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             <p style={{ color: '#0d0d0f', fontSize: '12px', lineHeight: 1.4, marginBottom: '10px' }}>{loadError}</p>
@@ -139,8 +169,11 @@ export default function ConnectSheet() {
         )}
       </div>
 
-      <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+      <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '4px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
         {user?.name ?? 'Your profile'}
+      </p>
+      <p style={{ color: justConnected ? theme.accent : theme.muted, fontSize: '12px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+        {justConnected ? 'Connected! New code ready for the next person.' : 'Scan it from the W App, not the phone camera.'}
       </p>
 
       <Link

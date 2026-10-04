@@ -50,6 +50,10 @@ export default function ScanPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Start the (up to 5s) location lookup now, not at scan time, so the
+    // connect call fires the instant a code is read. The code on the other
+    // phone is single-use and refreshes, so a slow call can miss it.
+    const coordsPromise = getScanCoords();
 
     const stop = () => {
       if (rafRef.current !== null) {
@@ -92,11 +96,11 @@ export default function ScanPage() {
         lastActedRef.current = code.data;
         const token = decodeConnectPayload(code.data);
         if (!token) {
-          setError("That's not a W code.");
+          setError("That's not a W connect code. Ask them to open Connect in their W App.");
         } else {
           busyRef.current = true;
           setError(null);
-          getScanCoords()
+          coordsPromise
             .then((coords) => recordQrScan(token, coords?.lat, coords?.lng))
             .then((id) => {
               if (cancelled) return;

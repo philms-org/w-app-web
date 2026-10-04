@@ -31,7 +31,7 @@ export default function MyLinksPage() {
     if (!user?.id) return;
     await upsertContactMethod({
       user_id: user.id,
-      ...(existing?.id ? { id: existing.id } : {}),
+      id: existing?.id ?? crypto.randomUUID(),
       slot_order: patch.slot_order,
       type: patch.type,
       value: patch.value || null,
