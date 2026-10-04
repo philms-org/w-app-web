@@ -345,16 +345,39 @@ export async function fetchPresence(locationId: string): Promise<Presence[]> {
   return data ?? [];
 }
 
-// Same 12h window as the 0007 cleanup: an open check-in older than this is a
+// A check-in lasts until the venue's event ends, or CHECKIN_FALLBACK_MS when
+// no end date is set — long enough to stay checked in across a Fri–Sun
+// weekend (founder, 2026-10-03; was 12h). Past that, an open row is a
 // forgotten session, not a current visit.
-const STALE_CHECKIN_MS = 12 * 60 * 60 * 1000;
+const CHECKIN_FALLBACK_MS = 72 * 60 * 60 * 1000;
+
+function checkinExpiresAt(checkedInAt: string, eventEndDate?: string | null): number {
+  const start = new Date(checkedInAt).getTime();
+  if (eventEndDate) {
+    // A bare date means the whole of that day.
+    const end = new Date(/^\d{4}-\d{2}-\d{2}$/.test(eventEndDate) ? `${eventEndDate}T23:59:59` : eventEndDate).getTime();
+    if (!Number.isNaN(end) && end > start) return end;
+  }
+  return start + CHECKIN_FALLBACK_MS;
+}
+
+type CheckinRow = {
+  id: string;
+  location_id: string;
+  checked_in_at: string;
+  checked_out_at: string | null;
+  locations: Venue | null;
+};
+
+const isCheckinActive = (row: CheckinRow) =>
+  Date.now() < checkinExpiresAt(row.checked_in_at, row.locations?.event_end_date);
 
 export async function checkIn(locationId: string): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) return;
   const { data: existing, error: existingError } = await supabase
     .from('location_checkins')
-    .select('id, checked_in_at')
+    .select('id, location_id, checked_in_at, checked_out_at, locations(event_end_date)')
     .eq('user_id', uid)
     .eq('location_id', locationId)
     .is('checked_out_at', null)
@@ -362,10 +385,9 @@ export async function checkIn(locationId: string): Promise<void> {
   if (existingError) throw existingError;
   // A forgotten session (never checked out) would otherwise count as "already
   // checked in" forever, blocking hotspot stamps and new visits. Close an open
-  // row older than STALE_CHECKIN_MS and start a fresh one.
-  const open = existing?.[0];
-  const isStale =
-    !!open && Date.now() - new Date(open.checked_in_at).getTime() > STALE_CHECKIN_MS;
+  // row past its expiry (checkinExpiresAt) and start a fresh one.
+  const open = (existing as unknown as CheckinRow[] | null)?.[0];
+  const isStale = !!open && !isCheckinActive(open);
   if (open && isStale) {
     const { error: closeError } = await supabase
       .from('location_checkins')
@@ -427,23 +449,27 @@ async function autoJoinVenueChatIfEnabled(locationId: string, uid: string): Prom
   if (joinError) throw joinError;
 }
 
-// The venue I'm checked in at right now, if any. Same 12h window as the
-// 0007 cleanup, so a check-in forgotten yesterday doesn't count.
-export async function fetchMyOpenCheckinVenue(): Promise<Venue | null> {
+// The event you're part of right now, for Home's way back into its feed: the
+// venue of your latest check-in that hasn't expired (checkinExpiresAt), and
+// whether you're still checked in there. Walking out of the room checks you
+// out, but the event — and its feed — stays one tap away until it ends.
+export async function fetchMyCurrentVenue(): Promise<{ venue: Venue; checkedIn: boolean } | null> {
   const uid = await getCurrentUserId();
   if (!uid) return null;
-  const since = new Date(Date.now() - STALE_CHECKIN_MS).toISOString();
   const { data, error } = await supabase
     .from('location_checkins')
-    .select('location_id')
+    .select('id, location_id, checked_in_at, checked_out_at, locations(*)')
     .eq('user_id', uid)
-    .is('checked_out_at', null)
-    .gte('checked_in_at', since)
     .order('checked_in_at', { ascending: false })
-    .limit(1);
+    .limit(20);
   if (error) throw error;
-  const locationId = data?.[0]?.location_id as string | undefined;
-  return locationId ? fetchVenue(locationId) : null;
+  const rows = (data ?? []) as unknown as CheckinRow[];
+  const current = rows.find((row) => row.locations && isCheckinActive(row));
+  if (!current?.locations) return null;
+  const checkedIn = rows.some(
+    (row) => row.location_id === current.location_id && !row.checked_out_at && isCheckinActive(row),
+  );
+  return { venue: current.locations, checkedIn };
 }
 
 export async function hasOpenCheckin(locationId: string): Promise<boolean> {
@@ -451,14 +477,12 @@ export async function hasOpenCheckin(locationId: string): Promise<boolean> {
   if (!uid) return false;
   const { data, error } = await supabase
     .from('location_checkins')
-    .select('id')
+    .select('id, location_id, checked_in_at, checked_out_at, locations(event_end_date)')
     .eq('user_id', uid)
     .eq('location_id', locationId)
-    .is('checked_out_at', null)
-    .gte('checked_in_at', new Date(Date.now() - STALE_CHECKIN_MS).toISOString())
-    .limit(1);
+    .is('checked_out_at', null);
   if (error) throw error;
-  return (data?.length ?? 0) > 0;
+  return ((data ?? []) as unknown as CheckinRow[]).some(isCheckinActive);
 }
 
 export async function checkOut(locationId: string): Promise<void> {
