@@ -79,7 +79,9 @@ const TOOLS: Tool[] = [
   { label: 'Chat', icon: MessageCircle, href: (id) => `/main/venue/chat?locationId=${id}` },
   { label: 'Zones', icon: Map, href: (id) => `/main/venue/zones?locationId=${id}` },
   { label: 'Hotspots', icon: Flame, href: (id) => `/main/venue/hotspots?locationId=${id}` },
-  { label: 'Titles', icon: UserCheck, href: (id) => `/admin/venue/${id}/tags` },
+  // /admin/* bounces anyone who isn't a master admin, so organizers need the
+  // /main/venue copy of this tool.
+  { label: 'Titles', icon: UserCheck, href: (id) => `/main/venue/titles?locationId=${id}` },
   { label: 'Edit Info', icon: Settings, href: (id) => `/main/venue/edit?locationId=${id}` },
 ];
 
