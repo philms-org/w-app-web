@@ -9,12 +9,10 @@ import { mintConnectToken, fetchMyConnectionCount } from '@/lib/data';
 import { encodeConnectPayload, connectErrorMessage } from '@/lib/connect';
 import { Camera } from 'lucide-react';
 
-// Token TTL is 90s (migration 0019) and SINGLE-USE: the first successful scan
-// deletes it, so a code left on screen fails for everyone after the first
-// scanner ("That code has expired"). With no realtime on connections, poll the
-// cheap connection count while the sheet is visible and re-mint the moment it
-// goes up; also re-mint on a short timer.
-const REMINT_MS = 20_000;
+// Tokens last 5 minutes and work for many scans (migration 0040). Re-mint
+// every 60s so the code on screen is always fresh. The connection-count poll
+// is only for the "Connected!" confirmation while the sheet is visible.
+const REMINT_MS = 60_000;
 const POLL_MS = 3_000;
 
 export default function ConnectSheet() {
@@ -92,7 +90,6 @@ export default function ConnectSheet() {
         if (lastCount !== null && n > lastCount) {
           setJustConnected(true);
           setTimeout(() => { if (!cancelledRef.current) setJustConnected(false); }, 3000);
-          void refresh();
         }
         lastCount = n;
       } catch {
@@ -173,7 +170,7 @@ export default function ConnectSheet() {
         {user?.name ?? 'Your profile'}
       </p>
       <p style={{ color: justConnected ? theme.accent : theme.muted, fontSize: '12px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-        {justConnected ? 'Connected! New code ready for the next person.' : 'Scan it from the W App, not the phone camera.'}
+        {justConnected ? 'Connected!' : 'Scan with a phone camera or the W App.'}
       </p>
 
       <Link
