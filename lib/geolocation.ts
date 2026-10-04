@@ -91,35 +91,55 @@ export function requestLocation(maximumAge = 0): Promise<void> {
       return;
     }
 
+    const onFix = (position: GeolocationPosition) => {
+      setCurrentLocation({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      });
+      setLocationDenied(false);
+      setLocationPermissionBlocked(false);
+      resolve();
+    };
+
+    const onError = (error: GeolocationPositionError) => {
+      console.error('Location error:', error);
+      if (error.code === error.PERMISSION_DENIED) {
+        setCurrentLocation(null);
+        setLocationDenied(true);
+      } else if (!useStore.getState().currentLocation) {
+        // Timed out / no signal with nothing to fall back on. Permission is
+        // fine, so the live watch keeps trying and clears this on its fix.
+        setLocationDenied(true);
+      }
+      // else: a slow refresh with a real fix already in hand isn't "off" —
+      // flagging it denied hid the in-range venues and stopped the live
+      // watch, so check-in silently stopped working after one slow read.
+      // code 1 = PERMISSION_DENIED: the browser has this site blocked and
+      // will keep failing instantly on every retry until the user changes
+      // it in their browser's site settings — no in-app retry can fix it.
+      setLocationPermissionBlocked(error.code === error.PERMISSION_DENIED);
+      resolve();
+    };
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
-        setLocationDenied(false);
-        setLocationPermissionBlocked(false);
-        resolve();
-      },
+      onFix,
       (error) => {
-        console.error('Location error:', error);
         if (error.code === error.PERMISSION_DENIED) {
-          setCurrentLocation(null);
-          setLocationDenied(true);
-        } else if (!useStore.getState().currentLocation) {
-          // Timed out / no signal with nothing to fall back on. Permission is
-          // fine, so the live watch keeps trying and clears this on its fix.
-          setLocationDenied(true);
+          onError(error);
+          return;
         }
-        // else: a slow refresh with a real fix already in hand isn't "off" —
-        // flagging it denied hid the in-range venues and stopped the live
-        // watch, so check-in silently stopped working after one slow read.
-        // code 1 = PERMISSION_DENIED: the browser has this site blocked and
-        // will keep failing instantly on every retry until the user changes
-        // it in their browser's site settings — no in-app retry can fix it.
-        setLocationPermissionBlocked(error.code === error.PERMISSION_DENIED);
-        resolve();
+        // A GPS-only fix fails on plenty of phones: indoors it times out,
+        // and with precise location / Google Location Accuracy off it's
+        // "unavailable" outright — which left those people with location
+        // "off" despite having allowed it. Wi-Fi/cell positioning (or a
+        // recent cached fix) still works there, so take that instead; the
+        // live watch sharpens it once GPS locks.
+        navigator.geolocation.getCurrentPosition(onFix, onError, {
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: Math.max(maximumAge, 300000),
+        });
       },
       {
         enableHighAccuracy: true,
