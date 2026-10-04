@@ -2552,6 +2552,12 @@ export async function removeTeamMember(teamId: string, userId: string): Promise<
   if (error) throw teamError(error, "Couldn't update the team. Try again.");
 }
 
+// Organizers only (0042). Members and requests go with the team.
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_team', { p_team_id: teamId });
+  if (error) throw teamError(error, "Couldn't delete the team. Try again.");
+}
+
 export async function updateTeam(
   teamId: string,
   fields: { name: string; idea?: string; needs?: TeamNeed[]; maxSize?: number },

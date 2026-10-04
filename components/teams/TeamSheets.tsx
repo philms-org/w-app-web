@@ -11,6 +11,7 @@ import {
   updateTeam,
   addTeamMember,
   removeTeamMember,
+  deleteTeam,
   respondToJoinRequest,
   requestToJoinTeam,
   startConversation,
@@ -210,6 +211,7 @@ export function TeamDetailSheet({
   onClose,
   onChanged,
   onEdit,
+  canManage = false,
 }: {
   team: TeamWithMembers;
   myUserId: string | undefined;
@@ -220,8 +222,11 @@ export function TeamDetailSheet({
   onClose: () => void;
   onChanged: () => void;
   onEdit: () => void;
+  // Organizer of this venue: can run any team here (0042).
+  canManage?: boolean;
 }) {
   const isOwner = team.owner_id === myUserId;
+  const canRun = isOwner || canManage;
   const isMember = team.members.some((m) => m.user_id === myUserId);
   const iRequested = team.requests.some((m) => m.user_id === myUserId);
   const full = team.members.length >= team.max_size;
@@ -230,6 +235,7 @@ export function TeamDetailSheet({
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
   // Whose inline composer is open: a member's user id, or 'team' for the group chat.
   const [composeTo, setComposeTo] = useState<string | null>(null);
@@ -253,11 +259,11 @@ export function TeamDetailSheet({
   const link = typeof window === 'undefined' ? '' : `${window.location.origin}/main?teamCode=${team.join_code}`;
 
   useEffect(() => {
-    if (!isMember || !link) return;
+    if (!(isMember || canRun) || !link) return;
     let alive = true;
     QRCode.toDataURL(link, { margin: 1, width: 220 }).then((url) => alive && setQr(url)).catch(() => {});
     return () => { alive = false; };
-  }, [isMember, link]);
+  }, [isMember, canRun, link]);
 
   const run = async (key: string, fn: () => Promise<void>, closeAfter = false) => {
     setBusy(key);
@@ -308,7 +314,7 @@ export function TeamDetailSheet({
         </div>
       )}
 
-      {isMember && (
+      {(isMember || canRun) && (
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: 12, borderRadius: radius.card, background: theme.surface2, border: `1px solid ${theme.divider}`, margin: '8px 0 12px' }}>
           {qr && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -329,7 +335,7 @@ export function TeamDetailSheet({
         </div>
       )}
 
-      {isOwner && team.requests.length > 0 && (
+      {canRun && team.requests.length > 0 && (
         <div style={{ border: `1px solid ${theme.accent2}`, borderRadius: radius.card, padding: '8px 12px', margin: '0 0 12px' }}>
           <strong style={{ fontSize: 13, color: theme.text }}>{team.requests.length} {team.requests.length === 1 ? 'request' : 'requests'}</strong>
           {team.requests.map((r) => (
@@ -387,7 +393,7 @@ export function TeamDetailSheet({
                     {sentTo === m.user_id ? <><Check size={14} />&nbsp;Sent</> : <><MessageCircle size={14} />&nbsp;Message</>}
                   </Button>
                 )}
-                {isOwner && !me && (
+                {canRun && !me && (
                   <Button variant="secondary" style={small} disabled={busy !== null} onClick={() => run(`r${m.user_id}`, () => removeTeamMember(team.id, m.user_id))}>Remove</Button>
                 )}
               </div>
@@ -401,7 +407,7 @@ export function TeamDetailSheet({
         })}
       </div>
 
-      {isOwner && !full && (
+      {canRun && !full && (
         <div style={{ marginTop: 12 }}>
           <Button variant="secondary" fullWidth style={{ minHeight: 48 }} onClick={() => setAdding((v) => !v)} aria-expanded={adding}>
             <UserPlus size={16} />&nbsp;Add someone from the room
@@ -423,7 +429,16 @@ export function TeamDetailSheet({
       {error && <p role="alert" style={{ color: theme.accent2, fontSize: 13, margin: '12px 0 0' }}>{error}</p>}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        {isOwner && <Button variant="secondary" style={{ minHeight: 48 }} onClick={onEdit}>Edit team</Button>}
+        {canRun && <Button variant="secondary" style={{ minHeight: 48 }} onClick={onEdit}>Edit team</Button>}
+        {canManage && !confirmDelete && (
+          <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setConfirmDelete(true)}>Delete team</Button>
+        )}
+        {canManage && confirmDelete && (
+          <>
+            <Button style={{ minHeight: 48 }} disabled={busy !== null} onClick={() => run('delete', () => deleteTeam(team.id), true)}>Yes, delete {team.name}</Button>
+            <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setConfirmDelete(false)}>Keep it</Button>
+          </>
+        )}
         {isMember && !confirmLeave && (
           <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setConfirmLeave(true)}>Leave team</Button>
         )}
@@ -433,7 +448,7 @@ export function TeamDetailSheet({
             <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setConfirmLeave(false)}>Stay</Button>
           </>
         )}
-        {!isMember && (
+        {!isMember && !canRun && (
           <Button
             fullWidth
             style={{ minHeight: 48 }}
