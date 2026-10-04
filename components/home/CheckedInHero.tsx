@@ -21,7 +21,7 @@ import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 import { useVenuePositionWatch } from '@/lib/hooks/useVenuePositionWatch';
 import { theme } from '@/lib/theme';
 import { STORAGE_KEYS } from '@/lib/constants';
-import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings } from 'lucide-react';
+import { Users, MapPin, AlertCircle, CheckCircle2, MessageCircle, Settings, LifeBuoy } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import HotspotsCard from '@/components/hotspots/HotspotsCard';
 import { useEventHotspots } from '@/lib/hooks/useEventHotspots';
@@ -68,7 +68,11 @@ export default function CheckedInHero() {
   const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
   const [showOrganizerSheet, setShowOrganizerSheet] = useState(false);
 
-  const { canManage } = useIsOrganizer(selectedLocation?.id);
+  const { canManage, isMasterAdmin } = useIsOrganizer(selectedLocation?.id);
+  // Support mode (0041): a master admin is never auto-checked in, so they
+  // stay out of the roster, counts, meter and analytics, but the feed treats
+  // them as in the room (can_read_venue_feed / can_engage_venue).
+  const supportMode = isMasterAdmin && !checkedIn;
   const eventHotspots = useEventHotspots(selectedLocation?.id);
   const reloadHotspots = eventHotspots.reload;
   const hp = eventHotspots.progress;
@@ -231,7 +235,7 @@ export default function CheckedInHero() {
       return;
     }
 
-    if (withinGeofence) {
+    if (withinGeofence && !isMasterAdmin) {
       checkInAttemptedFor.current = selectedLocation.id;
       checkIn(selectedLocation.id)
         .then(() => {
@@ -245,7 +249,7 @@ export default function CheckedInHero() {
           console.error('Check-in failed:', err);
         });
     }
-  }, [selectedLocation, withinGeofence, openCheckin, reloadHotspots]);
+  }, [selectedLocation, withinGeofence, openCheckin, reloadHotspots, isMasterAdmin]);
 
   useEffect(() => {
     if (!selectedLocation) return;
@@ -469,7 +473,25 @@ export default function CheckedInHero() {
           </div>
         )}
 
-        {!withinGeofence && !iAmAttending && (
+        {supportMode && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            backgroundColor: theme.surface2,
+            border: `1px solid ${theme.divider}`,
+            borderRadius: '12px',
+            padding: '12px 14px',
+            marginBottom: '16px'
+          }}>
+            <LifeBuoy style={{ width: '18px', height: '18px', color: theme.accent, flexShrink: 0, marginTop: '1px' }} />
+            <p style={{ color: theme.text, fontSize: '13px', lineHeight: 1.4, fontFamily: 'Montserrat, system-ui, sans-serif', margin: 0 }}>
+              Support mode. You&apos;re in without checking in, and you won&apos;t show in the room or the counts.
+            </p>
+          </div>
+        )}
+
+        {!withinGeofence && !iAmAttending && !supportMode && (
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -603,7 +625,7 @@ export default function CheckedInHero() {
               myUserId={user?.id}
               myAvatarUrl={user?.image}
               onReply={(profile) => setSelectedAttendeeId(profile.id)}
-              checkedIn={checkedIn}
+              checkedIn={checkedIn || supportMode}
               inRoomIds={inRoomIds}
               guestIds={guestIds}
             />

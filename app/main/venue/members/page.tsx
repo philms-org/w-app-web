@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Megaphone, Users } from 'lucide-react';
+import { ChevronLeft, Megaphone, UserX, Users } from 'lucide-react';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
-import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier, fetchVenueAnnouncerIds, setVenueAnnouncer } from '@/lib/data';
+import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier, fetchVenueAnnouncerIds, setVenueAnnouncer, fetchLocationManagers, fetchVenueRemovals, removeFromVenue, restoreToVenue, type VenueRemoval } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, VenueMember, Reward } from '@/lib/types';
@@ -80,6 +80,61 @@ function VenueMembersPageInner() {
       setError("Couldn't update the announcer role. Try again.");
     } finally {
       setAnnouncerBusy(null);
+    }
+  };
+
+  // Removing someone (migration 0041): any venue manager can, but never the
+  // owner, a co-owner or themselves (the server also refuses master admins).
+  const [removals, setRemovals] = useState<VenueRemoval[]>([]);
+  const [managerIds, setManagerIds] = useState<Set<string>>(new Set());
+  const [confirmRemove, setConfirmRemove] = useState<VenueMember | null>(null);
+  const [removeBusy, setRemoveBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!venue) return;
+    fetchVenueRemovals(venue.id)
+      .then(setRemovals)
+      .catch((err) => console.error('Failed to load removed people:', err));
+    fetchLocationManagers(venue.id)
+      .then((rows) => setManagerIds(new Set(rows.map((r) => r.user_id))))
+      .catch((err) => console.error('Failed to load co-owners:', err));
+  }, [venue]);
+
+  const canRemove = (userId: string) =>
+    !!venue && userId !== venue.owner_id && userId !== user?.id && !managerIds.has(userId);
+
+  const handleRemove = async (m: VenueMember) => {
+    if (!venue) return;
+    setRemoveBusy(m.profile.id);
+    try {
+      await removeFromVenue(venue.id, m.profile.id);
+      setRemovals((prev) => [{ profile: m.profile, removedAt: new Date().toISOString() }, ...prev]);
+      setAnnouncerIds((prev) => {
+        const next = new Set(prev);
+        next.delete(m.profile.id);
+        return next;
+      });
+      setConfirmRemove(null);
+    } catch (err) {
+      console.error('Failed to remove member:', err);
+      setError("Couldn't remove them. Try again.");
+      setConfirmRemove(null);
+    } finally {
+      setRemoveBusy(null);
+    }
+  };
+
+  const handleRestore = async (userId: string) => {
+    if (!venue) return;
+    setRemoveBusy(userId);
+    try {
+      await restoreToVenue(venue.id, userId);
+      setRemovals((prev) => prev.filter((r) => r.profile.id !== userId));
+    } catch (err) {
+      console.error('Failed to let member back in:', err);
+      setError("Couldn't let them back in. Try again.");
+    } finally {
+      setRemoveBusy(null);
     }
   };
 
@@ -160,9 +215,11 @@ function VenueMembersPageInner() {
     );
   }
 
+  const removedIds = new Set(removals.map((r) => r.profile.id));
+  const activeMembers = members.filter((m) => !removedIds.has(m.profile.id));
   const filtered = query.trim()
-    ? members.filter((m) => (m.profile.display_name ?? '').toLowerCase().includes(query.trim().toLowerCase()))
-    : members;
+    ? activeMembers.filter((m) => (m.profile.display_name ?? '').toLowerCase().includes(query.trim().toLowerCase()))
+    : activeMembers;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -198,7 +255,7 @@ function VenueMembersPageInner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <Users style={{ width: '18px', height: '18px', color: theme.accent }} />
           <span style={{ color: theme.text, fontSize: '14px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            {members.length} {members.length === 1 ? 'member' : 'members'} total
+            {activeMembers.length} {activeMembers.length === 1 ? 'member' : 'members'} total
           </span>
         </div>
 
@@ -225,7 +282,7 @@ function VenueMembersPageInner() {
           <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading members...</p>
         ) : filtered.length === 0 ? (
           <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            {members.length === 0 ? 'No one has checked in here yet.' : 'No members match that search.'}
+            {activeMembers.length === 0 ? 'No one has checked in here yet.' : 'No members match that search.'}
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -303,6 +360,21 @@ function VenueMembersPageInner() {
                       <Megaphone size={11} aria-hidden /> Announcer
                     </span>
                   ) : null}
+                  {canRemove(m.profile.id) && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRemove(m)}
+                      disabled={removeBusy === m.profile.id}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, marginTop: 6, marginLeft: canGovern ? 6 : 0, padding: '0 12px',
+                        borderRadius: 999, cursor: 'pointer', fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 12, fontWeight: 700,
+                        background: 'transparent', color: theme.accent2, border: `1px solid ${theme.accent2}`,
+                      }}
+                    >
+                      <UserX size={13} aria-hidden />
+                      Remove
+                    </button>
+                  )}
                   {(m.tags.length > 0 || highestEarnedTier(tierRewards, m.checkinCount)) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                       {(() => {
@@ -347,7 +419,81 @@ function VenueMembersPageInner() {
             ))}
           </div>
         )}
+
+        {removals.length > 0 && (
+          <div style={{ marginTop: '28px' }}>
+            <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '10px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+              Removed ({removals.length})
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {removals.map((r) => (
+                <div
+                  key={r.profile.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    backgroundColor: theme.surface, border: `1px solid ${theme.divider}`, borderRadius: '12px', padding: '10px 14px',
+                  }}
+                >
+                  <span style={{ color: theme.text, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.profile.display_name ?? 'Someone'} · {formatDate(r.removedAt)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRestore(r.profile.id)}
+                    disabled={removeBusy === r.profile.id}
+                    style={{ minHeight: 36, padding: '0 8px', background: 'transparent', border: 'none', cursor: 'pointer', color: theme.accent, fontSize: '13px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif', flexShrink: 0 }}
+                  >
+                    Let back in
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {confirmRemove && (
+        <div
+          role="presentation"
+          onClick={() => removeBusy === null && setConfirmRemove(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-member-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '480px', backgroundColor: theme.surface, borderRadius: '20px 20px 0 0',
+              padding: '20px 20px max(20px, env(safe-area-inset-bottom))', fontFamily: 'Montserrat, system-ui, sans-serif',
+            }}
+          >
+            <h2 id="remove-member-title" style={{ color: theme.text, fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>
+              Remove {confirmRemove.profile.display_name ?? 'them'} from this venue?
+            </h2>
+            <p style={{ color: theme.muted, fontSize: '13px', lineHeight: 1.5, marginBottom: '18px' }}>
+              They&apos;ll be checked out, lose access to this venue&apos;s feed and invite link, and can&apos;t check back in.
+              Their posts stay up unless you delete them. You can let them back in later.
+            </p>
+            <button
+              type="button"
+              onClick={() => handleRemove(confirmRemove)}
+              disabled={removeBusy !== null}
+              style={{ width: '100%', minHeight: 46, borderRadius: '12px', border: 'none', cursor: 'pointer', background: theme.accent2, color: theme.onAccent, fontSize: '15px', fontWeight: 700, marginBottom: '8px' }}
+            >
+              {removeBusy ? 'Removing…' : 'Remove'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmRemove(null)}
+              disabled={removeBusy !== null}
+              style={{ width: '100%', minHeight: 44, borderRadius: '12px', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.text, fontSize: '15px', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
