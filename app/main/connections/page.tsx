@@ -16,10 +16,18 @@ export default function ConnectionsPage() {
   const [linksFor, setLinksFor] = useState<{ id: string; name: string } | null>(null);
   const [sheetMethods, setSheetMethods] = useState<ContactMethod[]>([]);
 
+  const [loadError, setLoadError] = useState(false);
+
+  // A failed load used to show "You haven't connected with anyone yet",
+  // which reads like your connections were gone.
   const load = useCallback(() => {
+    setLoadError(false);
     fetchMyConnections()
       .then(setRows)
-      .catch(() => setRows([]));
+      .catch((err) => {
+        console.error('Failed to load connections:', err);
+        setLoadError(true);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -53,7 +61,23 @@ export default function ConnectionsPage() {
         <h1 style={{ fontSize: '18px', fontWeight: 700 }}>My Connections</h1>
       </div>
 
-      {rows === null ? (
+      {loadError && rows === null ? (
+        <div style={{ padding: '24px 20px' }}>
+          <p style={{ color: theme.muted, fontSize: '14px', lineHeight: 1.5, marginBottom: '12px' }}>
+            Couldn&apos;t load your connections. Check your connection and try again.
+          </p>
+          <button
+            onClick={load}
+            style={{
+              padding: '10px 18px', borderRadius: '9999px', border: `1px solid ${theme.divider}`,
+              backgroundColor: theme.surface, color: theme.text, fontWeight: 600, fontSize: '14px',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      ) : rows === null ? (
         <p style={{ color: theme.muted, fontSize: '13px', padding: '24px 20px' }}>Loading…</p>
       ) : rows.length === 0 ? (
         <p style={{ color: theme.muted, fontSize: '14px', padding: '24px 20px', lineHeight: 1.5 }}>

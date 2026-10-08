@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { requestLocation } from '@/lib/geolocation';
@@ -47,9 +47,7 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState('');
   const [peekVenue, setPeekVenue] = useState<Venue | null>(null);
-  const [showComingSoon, setShowComingSoon] = useState(false);
   const [showLocationFix, setShowLocationFix] = useState(false);
-  const comingSoonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A denied/timed-out/unsupported geolocation request still writes a
   // hardcoded fallback coordinate to the store (see lib/geolocation.ts), so
@@ -121,25 +119,12 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
     setQuery('');
   };
 
-  // Adding a location isn't available yet on the live app (the request
-  // flow's table, migration 0020, isn't on prod), so + says so for now.
+  // Location requests (migration 0020) are live: + hands off to the Map
+  // tab's add flow, armed so the next map tap places the pin.
   const openAddLocation = () => {
-    setShowComingSoon(true);
-    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
-    comingSoonTimer.current = setTimeout(() => setShowComingSoon(false), 3000);
+    useStore.getState().setMapAddRequested(true);
+    useStore.getState().setActiveTab('map');
   };
-  useEffect(() => () => {
-    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
-  }, []);
-
-  const comingSoonNote = showComingSoon && (
-    <p role="status" style={{
-      margin: '30px auto 0', width: 'fit-content', padding: '8px 14px', borderRadius: 9999,
-      backgroundColor: theme.surface2, color: theme.text, fontSize: 13, fontWeight: 600, fontFamily: FONT,
-    }}>
-      Adding locations is coming soon
-    </p>
-  );
 
   const circleButton = (size: number): React.CSSProperties => ({
     width: size, height: size, borderRadius: 9999, border: 'none', flexShrink: 0,
@@ -232,7 +217,6 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
             <MapPinPlus style={{ width: 20, height: 20, color: theme.onAccent }} />
           </button>
         </section>
-        {comingSoonNote}
         {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
       </div>
     );
@@ -372,7 +356,6 @@ export default function NearbyBanner({ checkedInVenueId = null }: {
           <Plus style={{ width: 26, height: 26, color: '#fff' }} strokeWidth={3} />
         </button>
       </section>
-      {comingSoonNote}
       {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
       {showLocationFix && <LocationFixSheet onClose={() => setShowLocationFix(false)} />}
     </div>

@@ -118,7 +118,10 @@ export default function ProfileTab() {
                 <User style={{ width: '56px', height: '56px', color: 'white' }} />
               )}
             </div>
-            <button style={{
+            <button
+              onClick={() => router.push('/profile/edit')}
+              aria-label="Change profile photo"
+              style={{
               position: 'absolute',
               bottom: 0,
               right: 0,
@@ -144,12 +147,14 @@ export default function ProfileTab() {
             fontWeight: 'bold',
             marginBottom: '4px',
             fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{user?.name || 'Guest User'}</h1>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '16px',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{user?.email || 'guest@example.com'}</p>
+          }}>{user?.name || 'Your profile'}</h1>
+          {user?.email && (
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '16px',
+              fontFamily: 'Montserrat, system-ui, sans-serif'
+            }}>{user.email}</p>
+          )}
           
           {/* Stats */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginTop: '24px' }}>

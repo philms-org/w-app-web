@@ -19,6 +19,17 @@ import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
 import LocationDebug from '@/components/shared/LocationDebug';
 import { MapPin } from 'lucide-react';
 
+const LOCATION_SNOOZE_KEY = 'w_app_location_snoozed_until';
+const LOCATION_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+function isLocationPromptSnoozed(): boolean {
+  try {
+    return Number(localStorage.getItem(LOCATION_SNOOZE_KEY) ?? 0) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export default function MainPage() {
   const router = useRouter();
   const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setLocationDenied } = useStore();
@@ -70,11 +81,24 @@ export default function MainPage() {
             if (status.state === 'granted') {
               setLocationPermissionAsked(true);
               requestLocation().then(() => setLiveWanted(true));
+            } else if (status.state === 'denied') {
+              // Blocked in the browser: our Allow button can't change that,
+              // so skip the modal and let Home's location card explain how
+              // to turn it back on.
+              setLocationPermissionAsked(true);
+              setLocationDenied(true);
+              useStore.getState().setLocationPermissionBlocked(true);
+            } else if (isLocationPromptSnoozed()) {
+              setLocationPermissionAsked(true);
+              setLocationDenied(true);
             } else {
               showPrompt();
             }
           })
           .catch(showPrompt);
+      } else if (isLocationPromptSnoozed()) {
+        setLocationPermissionAsked(true);
+        setLocationDenied(true);
       } else {
         showPrompt();
       }
@@ -98,6 +122,12 @@ export default function MainPage() {
     // sorted search, map and distances around a city the user isn't in.
     setLocationDenied(true);
     setShowLocationPrompt(false);
+    // "Maybe Later" used to be forgotten on reload, so the modal came back
+    // on every app open. Hold it off for a day; Home's location card still
+    // offers to turn location on in the meantime.
+    try {
+      localStorage.setItem(LOCATION_SNOOZE_KEY, String(Date.now() + LOCATION_SNOOZE_MS));
+    } catch {}
   };
 
   const renderTab = () => {
