@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import { fetchConversations } from '@/lib/data';
+import { fetchConversations, markConversationRead } from '@/lib/data';
 import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
@@ -20,6 +20,7 @@ export default function MessagesTab() {
     fetchConversations()
       .then((rows) => {
         setLoadError(false);
+        useStore.getState().setUnreadCount(rows.filter((c) => c.unread).length);
         setConversations(
           rows.map((c) => ({
             id: c.id,
@@ -28,7 +29,7 @@ export default function MessagesTab() {
             userImage: c.other_profile?.avatar_url ?? '',
             lastMessage: c.last_message ?? 'No messages yet',
             timestamp: c.last_message_at ?? '',
-            unread: false,
+            unread: c.unread,
             online: false,
             isGroup: !!c.is_group,
             myStatus: c.my_status ?? 'accepted',
@@ -68,6 +69,13 @@ export default function MessagesTab() {
 
   const handleOpenChat = (message: any) => {
     setActiveChat(message.id);
+    if (message.unread) {
+      // Clear it locally right away; the server marker follows.
+      setConversations((prev) => prev.map((c) => (c.id === message.id ? { ...c, unread: false } : c)));
+      const { unreadCount, setUnreadCount } = useStore.getState();
+      setUnreadCount(Math.max(0, unreadCount - 1));
+    }
+    markConversationRead(message.id).catch((err) => console.error('Failed to mark conversation read:', err));
     setOpenChat({
       id: message.id,
       userName: message.userName,
@@ -78,9 +86,13 @@ export default function MessagesTab() {
   };
 
   const handleCloseChat = () => {
+    const closedId = openChat?.id;
     setOpenChat(null);
     setActiveChat(null);
-    loadConversations(); // refresh previews after chatting
+    // Messages that arrived while the chat was open count as read too, so
+    // move the marker again before refreshing previews.
+    const markRead = closedId ? markConversationRead(closedId).catch(() => {}) : Promise.resolve();
+    markRead.finally(loadConversations);
   };
 
   const formatTimestamp = (iso: string) => {

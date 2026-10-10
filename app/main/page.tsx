@@ -14,6 +14,7 @@ import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
+import { useUnreadCount } from '@/lib/hooks/useUnreadCount';
 import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
 import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
 import LocationDebug from '@/components/shared/LocationDebug';
@@ -36,6 +37,8 @@ export default function MainPage() {
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
+  // Messages tab badge.
+  useUnreadCount(hasHydrated && isAuthenticated);
   const locationDenied = useStore((s) => s.locationDenied);
   const locationPermissionBlocked = useStore((s) => s.locationPermissionBlocked);
   // Set once the location request has been answered. A first fix that

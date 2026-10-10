@@ -1256,7 +1256,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 
   const { data: rows, error } = await supabase
     .from('conversation_participants')
-    .select('conversation_id, status, conversations(id, is_group, name)')
+    .select('conversation_id, status, last_read_at, conversations(id, is_group, name)')
     .eq('user_id', uid);
   if (error) throw error;
 
@@ -1293,9 +1293,18 @@ export async function fetchConversations(): Promise<Conversation[]> {
       last_message_at: recent?.[0]?.created_at ?? null,
       my_status: row.status,
       other_profile: otherProfile,
+      unread: !!recent?.[0]
+        && recent[0].sender_id !== uid
+        && (!row.last_read_at || new Date(recent[0].created_at) > new Date(row.last_read_at)),
     });
   }
   return result;
+}
+
+// Moves my read marker on this conversation to now (0043).
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId });
+  if (error) throw error;
 }
 
 export async function fetchMessages(conversationId: string): Promise<Message[]> {
