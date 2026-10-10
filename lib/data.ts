@@ -536,6 +536,26 @@ export async function fetchMyCheckinCount(locationId: string): Promise<number> {
   return count ?? 0;
 }
 
+// Profile header counts: connections (friendships rows), check-ins and the
+// distinct venues they were at (live location_checkins, the same rows the
+// attendance tiers count).
+export async function fetchMyProfileStats(): Promise<{ connections: number; locations: number; checkins: number }> {
+  const uid = await getCurrentUserId();
+  if (!uid) return { connections: 0, locations: 0, checkins: 0 };
+  const [friends, checkins] = await Promise.all([
+    supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+    supabase.from('location_checkins').select('location_id').eq('user_id', uid).eq('mode', 'live'),
+  ]);
+  if (friends.error) throw friends.error;
+  if (checkins.error) throw checkins.error;
+  const rows = (checkins.data ?? []) as { location_id: string }[];
+  return {
+    connections: friends.count ?? 0,
+    locations: new Set(rows.map((r) => r.location_id)).size,
+    checkins: rows.length,
+  };
+}
+
 // Highest-threshold reward a member with `checkinCount` visits has earned
 // at this venue, given the venue's active tiered rewards (min_checkins set).
 // Used by the Members roster to show each member's current tier badge.

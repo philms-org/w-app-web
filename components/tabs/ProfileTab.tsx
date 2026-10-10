@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
 import {
   fetchOwnProfile, setShareCheckinsWithFriends,
-  fetchMyRoleBadges, fetchMyVenues,
+  fetchMyRoleBadges, fetchMyVenues, fetchMyProfileStats,
 } from '@/lib/data';
 import type { Profile, RoleBadge } from '@/lib/types';
 import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
@@ -29,6 +29,16 @@ export default function ProfileTab() {
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [stats, setStats] = useState<{ connections: number; locations: number; checkins: number } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchMyProfileStats()
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch((err) => console.error('Failed to load profile stats:', err));
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -164,7 +174,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.connections : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
@@ -177,7 +187,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.locations : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
@@ -190,7 +200,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.checkins : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
