@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import { mintConnectToken } from '@/lib/data';
-import { encodeConnectPayload } from '@/lib/connect';
+import { encodeConnectPayload, connectErrorMessage } from '@/lib/connect';
 import { Camera } from 'lucide-react';
 
 // Token TTL is 90s (migration 0019); re-mint every 60s so the code on screen
@@ -16,33 +16,80 @@ const REMINT_MS = 60_000;
 export default function ConnectSheet() {
   const { user } = useStore();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  // Shown instead of an endless "LOADING" when minting fails (dropped
+  // network, a session that lapsed while the phone slept, not signed in).
+  const [loadError, setLoadError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
+  const refreshRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     cancelledRef.current = false;
 
+    const mint = async () => {
+      const token = await mintConnectToken();
+      // Rendered dark-on-white and placed on a white plate below: the app's
+      // dark theme would otherwise invert the code and many scanners fail.
+      return QRCode.toDataURL(encodeConnectPayload(token), {
+        width: 360,
+        margin: 1,
+        color: { dark: '#0d0d0f', light: '#ffffff' },
+      });
+    };
+
+    // Each mint deletes the previous token, so two overlapping refreshes
+    // (wake-up + interval firing together) could leave the older, already
+    // dead code on screen. Only one at a time.
+    let inFlight = false;
     const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const token = await mintConnectToken();
-        if (cancelledRef.current) return;
-        // Rendered dark-on-white and placed on a white plate below: the app's
-        // dark theme would otherwise invert the code and many scanners fail.
-        const url = await QRCode.toDataURL(encodeConnectPayload(token), {
-          width: 360,
-          margin: 1,
-          color: { dark: '#0d0d0f', light: '#ffffff' },
-        });
-        if (!cancelledRef.current) setQrDataUrl(url);
-      } catch {
-        if (!cancelledRef.current) setQrDataUrl(null);
+        await doRefresh();
+      } finally {
+        inFlight = false;
       }
     };
 
+    const doRefresh = async () => {
+      let url: string;
+      try {
+        url = await mint();
+      } catch {
+        // One quick retry covers the common case: the auth token was being
+        // refreshed right as the phone woke up.
+        await new Promise((r) => setTimeout(r, 1500));
+        if (cancelledRef.current) return;
+        try {
+          url = await mint();
+        } catch (err) {
+          if (cancelledRef.current) return;
+          setQrDataUrl(null);
+          setLoadError(
+            connectErrorMessage(err) === 'You need to be signed in.'
+              ? 'Sign in to get your connect code.'
+              : "Couldn't load your code. Check your connection and try again.",
+          );
+          return;
+        }
+      }
+      if (cancelledRef.current) return;
+      setLoadError(null);
+      setQrDataUrl(url);
+    };
+    refreshRef.current = refresh;
+
     void refresh();
     const id = setInterval(() => void refresh(), REMINT_MS);
+    // Timers are frozen while the phone is locked, so after unlocking the
+    // code on screen could be past its 90s TTL. Re-mint as soon as we're back.
+    const onVisibility = () => {
+      if (!document.hidden) void refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       cancelledRef.current = true;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
@@ -75,6 +122,16 @@ export default function ConnectSheet() {
       }}>
         {qrDataUrl ? (
           <img src={qrDataUrl} alt="Your connect code" style={{ width: '164px', height: '164px', display: 'block' }} />
+        ) : loadError ? (
+          <div style={{ padding: '0 14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+            <p style={{ color: '#0d0d0f', fontSize: '12px', lineHeight: 1.4, marginBottom: '10px' }}>{loadError}</p>
+            <button
+              onClick={() => { setLoadError(null); void refreshRef.current(); }}
+              style={{ background: '#0d0d0f', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Try again
+            </button>
+          </div>
         ) : (
           <span style={{ color: '#0d0d0f', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
             LOADING
