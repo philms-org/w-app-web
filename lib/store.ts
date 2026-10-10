@@ -99,6 +99,7 @@ interface AppState {
   setInLocation: (inLocation: boolean) => void;
   addMessage: (message: Message) => void;
   setActiveChat: (chatId: string | null) => void;
+  setUnreadCount: (count: number) => void;
   setActiveTab: (tab: string) => void;
   setMapAddRequested: (requested: boolean) => void;
   setLoading: (loading: boolean) => void;
@@ -159,6 +160,8 @@ export const useStore = create<AppState>()(
       })),
       
       setActiveChat: (chatId) => set({ activeChat: chatId }),
+
+      setUnreadCount: (count) => set({ unreadCount: count }),
       
       setActiveTab: (tab) => set({ activeTab: tab }),
 
