@@ -212,6 +212,7 @@ export function TeamDetailSheet({
   onChanged,
   onEdit,
   canManage = false,
+  afterEvent = false,
 }: {
   team: TeamWithMembers;
   myUserId: string | undefined;
@@ -224,6 +225,8 @@ export function TeamDetailSheet({
   onEdit: () => void;
   // Organizer of this venue: can run any team here (0042).
   canManage?: boolean;
+  // Opened from History after the event: no joining, messaging only.
+  afterEvent?: boolean;
 }) {
   const isOwner = team.owner_id === myUserId;
   const canRun = isOwner || canManage;
@@ -448,7 +451,7 @@ export function TeamDetailSheet({
             <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setConfirmLeave(false)}>Stay</Button>
           </>
         )}
-        {!isMember && !canRun && (
+        {!isMember && !canRun && !afterEvent && (
           <Button
             fullWidth
             style={{ minHeight: 48 }}

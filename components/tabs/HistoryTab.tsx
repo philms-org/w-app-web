@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLastVisited, fetchVenueHistory, fetchAttendeeHistory } from '@/lib/data';
+import { fetchLastVisited, fetchVenueHistory, fetchAttendeeHistory, fetchTeams } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
@@ -9,6 +9,7 @@ import { ChevronRight, Clock, User, BadgeCheck } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
+import TeamsView from '@/components/teams/TeamsView';
 
 interface DayGroup {
   dateLabel: string;
@@ -33,7 +34,7 @@ function groupByDay(items: FeedItem[]): DayGroup[] {
 }
 
 export default function HistoryTab() {
-  const { setActiveTab } = useStore();
+  const { setActiveTab, user } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -41,6 +42,8 @@ export default function HistoryTab() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [attendees, setAttendees] = useState<Profile[]>([]);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
+  // Teams stay messageable after the event; the section only shows if there were any.
+  const [hasTeams, setHasTeams] = useState(false);
 
   useEffect(() => {
     fetchLastVisited(50)
@@ -68,6 +71,18 @@ export default function HistoryTab() {
         if (!ignore) setAttendees(result);
       })
       .catch((err) => console.error('Failed to load attendee history:', err));
+    return () => {
+      ignore = true;
+    };
+  }, [selectedVenue]);
+
+  useEffect(() => {
+    if (!selectedVenue) return;
+    let ignore = false;
+    setHasTeams(false);
+    fetchTeams(selectedVenue.id)
+      .then((t) => { if (!ignore) setHasTeams(t.length > 0); })
+      .catch((err) => console.error('Failed to load teams:', err));
     return () => {
       ignore = true;
     };
@@ -118,6 +133,27 @@ export default function HistoryTab() {
                 setSelectedAttendeeId(null);
                 setActiveTab('messages');
               }}
+            />
+          </div>
+        )}
+
+        {hasTeams && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{
+              color: theme.muted,
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: '10px',
+              fontFamily: 'Montserrat, system-ui, sans-serif'
+            }}>Teams</p>
+            <TeamsView
+              locationId={selectedVenue.id}
+              myUserId={user?.id}
+              roomProfiles={[]}
+              checkedIn={false}
+              afterEvent
             />
           </div>
         )}
