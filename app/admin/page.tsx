@@ -60,6 +60,8 @@ export default function AdminPage() {
   });
   const [creatingVenue, setCreatingVenue] = useState(false);
   const [createVenueError, setCreateVenueError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [hereAccuracy, setHereAccuracy] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -138,6 +140,37 @@ export default function AdminPage() {
       .finally(() => setBusy(null));
   };
 
+  // Fill lat/lng from where this phone is right now, so staff can put a test
+  // venue on the spot they're standing instead of looking up coordinates.
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setCreateVenueError("This browser can't share its location.");
+      return;
+    }
+    setLocating(true);
+    setCreateVenueError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setVenueForm((f) => ({
+          ...f,
+          lat: pos.coords.latitude.toFixed(6),
+          lng: pos.coords.longitude.toFixed(6),
+        }));
+        setHereAccuracy(Math.round(pos.coords.accuracy));
+        setLocating(false);
+      },
+      (err) => {
+        setCreateVenueError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location is blocked for this site — allow it in your browser settings.'
+            : "Couldn't get your location — try again, or step outside for a GPS fix."
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+    );
+  };
+
   const handleCreateVenue = () => {
     const lat = parseFloat(venueForm.lat);
     const lng = parseFloat(venueForm.lng);
@@ -164,6 +197,7 @@ export default function AdminPage() {
     })
       .then(() => {
         setVenueForm({ name: '', address: '', city: '', lat: '', lng: '', radius: '150', description: '' });
+        setHereAccuracy(null);
         setShowCreateVenue(false);
         load();
       })
@@ -329,16 +363,29 @@ export default function AdminPage() {
                       style={{ ...inputStyle, flex: 1 }}
                     />
                   </div>
+                  <button
+                    onClick={handleUseMyLocation}
+                    disabled={locating}
+                    style={{ ...linkButtonStyle, alignSelf: 'flex-start', opacity: locating ? 0.6 : 1 }}
+                  >
+                    {locating ? 'Getting your location…' : 'Use my current location'}
+                  </button>
+                  {hereAccuracy != null && (
+                    <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      Accurate to about {hereAccuracy} m
+                      {hereAccuracy > 50 ? ' — step outside or wait a moment and tap again for a sharper fix.' : '.'}
+                    </p>
+                  )}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       value={venueForm.lat}
-                      onChange={(e) => setVenueForm((f) => ({ ...f, lat: e.target.value }))}
+                      onChange={(e) => { setHereAccuracy(null); setVenueForm((f) => ({ ...f, lat: e.target.value })); }}
                       placeholder="Latitude"
                       style={{ ...inputStyle, flex: 1 }}
                     />
                     <input
                       value={venueForm.lng}
-                      onChange={(e) => setVenueForm((f) => ({ ...f, lng: e.target.value }))}
+                      onChange={(e) => { setHereAccuracy(null); setVenueForm((f) => ({ ...f, lng: e.target.value })); }}
                       placeholder="Longitude"
                       style={{ ...inputStyle, flex: 1 }}
                     />
