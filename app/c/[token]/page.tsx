@@ -13,7 +13,7 @@ import ConnectResult from '@/components/connect/ConnectResult';
 // Connect link encoded in every QR code (/c/<token>), so a plain phone camera
 // works, not only the in-app scanner. Signed in: connect right away. Signed
 // out: stash the token and send them through sign-up / log-in; /main hands it
-// back here (usePendingConnect). Tokens last 5 minutes (migration 0040).
+// back here (usePendingConnect). Tokens last 5 minutes (migration 0044).
 export default function ConnectLinkPage() {
   const router = useRouter();
   const { token } = useParams<{ token: string }>();

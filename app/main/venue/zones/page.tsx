@@ -15,6 +15,7 @@ import {
   deleteVenueZone,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, VenueZone } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 
@@ -52,6 +53,8 @@ function VenueZonesPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
 
   const [zones, setZones] = useState<VenueZone[]>([]);
@@ -78,6 +81,7 @@ function VenueZonesPageInner() {
         .catch((err) => {
           console.error('Failed to load venue:', err);
           setVenue(null);
+          setVenueLoadError(true);
         })
         .finally(() => setVenueLoading(false));
       return;
@@ -92,7 +96,7 @@ function VenueZonesPageInner() {
       })
       .catch((err) => {
         console.error('Failed to load venues:', err);
-        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
+        fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
       })
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
@@ -104,6 +108,7 @@ function VenueZonesPageInner() {
       .catch((err) => {
         console.error('Failed to load selected venue:', err);
         setVenue(null);
+        setVenueLoadError(true);
       });
   }, [selectedVenueId, paramLocationId]);
 
@@ -132,6 +137,8 @@ function VenueZonesPageInner() {
       </div>
     );
   }
+
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
 
   if (!venue || !canManage) {
     return (

@@ -15,6 +15,7 @@ import {
   deletePostComment,
 } from '@/lib/data';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import { GlassPanel, SectionHeader } from '@/components/ui/primitives';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import type { Venue, VenueReport } from '@/lib/types';
@@ -52,6 +53,8 @@ function VenueReportsPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
   const [status, setStatus] = useState<'open' | 'resolved'>('open');
   const [reports, setReports] = useState<VenueReport[] | null>(null);
@@ -62,7 +65,7 @@ function VenueReportsPageInner() {
   useEffect(() => {
     if (paramLocationId) {
       setVenueLoading(true);
-      fetchVenue(paramLocationId).then(setVenue).catch(() => setVenue(null)).finally(() => setVenueLoading(false));
+      fetchVenue(paramLocationId).then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); }).finally(() => setVenueLoading(false));
       return;
     }
     setVenueLoading(true);
@@ -72,13 +75,13 @@ function VenueReportsPageInner() {
         setSelectedVenueId((current) => current ?? venues[0]?.id ?? null);
         if (venues.length === 0) setVenue(null);
       })
-      .catch(() => fetchMyVenue().then(setVenue).catch(() => setVenue(null)))
+      .catch(() => fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); }))
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
 
   useEffect(() => {
     if (paramLocationId || !selectedVenueId) return;
-    fetchVenue(selectedVenueId).then(setVenue).catch(() => setVenue(null));
+    fetchVenue(selectedVenueId).then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
   }, [selectedVenueId, paramLocationId]);
 
   const load = useCallback(() => {
@@ -120,6 +123,8 @@ function VenueReportsPageInner() {
       </div>
     );
   }
+
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
 
   if (!venue || !canManage) {
     return (

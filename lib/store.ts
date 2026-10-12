@@ -75,6 +75,9 @@ interface AppState {
   
   // UI State
   activeTab: string;
+  // Set by Home's "add a location" button: the Map tab opens with add mode
+  // already armed, then clears it.
+  mapAddRequested: boolean;
   isLoading: boolean;
   error: string | null;
   
@@ -96,7 +99,9 @@ interface AppState {
   setInLocation: (inLocation: boolean) => void;
   addMessage: (message: Message) => void;
   setActiveChat: (chatId: string | null) => void;
+  setUnreadCount: (count: number) => void;
   setActiveTab: (tab: string) => void;
+  setMapAddRequested: (requested: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -118,6 +123,7 @@ export const useStore = create<AppState>()(
       unreadCount: 0,
       activeChat: null,
       activeTab: 'home',
+      mapAddRequested: false,
       isLoading: false,
       error: null,
       hasHydrated: false,
@@ -154,8 +160,12 @@ export const useStore = create<AppState>()(
       })),
       
       setActiveChat: (chatId) => set({ activeChat: chatId }),
+
+      setUnreadCount: (count) => set({ unreadCount: count }),
       
       setActiveTab: (tab) => set({ activeTab: tab }),
+
+      setMapAddRequested: (requested) => set({ mapAddRequested: requested }),
       
       setLoading: (loading) => set({ isLoading: loading }),
       

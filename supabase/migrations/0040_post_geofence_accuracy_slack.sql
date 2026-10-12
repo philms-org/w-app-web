@@ -1,17 +1,17 @@
--- Venue posts: allow for GPS error, the same way check-in does.
+-- 0040: give the post geofence the same GPS-error slack the client uses.
 --
--- #41 made the client count someone as "at the venue" when their distance
--- minus the fix's reported accuracy (capped at 150 m) is within the radius
--- (lib/geo.ts isWithinGeofence). create_venue_post still compared the raw
--- distance, so a person indoors with a fuzzy fix was shown as checked in and
--- then told "You need to be at the venue to post."
+-- PR #41 made the app judge "at the venue" as distance - min(accuracy, 150m)
+-- <= radius (lib/geo.ts isWithinGeofence), but create_venue_post still checked
+-- the raw point. Indoors a phone's fix is routinely 50-300m off, so people the
+-- app showed as checked in were refused with "not within venue geofence" when
+-- they tried to post (seen on Android at the Winston-Salem event, 2026-10-02).
 --
--- Adds p_accuracy (meters, optional). Same rule and cap as the client:
---   distance - least(greatest(accuracy, 0), 150) <= radius
--- Otherwise identical to 0035's version.
---
--- Deploy order: apply this BEFORE shipping the client that sends p_accuracy.
--- (Old clients keep working against this version: p_accuracy defaults to null.)
+-- Same as 0035's version, plus an optional p_accuracy (meters, as reported by
+-- the browser). The 4-arg signature is dropped rather than overloaded so a
+-- 4-arg call (older cached clients) resolves to this one with p_accuracy null,
+-- i.e. the old strict check, instead of erroring as ambiguous.
+
+begin;
 
 drop function if exists public.create_venue_post(uuid, text, double precision, double precision);
 
@@ -32,7 +32,8 @@ declare
   v_post venue_posts%rowtype;
   v_body text := btrim(coalesce(p_body, ''));
   v_announcer boolean;
-  -- Same cap as lib/geo.ts MAX_ACCURACY_ALLOWANCE_METERS.
+  -- Same cap as lib/geo.ts MAX_ACCURACY_ALLOWANCE_METERS, so a coarse
+  -- IP/cell-tower fix can't post from across town.
   v_allowance double precision := least(greatest(coalesce(p_accuracy, 0), 0), 150);
 begin
   if auth.uid() is null then
@@ -74,3 +75,5 @@ $$;
 
 revoke all on function public.create_venue_post(uuid, text, double precision, double precision, double precision) from public, anon;
 grant execute on function public.create_venue_post(uuid, text, double precision, double precision, double precision) to authenticated;
+
+commit;

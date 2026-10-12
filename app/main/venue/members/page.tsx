@@ -8,6 +8,7 @@ import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { fetchMyVenue, fetchMyVenues, fetchVenue, fetchVenueMembers, fetchRewards, highestEarnedTier, fetchVenueAnnouncerIds, setVenueAnnouncer } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, VenueMember, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import TagBadge from '@/components/shared/TagBadge';
@@ -41,6 +42,8 @@ function VenueMembersPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
   const [members, setMembers] = useState<VenueMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -91,6 +94,7 @@ function VenueMembersPageInner() {
         .catch((err) => {
           console.error('Failed to load venue:', err);
           setVenue(null);
+          setVenueLoadError(true);
         })
         .finally(() => setVenueLoading(false));
       return;
@@ -105,7 +109,7 @@ function VenueMembersPageInner() {
       })
       .catch((err) => {
         console.error('Failed to load venues:', err);
-        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
+        fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
       })
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
@@ -117,6 +121,7 @@ function VenueMembersPageInner() {
       .catch((err) => {
         console.error('Failed to load selected venue:', err);
         setVenue(null);
+        setVenueLoadError(true);
       });
   }, [selectedVenueId, paramLocationId]);
 
@@ -143,6 +148,8 @@ function VenueMembersPageInner() {
       </div>
     );
   }
+
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
 
   if (!venue || !canManage) {
     return (

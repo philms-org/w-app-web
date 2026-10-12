@@ -1,4 +1,4 @@
--- 0040_connect_tokens_multiscan.sql
+-- 0044_connect_tokens_multiscan.sql
 -- FOUNDER-GATED (CLAUDE.md #1/#3): review before applying to QA, then prod.
 --
 -- Connect codes were single-use with a 90s TTL, and every mint deleted the
@@ -85,7 +85,7 @@ begin
     raise exception 'self_scan';
   end if;
 
-  -- Multi-use within the TTL (0040): the token is NOT consumed, so everyone
+  -- Multi-use within the TTL (0044): the token is NOT consumed, so everyone
   -- scanning the same code connects. The share lock above lets concurrent
   -- scans of one code proceed in parallel while blocking the purge cron from
   -- deleting the token mid-scan. Pairs stay idempotent via the unique

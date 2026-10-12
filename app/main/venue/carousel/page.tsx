@@ -21,6 +21,7 @@ import {
   fetchAllProfiles,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, Banner, LocationManager, Profile } from '@/lib/types';
 import HeroCarousel from '@/components/HeroCarousel';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
@@ -51,6 +52,8 @@ function VenueCarouselPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannersLoading, setBannersLoading] = useState(true);
@@ -75,6 +78,7 @@ function VenueCarouselPageInner() {
         .catch((err) => {
           console.error('Failed to load venue:', err);
           setVenue(null);
+          setVenueLoadError(true);
         })
         .finally(() => setVenueLoading(false));
       return;
@@ -91,7 +95,7 @@ function VenueCarouselPageInner() {
         console.error('Failed to load venues:', err);
         // Fall back to the single-venue lookup in case fetchMyVenues fails
         // for a reason fetchMyVenue wouldn't (defensive, shouldn't normally hit).
-        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
+        fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
       })
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
@@ -103,6 +107,7 @@ function VenueCarouselPageInner() {
       .catch((err) => {
         console.error('Failed to load selected venue:', err);
         setVenue(null);
+        setVenueLoadError(true);
       });
   }, [selectedVenueId, paramLocationId]);
 
@@ -263,6 +268,8 @@ function VenueCarouselPageInner() {
       </div>
     );
   }
+
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
 
   if (!venue || !canManage) {
     return (

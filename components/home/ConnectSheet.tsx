@@ -9,7 +9,7 @@ import { mintConnectToken, fetchMyConnectionCount } from '@/lib/data';
 import { encodeConnectPayload, connectErrorMessage } from '@/lib/connect';
 import { Camera } from 'lucide-react';
 
-// Tokens last 5 minutes and work for many scans (migration 0040). Re-mint
+// Tokens last 5 minutes and work for many scans (migration 0044). Re-mint
 // every 60s so the code on screen is always fresh. The connection-count poll
 // is only for the "Connected!" confirmation while the sheet is visible.
 const REMINT_MS = 60_000;
