@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { fetchVenues, fetchPublicProfile, fetchAllProfilesForAdmin, setMasterAdmin, assignVenueOwner, createVenue } from '@/lib/data';
+import { fetchVenues, fetchPublicProfile, fetchAllProfilesForAdmin, setMasterAdmin, assignVenueOwner, createVenue, setVenueLive } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import PersonPicker from '@/components/shared/PersonPicker';
 import type { Venue, Profile } from '@/lib/types';
@@ -57,9 +57,12 @@ export default function AdminPage() {
     lng: '',
     radius: '150',
     description: '',
+    testMode: true,
   });
   const [creatingVenue, setCreatingVenue] = useState(false);
   const [createVenueError, setCreateVenueError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [hereAccuracy, setHereAccuracy] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -138,6 +141,48 @@ export default function AdminPage() {
       .finally(() => setBusy(null));
   };
 
+  // Fill lat/lng from where this phone is right now, so staff can put a test
+  // venue on the spot they're standing instead of looking up coordinates.
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setCreateVenueError("This browser can't share its location.");
+      return;
+    }
+    setLocating(true);
+    setCreateVenueError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setVenueForm((f) => ({
+          ...f,
+          lat: pos.coords.latitude.toFixed(6),
+          lng: pos.coords.longitude.toFixed(6),
+        }));
+        setHereAccuracy(Math.round(pos.coords.accuracy));
+        setLocating(false);
+      },
+      (err) => {
+        setCreateVenueError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location is blocked for this site — allow it in your browser settings.'
+            : "Couldn't get your location — try again, or step outside for a GPS fix."
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+    );
+  };
+
+  const handleSetLive = (venue: Venue, isLive: boolean) => {
+    setBusy(venue.id);
+    setVenueLive(venue.id, isLive)
+      .then(load)
+      .catch((err) => {
+        console.error('Failed to change venue test mode:', err);
+        setError(isLive ? "Couldn't make the venue live — try again" : "Couldn't move the venue to test mode — try again");
+      })
+      .finally(() => setBusy(null));
+  };
+
   const handleCreateVenue = () => {
     const lat = parseFloat(venueForm.lat);
     const lng = parseFloat(venueForm.lng);
@@ -161,9 +206,11 @@ export default function AdminPage() {
       lng,
       geofence_radius_meters: radius,
       description: venueForm.description.trim() || undefined,
+      isLive: !venueForm.testMode,
     })
       .then(() => {
-        setVenueForm({ name: '', address: '', city: '', lat: '', lng: '', radius: '150', description: '' });
+        setVenueForm({ name: '', address: '', city: '', lat: '', lng: '', radius: '150', description: '', testMode: true });
+        setHereAccuracy(null);
         setShowCreateVenue(false);
         load();
       })
@@ -329,16 +376,29 @@ export default function AdminPage() {
                       style={{ ...inputStyle, flex: 1 }}
                     />
                   </div>
+                  <button
+                    onClick={handleUseMyLocation}
+                    disabled={locating}
+                    style={{ ...linkButtonStyle, alignSelf: 'flex-start', opacity: locating ? 0.6 : 1 }}
+                  >
+                    {locating ? 'Getting your location…' : 'Use my current location'}
+                  </button>
+                  {hereAccuracy != null && (
+                    <p style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      Accurate to about {hereAccuracy} m
+                      {hereAccuracy > 50 ? ' — step outside or wait a moment and tap again for a sharper fix.' : '.'}
+                    </p>
+                  )}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       value={venueForm.lat}
-                      onChange={(e) => setVenueForm((f) => ({ ...f, lat: e.target.value }))}
+                      onChange={(e) => { setHereAccuracy(null); setVenueForm((f) => ({ ...f, lat: e.target.value })); }}
                       placeholder="Latitude"
                       style={{ ...inputStyle, flex: 1 }}
                     />
                     <input
                       value={venueForm.lng}
-                      onChange={(e) => setVenueForm((f) => ({ ...f, lng: e.target.value }))}
+                      onChange={(e) => { setHereAccuracy(null); setVenueForm((f) => ({ ...f, lng: e.target.value })); }}
                       placeholder="Longitude"
                       style={{ ...inputStyle, flex: 1 }}
                     />
@@ -356,6 +416,20 @@ export default function AdminPage() {
                     rows={2}
                     style={{ ...inputStyle, resize: 'vertical', fontFamily: 'Montserrat, system-ui, sans-serif' }}
                   />
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: theme.text, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                    <input
+                      type="checkbox"
+                      checked={venueForm.testMode}
+                      onChange={(e) => setVenueForm((f) => ({ ...f, testMode: e.target.checked }))}
+                      style={{ marginTop: '2px' }}
+                    />
+                    <span>
+                      Start in test mode
+                      <span style={{ display: 'block', color: theme.muted, fontSize: '12px' }}>
+                        Only you, its organizers and W staff can see it or check in until you make it live.
+                      </span>
+                    </span>
+                  </label>
                   {createVenueError && (
                     <p style={{ color: theme.accent2, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>{createVenueError}</p>
                   )}
@@ -401,7 +475,29 @@ export default function AdminPage() {
                       fontSize: '16px',
                       fontWeight: 600,
                       fontFamily: 'Montserrat, system-ui, sans-serif',
-                    }}>{venue.name}</p>
+                    }}>
+                      {venue.name}
+                      {venue.is_live === false && (
+                        <span style={{
+                          marginLeft: '8px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px',
+                          fontWeight: 700, letterSpacing: '0.04em', backgroundColor: theme.surface2, color: theme.accent2,
+                        }}>TEST</span>
+                      )}
+                    </p>
+                    {venue.is_live === false && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+                        <p style={{ color: theme.muted, fontSize: '12px', margin: 0, fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                          Hidden from everyone except its organizers and W staff.
+                        </p>
+                        <button
+                          onClick={() => handleSetLive(venue, true)}
+                          disabled={busy === venue.id}
+                          style={{ ...linkButtonStyle, fontSize: '12px', whiteSpace: 'nowrap' }}
+                        >
+                          Make live
+                        </button>
+                      </div>
+                    )}
 
                     {(venue.address || venue.city) && (
                       <p style={{
