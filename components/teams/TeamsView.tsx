@@ -21,12 +21,16 @@ export default function TeamsView({
   roomProfiles,
   checkedIn,
   myAffiliation: affiliationProp,
+  afterEvent = false,
 }: {
   locationId: string;
   myUserId: string | undefined;
   roomProfiles: Profile[];
   checkedIn: boolean;
   myAffiliation?: string | null;
+  // Shown from History after the event: no joining or creating, but every
+  // team and its members stay visible so people can still message them.
+  afterEvent?: boolean;
 }) {
   const [teams, setTeams] = useState<TeamWithMembers[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -65,13 +69,14 @@ export default function TeamsView({
 
   // Team link / QR lands on /main?teamCode=ABC123. Read it once, then clean the URL.
   useEffect(() => {
+    if (afterEvent) return;
     const url = new URL(window.location.href);
     const c = url.searchParams.get('teamCode');
     if (!c) return;
     setPendingCode(c.toUpperCase().slice(0, 12));
     url.searchParams.delete('teamCode');
     window.history.replaceState({}, '', url.pathname + url.search + url.hash);
-  }, []);
+  }, [afterEvent]);
 
   const myTeam = useMemo(
     () => teams.find((t) => t.members.some((m) => m.user_id === myUserId)) ?? null,
@@ -89,7 +94,7 @@ export default function TeamsView({
 
   const visible = teams.filter((t) => filter === 'all' || (t.needs.includes(filter) && t.members.length < t.max_size));
   const openTeam = teams.find((t) => t.id === openId) ?? null;
-  const suggestion = !myTeam && myAffiliation
+  const suggestion = !afterEvent && !myTeam && myAffiliation
     ? teams.find((t) => t.name.trim().toLowerCase() === myAffiliation.trim().toLowerCase() && t.members.length < t.max_size)
     : undefined;
 
@@ -162,19 +167,22 @@ export default function TeamsView({
         </div>
       )}
 
-      {(canManage || (!myTeam && checkedIn)) && (
+      {(canManage || (!afterEvent && !myTeam && checkedIn)) && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <Button style={{ minHeight: 48, flex: 1 }} onClick={() => setCreating(true)}>
             <Plus size={16} />&nbsp;Create a team
           </Button>
-          {!myTeam && checkedIn && (
+          {!afterEvent && !myTeam && checkedIn && (
             <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setCodeOpen((v) => !v)} aria-expanded={codeOpen}>
               <KeyRound size={16} />&nbsp;Have a code?
             </Button>
           )}
         </div>
       )}
-      {!checkedIn && !canManage && (
+      {afterEvent && teams.length > 0 && (
+        <p style={{ color: theme.muted, fontSize: 13, margin: '0 0 12px' }}>The event&apos;s over, but you can still see every team and message them.</p>
+      )}
+      {!afterEvent && !checkedIn && !canManage && (
         <p style={{ color: theme.muted, fontSize: 13, margin: '0 0 12px' }}>Check in to create or join a team. You can still browse.</p>
       )}
 
@@ -193,7 +201,7 @@ export default function TeamsView({
         <button type="button" style={pillStyle(filter === 'all')} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
           All teams {teams.length}
         </button>
-        {[...needCounts.entries()].map(([n, c]) => (
+        {!afterEvent && [...needCounts.entries()].map(([n, c]) => (
           <button key={n} type="button" style={pillStyle(filter === n)} aria-pressed={filter === n} onClick={() => setFilter(filter === n ? 'all' : n)}>
             Needs {NEED_LABEL[n].toLowerCase()} {c}
           </button>
@@ -207,10 +215,10 @@ export default function TeamsView({
         <div style={{ textAlign: 'center', padding: '24px 12px' }}>
           <Users size={32} style={{ color: theme.muted }} aria-hidden="true" />
           <p style={{ fontSize: 15, fontWeight: 700, margin: '8px 0 4px' }}>
-            {teams.length === 0 ? 'No teams yet' : `No teams need ${filter === 'all' ? 'anyone' : NEED_LABEL[filter].toLowerCase() + 's'} right now`}
+            {teams.length === 0 ? (afterEvent ? 'No teams were formed here' : 'No teams yet') : `No teams need ${filter === 'all' ? 'anyone' : NEED_LABEL[filter].toLowerCase() + 's'} right now`}
           </p>
           <p style={{ color: theme.muted, fontSize: 13, margin: 0 }}>
-            {teams.length === 0 ? 'Be the first. Create a team and others can join it.' : 'Try another filter.'}
+            {teams.length === 0 ? (afterEvent ? 'You can still message anyone from Who was there.' : 'Be the first. Create a team and others can join it.') : 'Try another filter.'}
           </p>
           {filter !== 'all' && <Button variant="secondary" style={{ minHeight: 44, marginTop: 12 }} onClick={() => setFilter('all')}>Show all teams</Button>}
         </div>
@@ -239,7 +247,7 @@ export default function TeamsView({
                 </span>
                 {t.idea && <span style={{ display: 'block', fontSize: 15, marginTop: 6, color: theme.text }}>{t.idea}</span>}
               </button>
-              {t.needs.length > 0 && !full && (
+              {!afterEvent && t.needs.length > 0 && !full && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                   {t.needs.map((n) => (
                     <span key={n} style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: radius.pill, border: `1px solid ${theme.glassBorder}`, color: theme.text }}>
@@ -256,6 +264,7 @@ export default function TeamsView({
                   <Button variant="secondary" style={{ minHeight: 44 }} onClick={() => setOpenId(t.id)}>
                     <MessageCircle size={14} />&nbsp;See members &amp; message
                   </Button>
+                  {!afterEvent && (
                   <Button
                     variant="secondary"
                     style={{ minHeight: 44 }}
@@ -266,6 +275,7 @@ export default function TeamsView({
                   >
                     {full ? 'Team is full' : requested ? 'Requested' : myTeam ? 'You’re on a team' : 'Ask to join'}
                   </Button>
+                  )}
                   </div>
                 )}
               </div>
@@ -304,6 +314,7 @@ export default function TeamsView({
           onChanged={load}
           onEdit={() => setEditing(openTeam)}
           canManage={canManage}
+          afterEvent={afterEvent}
         />
       )}
     </div>
