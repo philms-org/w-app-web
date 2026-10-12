@@ -190,6 +190,9 @@ export interface Conversation {
   last_message_at?: string | null;
   my_status: string;
   other_profile?: Profile | null;
+  // Latest message is newer than my last_read_at and someone else sent it
+  // (0043). Left unset on conversations just created client-side.
+  unread?: boolean;
 }
 
 export interface Message {

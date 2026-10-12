@@ -6,13 +6,14 @@ import { useStore } from '@/lib/store';
 import { signOut } from '@/lib/auth';
 import {
   fetchOwnProfile, setShareCheckinsWithFriends,
-  fetchMyRoleBadges, fetchMyVenues,
+  fetchMyRoleBadges, fetchMyVenues, fetchMyProfileStats,
 } from '@/lib/data';
 import type { Profile, RoleBadge } from '@/lib/types';
 import { LOOKING_FOR_OPTIONS } from '@/lib/constants';
 import RolePass from '@/components/profile/RolePass';
 import { theme, elevation } from '@/lib/theme';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
 import {
   Camera, Edit2, Shield, Link2, Award,
   LogOut, ChevronRight, User, MapPin, Briefcase, Heart, Users, LayoutDashboard, ShieldCheck
@@ -22,11 +23,22 @@ export default function ProfileTab() {
   const router = useRouter();
   const { user, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [shareCheckins, setShareCheckins] = useState(false);
   const [shareCheckinsSaving, setShareCheckinsSaving] = useState(false);
   const [roleBadges, setRoleBadges] = useState<RoleBadge[]>([]);
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [stats, setStats] = useState<{ connections: number; locations: number; checkins: number } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchMyProfileStats()
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch((err) => console.error('Failed to load profile stats:', err));
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -116,7 +128,10 @@ export default function ProfileTab() {
                 <User style={{ width: '56px', height: '56px', color: 'white' }} />
               )}
             </div>
-            <button style={{
+            <button
+              onClick={() => router.push('/profile/edit')}
+              aria-label="Change profile photo"
+              style={{
               position: 'absolute',
               bottom: 0,
               right: 0,
@@ -142,12 +157,14 @@ export default function ProfileTab() {
             fontWeight: 'bold',
             marginBottom: '4px',
             fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{user?.name || 'Guest User'}</h1>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '16px',
-            fontFamily: 'Montserrat, system-ui, sans-serif'
-          }}>{user?.email || 'guest@example.com'}</p>
+          }}>{user?.name || 'Your profile'}</h1>
+          {user?.email && (
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '16px',
+              fontFamily: 'Montserrat, system-ui, sans-serif'
+            }}>{user.email}</p>
+          )}
           
           {/* Stats */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginTop: '24px' }}>
@@ -157,7 +174,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.connections : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
@@ -170,7 +187,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.locations : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
@@ -183,7 +200,7 @@ export default function ProfileTab() {
                 fontSize: '32px',
                 fontWeight: 'bold',
                 fontFamily: 'Montserrat, system-ui, sans-serif'
-              }}>0</p>
+              }}>{stats ? stats.checkins : '–'}</p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '14px',
@@ -432,7 +449,7 @@ export default function ProfileTab() {
             // carries the destructive colour, and a confirm step follows.
             color: theme.text,
             fontWeight: '600',
-            marginBottom: '32px',
+            marginBottom: '20px',
             border: 'none',
             cursor: 'pointer',
             fontSize: '16px',
@@ -442,7 +459,36 @@ export default function ProfileTab() {
           <LogOut style={{ width: '20px', height: '20px', color: theme.accent2 }} />
           <span>Logout</span>
         </button>
+
+        {/* Delete account: deliberately quiet; the sheet does the warning. */}
+        <button
+          onClick={() => setShowDeleteAccount(true)}
+          style={{
+            display: 'block',
+            margin: '0 auto 40px',
+            padding: '8px 12px',
+            background: 'none',
+            border: 'none',
+            color: '#FF6B5B',
+            fontSize: '14px',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}
+        >
+          Delete account
+        </button>
       </div>
+
+      {showDeleteAccount && (
+        <DeleteAccountSheet
+          onClose={() => setShowDeleteAccount(false)}
+          onDeleted={() => {
+            logout();
+            router.replace('/auth/login');
+          }}
+        />
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

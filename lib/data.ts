@@ -536,6 +536,26 @@ export async function fetchMyCheckinCount(locationId: string): Promise<number> {
   return count ?? 0;
 }
 
+// Profile header counts: connections (friendships rows), check-ins and the
+// distinct venues they were at (live location_checkins, the same rows the
+// attendance tiers count).
+export async function fetchMyProfileStats(): Promise<{ connections: number; locations: number; checkins: number }> {
+  const uid = await getCurrentUserId();
+  if (!uid) return { connections: 0, locations: 0, checkins: 0 };
+  const [friends, checkins] = await Promise.all([
+    supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+    supabase.from('location_checkins').select('location_id').eq('user_id', uid).eq('mode', 'live'),
+  ]);
+  if (friends.error) throw friends.error;
+  if (checkins.error) throw checkins.error;
+  const rows = (checkins.data ?? []) as { location_id: string }[];
+  return {
+    connections: friends.count ?? 0,
+    locations: new Set(rows.map((r) => r.location_id)).size,
+    checkins: rows.length,
+  };
+}
+
 // Highest-threshold reward a member with `checkinCount` visits has earned
 // at this venue, given the venue's active tiered rewards (min_checkins set).
 // Used by the Members roster to show each member's current tier badge.
@@ -1236,7 +1256,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 
   const { data: rows, error } = await supabase
     .from('conversation_participants')
-    .select('conversation_id, status, conversations(id, is_group, name)')
+    .select('conversation_id, status, last_read_at, conversations(id, is_group, name)')
     .eq('user_id', uid);
   if (error) throw error;
 
@@ -1273,9 +1293,18 @@ export async function fetchConversations(): Promise<Conversation[]> {
       last_message_at: recent?.[0]?.created_at ?? null,
       my_status: row.status,
       other_profile: otherProfile,
+      unread: !!recent?.[0]
+        && recent[0].sender_id !== uid
+        && (!row.last_read_at || new Date(recent[0].created_at) > new Date(row.last_read_at)),
     });
   }
   return result;
+}
+
+// Moves my read marker on this conversation to now (0043).
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId });
+  if (error) throw error;
 }
 
 export async function fetchMessages(conversationId: string): Promise<Message[]> {
@@ -2282,19 +2311,13 @@ export async function createVenuePost(
   lng: number | null,
   accuracy: number | null = null,
 ): Promise<VenuePost> {
-  const args = {
+  const { data, error } = await supabase.rpc('create_venue_post', {
     p_location_id: locationId,
     p_body: body.trim(),
     p_lat: lat,
     p_lng: lng,
-  };
-  let { data, error } = await supabase.rpc('create_venue_post', { ...args, p_accuracy: accuracy });
-  // Before migration 0039 is applied the function has no p_accuracy, and
-  // PostgREST can't find a match (PGRST202). Fall back to the old call so
-  // posting never breaks on deploy order.
-  if (error?.code === 'PGRST202') {
-    ({ data, error } = await supabase.rpc('create_venue_post', args));
-  }
+    p_accuracy: accuracy,
+  });
   if (error) throw error;
   return data as VenuePost;
 }
@@ -2558,6 +2581,12 @@ export async function addTeamMember(teamId: string, userId: string): Promise<voi
 export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
   const { error } = await supabase.rpc('remove_team_member', { p_team_id: teamId, p_user_id: userId });
   if (error) throw teamError(error, "Couldn't update the team. Try again.");
+}
+
+// Organizers only (0042). Members and requests go with the team.
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_team', { p_team_id: teamId });
+  if (error) throw teamError(error, "Couldn't delete the team. Try again.");
 }
 
 export async function updateTeam(
