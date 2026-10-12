@@ -10,7 +10,6 @@ import HomeTab from '@/components/tabs/HomeTab';
 import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
-import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
@@ -143,8 +142,6 @@ export default function MainPage() {
         return <MessagesTab />;
       case 'profile':
         return <ProfileTab />;
-      case 'history':
-        return <HistoryTab />;
       default:
         return <HomeTab />;
     }
