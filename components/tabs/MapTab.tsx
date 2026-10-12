@@ -129,6 +129,14 @@ export default function MapTab() {
   // Add-location is opt-in: stray map taps must NOT open the modal.
   const [addMode, setAddMode] = useState(false);
 
+  // Home's add-location button lands here with add mode already on.
+  const mapAddRequested = useStore((s) => s.mapAddRequested);
+  useEffect(() => {
+    if (!mapAddRequested) return;
+    setAddMode(true);
+    useStore.getState().setMapAddRequested(false);
+  }, [mapAddRequested]);
+
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (!addModeRef.current) return;
     setClickedLocation({ lat, lng });

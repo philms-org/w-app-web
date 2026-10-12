@@ -88,6 +88,46 @@ export async function signOut() {
   if (error) throw error;
 }
 
+// ---- Account deletion (app/api/account/delete/route.ts) ----
+
+export type AccountDeletionBlockers = {
+  staff: boolean;
+  venues: { id: string; name: string }[];
+  teams: { id: string; name: string }[];
+};
+
+export const hasDeletionBlockers = (b: AccountDeletionBlockers) =>
+  b.staff || b.venues.length > 0 || b.teams.length > 0;
+
+async function accountDeleteRequest(init: RequestInit = {}) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('not_signed_in');
+  return fetch('/api/account/delete', {
+    ...init,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+}
+
+// What the user has to hand off before they can delete their account.
+export async function fetchAccountDeletionBlockers(): Promise<AccountDeletionBlockers> {
+  const res = await accountDeleteRequest();
+  if (!res.ok) throw new Error('blockers_unavailable');
+  return ((await res.json()) as { blockers: AccountDeletionBlockers }).blockers;
+}
+
+// Permanently deletes the signed-in account, then clears the local session.
+// Returns blockers instead if something still has to be handed off.
+export async function deleteAccount(): Promise<{ deleted: true } | { deleted: false; blockers: AccountDeletionBlockers }> {
+  const res = await accountDeleteRequest({ method: 'POST', body: JSON.stringify({ confirm: 'DELETE' }) });
+  const body = (await res.json().catch(() => ({}))) as { error?: string; blockers?: AccountDeletionBlockers };
+  if (res.status === 409 && body.blockers) return { deleted: false, blockers: body.blockers };
+  if (!res.ok) throw new Error(body.error ?? 'delete_failed');
+  // The auth user no longer exists; this just clears the session locally.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  return { deleted: true };
+}
+
 // Sends the Supabase recovery email. The link in it lands on /auth/reset,
 // where detectSessionInUrl establishes a short-lived recovery session.
 export async function requestPasswordReset(email: string, captchaToken?: string) {

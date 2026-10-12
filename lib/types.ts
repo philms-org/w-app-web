@@ -190,6 +190,9 @@ export interface Conversation {
   last_message_at?: string | null;
   my_status: string;
   other_profile?: Profile | null;
+  // Latest message is newer than my last_read_at and someone else sent it
+  // (0043). Left unset on conversations just created client-side.
+  unread?: boolean;
 }
 
 export interface Message {
@@ -318,22 +321,6 @@ export interface VenueZone {
   center_lng: number;
   created_by?: string | null;
   created_at: string;
-}
-
-export interface ActivityMenuItem {
-  id: string;
-  location_id: string;
-  label: string;
-  sort_order: number;
-  created_by: string | null;
-  created_at: string;
-}
-
-export interface AttendeeActivityPick {
-  user_id: string;
-  location_id: string;
-  item_id: string;
-  picked_at: string;
 }
 
 // ---- Badges ----

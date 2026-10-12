@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import jsQR from 'jsqr';
 import { theme } from '@/lib/theme';
-import { decodeConnectPayload, connectErrorMessage } from '@/lib/connect';
+import { decodeConnectPayload, connectErrorMessage, getScanCoords } from '@/lib/connect';
 import { recordQrScan } from '@/lib/data';
 import ConnectResult from '@/components/connect/ConnectResult';
 import { X } from 'lucide-react';
@@ -14,19 +14,6 @@ const MAX_SCAN_EDGE = 640;
 
 function isInAppBrowser(): boolean {
   return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|Snapchat|TikTok|musical_ly/.test(navigator.userAgent);
-}
-
-// Best-effort: resolve to coords if the browser cooperates within 5s, else
-// resolve undefined. Never rejects — a denied prompt must not block the scan.
-function getScanCoords(): Promise<{ lat: number; lng: number } | undefined> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(undefined);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(undefined),
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60_000 },
-    );
-  });
 }
 
 export default function ScanPage() {
