@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import jsQR from 'jsqr';
 import { theme } from '@/lib/theme';
-import { decodeConnectPayload, connectErrorMessage } from '@/lib/connect';
+import { decodeConnectPayload, connectErrorMessage, getScanCoords } from '@/lib/connect';
 import { recordQrScan } from '@/lib/data';
 import ConnectResult from '@/components/connect/ConnectResult';
 import { X } from 'lucide-react';
@@ -14,19 +14,6 @@ const MAX_SCAN_EDGE = 640;
 
 function isInAppBrowser(): boolean {
   return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|Snapchat|TikTok|musical_ly/.test(navigator.userAgent);
-}
-
-// Best-effort: resolve to coords if the browser cooperates within 5s, else
-// resolve undefined. Never rejects — a denied prompt must not block the scan.
-function getScanCoords(): Promise<{ lat: number; lng: number } | undefined> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(undefined);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(undefined),
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60_000 },
-    );
-  });
 }
 
 export default function ScanPage() {
@@ -50,6 +37,10 @@ export default function ScanPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Start the (up to 5s) location lookup now, not at scan time, so the
+    // connect call fires the instant a code is read. The code on the other
+    // phone is single-use and refreshes, so a slow call can miss it.
+    const coordsPromise = getScanCoords();
 
     const stop = () => {
       if (rafRef.current !== null) {
@@ -92,11 +83,11 @@ export default function ScanPage() {
         lastActedRef.current = code.data;
         const token = decodeConnectPayload(code.data);
         if (!token) {
-          setError("That's not a W code.");
+          setError("That's not a W connect code. Ask them to open Connect in their W App.");
         } else {
           busyRef.current = true;
           setError(null);
-          getScanCoords()
+          coordsPromise
             .then((coords) => recordQrScan(token, coords?.lat, coords?.lng))
             .then((id) => {
               if (cancelled) return;
