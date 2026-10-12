@@ -10,7 +10,7 @@ interface OrganizerWelcomeModalProps {
 }
 
 // First-run overlay explaining the new organizer tools (verification tags,
-// carousel/banners, groups). Reuses app/welcome/page.tsx's slide-carousel
+// carousel/banners, groups). Uses the old welcome page's slide-carousel
 // visual pattern (gradient background, emoji, dot pagination, Skip/Next
 // button) but as a modal overlay rather than a full-page route, since it's
 // shown on top of CheckedInHero rather than during signup. Dismissing
