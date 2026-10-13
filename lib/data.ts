@@ -334,14 +334,32 @@ export async function postToFeed(locationId: string, text: string): Promise<void
 
 // ---- Presence (who's here) ----
 
+// People in the room right now: an open check-in AND seen inside the venue
+// in the last 20 minutes (room_presence, 0045). An open check-in alone isn't
+// enough: walk-out check-out only runs while the app is open, so people who
+// closed the app or locked their phone would otherwise stay "in the room".
 export async function fetchPresence(locationId: string): Promise<Presence[]> {
+  const { data: ids, error: idsError } = await supabase.rpc('room_presence', { p_location_id: locationId });
+  if (idsError) throw idsError;
+  const userIds = ((ids ?? []) as (string | { room_presence: string })[]).map((r) =>
+    typeof r === 'string' ? r : r.room_presence,
+  );
+  if (userIds.length === 0) return [];
   const { data, error } = await supabase
     .from('location_checkins')
     .select(`*, profiles:${PUBLIC_PROFILE}!user_id(*)`)
     .eq('location_id', locationId)
-    .is('checked_out_at', null);
+    .is('checked_out_at', null)
+    .in('user_id', userIds);
   if (error) throw error;
   return data ?? [];
+}
+
+// "I'm still here": refreshes the caller's room ping (0045). The server
+// ignores it unless the caller has an open check-in at this venue.
+export async function touchRoom(locationId: string): Promise<void> {
+  const { error } = await supabase.rpc('touch_room', { p_location_id: locationId });
+  if (error) throw error;
 }
 
 // Same 12h window as the 0007 cleanup: an open check-in older than this is a

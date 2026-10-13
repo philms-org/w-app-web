@@ -13,6 +13,7 @@ import {
   startConversation,
   fetchBanners,
   hasOpenCheckin,
+  touchRoom,
 } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
@@ -45,6 +46,12 @@ import HotspotStrip from '@/components/hotspots/HotspotStrip';
 // real checkIn/checkOut/fetchPresence calls forward from MainFeedTab, but
 // adds a real geofence gate in front of checkIn: only actually check in when
 // the user's live location is within the venue's radius.
+// Room pings (0045): how often the app says "still here", and how recent the
+// last inside GPS fix must be for a timer ping. The server counts you in the
+// room for 20 minutes after your last ping.
+const PING_EVERY_MS = 2 * 60 * 1000;
+const INSIDE_FIX_FRESH_MS = 5 * 60 * 1000;
+
 export default function CheckedInHero() {
   const { selectedLocation, setSelectedLocation, currentLocation, user } = useStore();
   const [presenceProfiles, setPresenceProfiles] = useState<Profile[]>([]);
@@ -267,10 +274,27 @@ export default function CheckedInHero() {
   // fixes in a row clearly outside the radius so GPS jitter at the door
   // doesn't flicker people in and out.
   const outsideFixes = useRef(0);
+  // "In the room" = open check-in + seen inside in the last 20 min (0045).
+  // Ping at most every PING_EVERY_MS while a real GPS fix puts you inside;
+  // closing the app or locking the phone stops the pings, so you drop off
+  // "in the room" on your own instead of lingering until the 12h cleanup.
+  const lastInsideFixAt = useRef(0);
+  const lastPingAt = useRef(0);
+  const pingRoom = useCallback((locationId: string, force = false) => {
+    if (!force && Date.now() - lastPingAt.current < PING_EVERY_MS) return;
+    lastPingAt.current = Date.now();
+    touchRoom(locationId)
+      .then(loadPresence)
+      .catch((err) => console.error('Room ping failed:', err));
+  }, [loadPresence]);
   useVenuePositionWatch(selectedLocation?.id ?? null, (fix) => {
     if (!selectedLocation) return;
     useStore.getState().setCurrentLocation({ lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy });
     const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
+    if (isWithinGeofence(meters, selectedLocation.radius, fix.accuracy)) {
+      lastInsideFixAt.current = Date.now();
+      if (checkedIn) pingRoom(selectedLocation.id);
+    }
     const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
     outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;
     if (checkedIn && outsideFixes.current >= 2) {
@@ -282,6 +306,35 @@ export default function CheckedInHero() {
       checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
     }
   });
+
+  // A phone sitting still may not deliver new fixes, so also ping on a timer
+  // while the last real fix (within INSIDE_FIX_FRESH_MS) put you inside, and
+  // re-load presence so people who stopped pinging drop off the count (pings
+  // don't fire the realtime check-in subscription). Re-opening the venue
+  // after a fresh inside fix pings straight away.
+  useEffect(() => {
+    if (!checkedIn || !selectedId) return;
+    const tick = (force: boolean) => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastInsideFixAt.current < INSIDE_FIX_FRESH_MS) pingRoom(selectedId, force);
+    };
+    tick(true);
+    const id = window.setInterval(() => {
+      tick(false);
+      loadPresence();
+    }, PING_EVERY_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        tick(false);
+        loadPresence();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [checkedIn, selectedId, pingRoom, loadPresence]);
 
   // Back returns Home and keeps you checked in (Home shows "You're at …" to
   // come back in). Checking out is its own explicit action.
