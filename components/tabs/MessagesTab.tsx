@@ -14,12 +14,14 @@ export default function MessagesTab() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, unread, groups
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadError, setLoadError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [openChat, setOpenChat] = useState<ChatConversation | null>(null);
 
   const loadConversations = useCallback(() => {
     fetchConversations()
       .then((rows) => {
         setLoadError(false);
+        setLoaded(true);
         useStore.getState().setUnreadCount(rows.filter((c) => c.unread).length);
         setConversations(
           rows.map((c) => ({
@@ -319,7 +321,9 @@ export default function MessagesTab() {
               </div>
             </button>
           ))
-        ) : (
+        ) : conversations.length > 0 && (
+          // You have conversations, but the search or filter hides them all.
+          // (No conversations at all gets the "No Messages Yet" state below.)
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <div style={{
               width: '96px',
@@ -343,14 +347,20 @@ export default function MessagesTab() {
               fontSize: '14px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              {searchQuery ? 'Try a different search term' : 'Start a conversation by connecting with people at your location'}
+              {searchQuery
+                ? 'Try a different search term'
+                : activeFilter === 'unread'
+                  ? 'You’re all caught up'
+                  : 'No group chats yet'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Empty State (when no messages at all) */}
-      {!searchQuery && filteredMessages.length === 0 && (
+      {/* Empty State (when no messages at all). Waits for the first load so
+          it doesn't flash before conversations arrive or show under the
+          load-error message. */}
+      {loaded && !loadError && conversations.length === 0 && (
         <div style={{
           flex: 1,
           display: 'flex',
