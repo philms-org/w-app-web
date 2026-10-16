@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import InAppBrowserModal from '@/components/ui/InAppBrowserModal';
@@ -13,6 +13,10 @@ interface HeroCarouselProps {
   // Called when someone swipes/taps through the carousel or opens a slide's
   // link, with the element they used. Feeds the room activity meter.
   onEngage?: (el: Element | null) => void;
+  // Per-slide reach for organizers (0046): the slide now on screen, and a
+  // slide whose link was opened.
+  onSlideShown?: (index: number) => void;
+  onSlideLinkOpen?: (index: number) => void;
 }
 
 const SWIPE_PX = 40;
@@ -20,7 +24,7 @@ const SWIPE_PX = 40;
 // Organizer slides (event graphics, schedules, sponsor cards) carry text and
 // QR codes, so they are shown whole (`contain`, 3:2 frame) and never cropped.
 // The venue name sits below the image instead of on top of it.
-export default function HeroCarousel({ images, title, onBack, links, onEngage }: HeroCarouselProps) {
+export default function HeroCarousel({ images, title, onBack, links, onEngage, onSlideShown, onSlideLinkOpen }: HeroCarouselProps) {
   const [index, setIndex] = useState(0);
   const [browserUrl, setBrowserUrl] = useState<string | null>(null);
   const touchX = useRef<number | null>(null);
@@ -29,6 +33,12 @@ export default function HeroCarousel({ images, title, onBack, links, onEngage }:
   const many = images.length > 1;
   const current = Math.min(index, Math.max(0, images.length - 1));
   const currentLink = links?.[current] ?? null;
+
+  const shownRef = useRef(onSlideShown);
+  shownRef.current = onSlideShown;
+  useEffect(() => {
+    if (hasImages) shownRef.current?.(current);
+  }, [current, hasImages]);
 
   const goPrev = () => setIndex((i) => (i <= 0 ? images.length - 1 : i - 1));
   const goNext = () => setIndex((i) => (i >= images.length - 1 ? 0 : i + 1));
@@ -69,7 +79,7 @@ export default function HeroCarousel({ images, title, onBack, links, onEngage }:
           <div
             role="img"
             aria-label={`Slide ${current + 1} of ${images.length}`}
-            onClick={currentLink ? (e) => { setBrowserUrl(currentLink); onEngage?.(e.currentTarget); } : undefined}
+            onClick={currentLink ? (e) => { setBrowserUrl(currentLink); onEngage?.(e.currentTarget); onSlideLinkOpen?.(current); } : undefined}
             style={{
               position: 'absolute', inset: 0,
               backgroundImage: `url(${images[current]})`,

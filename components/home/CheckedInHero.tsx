@@ -38,6 +38,8 @@ import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters, isWithinGeofence, venueToLocation } from '@/lib/geo';
 import HotspotStrip from '@/components/hotspots/HotspotStrip';
+import EventRoleSheet from '@/components/venue/EventRoleSheet';
+import { fetchEventRolePrompt, reportEventPresence, reportSlideEvent } from '@/lib/eventTracking';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
 // banner) plus a "Connections" card built from VenueFeed (posts + presence,
@@ -273,6 +275,8 @@ export default function CheckedInHero() {
     const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
     const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
     outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;
+    // Daily presence for organizers (0046); the server re-checks the geofence.
+    if (checkedIn && !clearlyOutside) reportEventPresence(selectedLocation.id, fix);
     if (checkedIn && outsideFixes.current >= 2) {
       outsideFixes.current = 0;
       setCheckedIn(false);
@@ -282,6 +286,26 @@ export default function CheckedInHero() {
       checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
     }
   });
+
+  // Opening the venue while checked in and inside counts as being here today,
+  // even before the position watch delivers its next fix.
+  useEffect(() => {
+    if (!selectedId || !checkedIn || !withinGeofence || !currentLocation) return;
+    reportEventPresence(selectedId, currentLocation);
+  }, [selectedId, checkedIn, withinGeofence, currentLocation]);
+
+  // Role at the event (0046): asked once, right after check-in, when the
+  // organizer turned it on for this venue.
+  const [askRole, setAskRole] = useState(false);
+  useEffect(() => {
+    setAskRole(false);
+    if (!selectedId || !checkedIn) return;
+    let cancelled = false;
+    fetchEventRolePrompt(selectedId)
+      .then(({ ask, role }) => { if (!cancelled) setAskRole(ask && !role); })
+      .catch((err) => console.error('Failed to load event role prompt:', err));
+    return () => { cancelled = true; };
+  }, [selectedId, checkedIn]);
 
   // Back returns Home and keeps you checked in (Home shows "You're at …" to
   // come back in). Checking out is its own explicit action.
@@ -361,6 +385,8 @@ export default function CheckedInHero() {
         title={selectedLocation.name}
         onBack={handleBack}
         onEngage={(el) => checkedIn && contributeCarousel(selectedLocation.id, el)}
+        onSlideShown={(i) => { if (banners[i]) reportSlideEvent(banners[i].id, 'view'); }}
+        onSlideLinkOpen={(i) => { if (banners[i]) reportSlideEvent(banners[i].id, 'tap'); }}
       />
 
       {/* Venue screen per the approved feed mockup (v4): carousel, one status
@@ -709,6 +735,14 @@ export default function CheckedInHero() {
 
       {showOrganizerWelcome && (
         <OrganizerWelcomeModal onClose={() => setShowOrganizerWelcome(false)} />
+      )}
+
+      {askRole && (
+        <EventRoleSheet
+          locationId={selectedLocation.id}
+          venueName={selectedLocation.name}
+          onDone={() => setAskRole(false)}
+        />
       )}
     </div>
   );
