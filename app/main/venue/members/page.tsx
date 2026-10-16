@@ -12,6 +12,7 @@ import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, VenueMember, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import TagBadge from '@/components/shared/TagBadge';
+import { STAFF_KINDS, fetchEventStaff, removeEventStaff, setEventStaff, type StaffKind } from '@/lib/eventTracking';
 
 export default function VenueMembersPage() {
   return (
@@ -83,6 +84,36 @@ function VenueMembersPageInner() {
       setError("Couldn't update the announcer role. Try again.");
     } finally {
       setAnnouncerBusy(null);
+    }
+  };
+
+  // Staff (0046): marked people are left out of the report's counts.
+  const [staff, setStaff] = useState<Map<string, StaffKind>>(new Map());
+  const [staffBusy, setStaffBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!venue) return;
+    fetchEventStaff(venue.id)
+      .then((rows) => setStaff(new Map(rows.map((r) => [r.user_id, r.kind]))))
+      .catch((err) => console.error('Failed to load staff:', err));
+  }, [venue]);
+
+  const changeStaff = async (userId: string, value: string) => {
+    if (!venue) return;
+    setStaffBusy(userId);
+    try {
+      if (value === '') await removeEventStaff(venue.id, userId);
+      else await setEventStaff(venue.id, userId, value as StaffKind);
+      setStaff((prev) => {
+        const next = new Map(prev);
+        if (value === '') next.delete(userId); else next.set(userId, value as StaffKind);
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to update staff:', err);
+      setError("Couldn't update staff. Try again.");
+    } finally {
+      setStaffBusy(null);
     }
   };
 
@@ -310,6 +341,23 @@ function VenueMembersPageInner() {
                       <Megaphone size={11} aria-hidden /> Announcer
                     </span>
                   ) : null}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    <span style={{ color: theme.muted, fontSize: 11, fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Here as</span>
+                    <select
+                      id={`staff-${m.profile.id}`}
+                      value={staff.get(m.profile.id) ?? ''}
+                      disabled={staffBusy === m.profile.id}
+                      onChange={(e) => changeStaff(m.profile.id, e.target.value)}
+                      style={{
+                        minHeight: 32, padding: '0 8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        fontFamily: 'Montserrat, system-ui, sans-serif', color: theme.text,
+                        backgroundColor: theme.surface2, border: `1px solid ${theme.divider}`,
+                      }}
+                    >
+                      <option value="">Attendee</option>
+                      {STAFF_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label} (staff)</option>)}
+                    </select>
+                  </label>
                   {(m.tags.length > 0 || highestEarnedTier(tierRewards, m.checkinCount)) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                       {(() => {

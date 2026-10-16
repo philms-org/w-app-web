@@ -20,6 +20,7 @@ import {
 import { theme } from '@/lib/theme';
 import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
+import EventTrackingCard from '@/components/organizer/EventTrackingCard';
 import type {
   Venue,
   AttendanceStats,
@@ -273,6 +274,7 @@ function VenueReportPageInner() {
           <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading report...</p>
         ) : (
           <>
+            <EventTrackingCard locationId={venue.id} />
             <SectionCard title="Attendance & Peak Times">
               <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <StatTile label="Total check-ins" value={attendance?.totalCheckins ?? 0} />
