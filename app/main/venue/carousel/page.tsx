@@ -27,7 +27,6 @@ import HeroCarousel from '@/components/HeroCarousel';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import PersonPicker from '@/components/shared/PersonPicker';
 
-
 export default function VenueCarouselPage() {
   return (
     <Suspense
@@ -487,34 +486,32 @@ function VenueCarouselPageInner() {
           </div>
         )}
 
-        {(
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            backgroundColor: theme.accent,
-            color: theme.onAccent,
-            borderRadius: '12px',
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: 700,
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-            cursor: uploading ? 'default' : 'pointer',
-            opacity: uploading ? 0.6 : 1,
-          }}>
-            <Plus style={{ width: '18px', height: '18px' }} />
-            {uploading ? (uploadProgress ?? 'Uploading…') : 'Add slides'}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleUpload}
-              disabled={uploading}
-              style={{ display: 'none' }}
-            />
-          </label>
-        )}
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          backgroundColor: theme.accent,
+          color: theme.onAccent,
+          borderRadius: '12px',
+          padding: '12px 20px',
+          fontSize: '14px',
+          fontWeight: 700,
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+          cursor: uploading ? 'default' : 'pointer',
+          opacity: uploading ? 0.6 : 1,
+        }}>
+          <Plus style={{ width: '18px', height: '18px' }} />
+          {uploading ? (uploadProgress ?? 'Uploading…') : 'Add slides'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleUpload}
+            disabled={uploading}
+            style={{ display: 'none' }}
+          />
+        </label>
 
         {(isPrimaryOwner || isMasterAdmin) && (
           <div style={{
