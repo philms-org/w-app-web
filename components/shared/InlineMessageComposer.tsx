@@ -8,17 +8,18 @@ import type { Profile } from '@/lib/types';
 interface InlineMessageComposerProps {
   recipient: Profile;
   onSent: () => void;
+  autoFocus?: boolean;
 }
 
 // Compose-row + send logic extracted from HistoryTab's inline "reconnect"
 // composer so it can be reused by CheckedInHero as well.
-export default function InlineMessageComposer({ recipient, onSent }: InlineMessageComposerProps) {
+export default function InlineMessageComposer({ recipient, onSent, autoFocus = false }: InlineMessageComposerProps) {
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const handleSend = () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || sending) return;
     setSending(true);
     setSendError(null);
     startConversation([recipient.id], null, false, messageText.trim())
@@ -38,7 +39,9 @@ export default function InlineMessageComposer({ recipient, onSent }: InlineMessa
       <div style={{ display: 'flex', gap: '8px' }}>
         <input
           type="text"
+          autoFocus={autoFocus}
           value={messageText}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
           onChange={(e) => setMessageText(e.target.value)}
           placeholder={`Say hi to ${recipient.display_name ?? 'them'}...`}
           style={{
@@ -47,8 +50,10 @@ export default function InlineMessageComposer({ recipient, onSent }: InlineMessa
             border: 'none',
             borderRadius: '9999px',
             padding: '10px 16px',
-            fontSize: '14px',
+            // 16px: iOS Safari zooms the page into any input smaller than that.
+            fontSize: '16px',
             color: theme.text,
+            minWidth: 0,
             fontFamily: 'Montserrat, system-ui, sans-serif'
           }}
         />

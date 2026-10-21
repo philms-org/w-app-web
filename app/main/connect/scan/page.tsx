@@ -9,6 +9,13 @@ import { recordQrScan } from '@/lib/data';
 import ConnectResult from '@/components/connect/ConnectResult';
 import { X } from 'lucide-react';
 
+// Longest edge (px) of the frame handed to jsQR.
+const MAX_SCAN_EDGE = 640;
+
+function isInAppBrowser(): boolean {
+  return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|Snapchat|TikTok|musical_ly/.test(navigator.userAgent);
+}
+
 // Best-effort: resolve to coords if the browser cooperates within 5s, else
 // resolve undefined. Never rejects — a denied prompt must not block the scan.
 function getScanCoords(): Promise<{ lat: number; lng: number } | undefined> {
@@ -60,8 +67,12 @@ export default function ScanPage() {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Decode a downscaled frame: phones hand us 1080p+ and full-res jsQR on
+      // every frame froze the scanner on low-end Android. Our code is a
+      // small, low-density QR, so 640px on the long side is plenty.
+      const scale = Math.min(1, MAX_SCAN_EDGE / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) {
         rafRef.current = requestAnimationFrame(tick);
@@ -69,7 +80,9 @@ export default function ScanPage() {
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(img.data, img.width, img.height);
+      // ConnectSheet always renders dark-on-white, so skip the inverted pass
+      // (it doubles the decode cost for nothing).
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
 
       if (code && !busyRef.current) {
         if (code.data === lastActedRef.current) {
@@ -104,6 +117,17 @@ export default function ScanPage() {
     };
 
     const start = () => {
+      // In-app browsers (Instagram, Facebook, LinkedIn, …) and non-HTTPS
+      // pages have no mediaDevices at all. Calling getUserMedia on undefined
+      // threw synchronously and crashed the page instead of explaining.
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError(
+          isInAppBrowser()
+            ? "This app's browser can't use the camera. Open this page in Safari or Chrome to scan."
+            : "This browser can't use the camera. Try Safari or Chrome.",
+        );
+        return;
+      }
       navigator.mediaDevices
         .getUserMedia({ video: { facingMode: 'environment' } })
         .then((stream) => {
@@ -114,7 +138,7 @@ export default function ScanPage() {
           streamRef.current = stream;
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            void videoRef.current.play();
+            videoRef.current.play().catch(() => { /* autoplay hiccup: frames still arrive once it plays */ });
           }
           rafRef.current = requestAnimationFrame(tick);
         })

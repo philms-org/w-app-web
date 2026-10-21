@@ -14,7 +14,9 @@ import {
   updateReward,
   deleteReward,
 } from '@/lib/data';
+import { fetchEventHotspots } from '@/lib/hotspots';
 import { theme } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, Reward } from '@/lib/types';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 
@@ -52,6 +54,8 @@ function VenueRewardsPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
 
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -65,7 +69,9 @@ function VenueRewardsPageInner() {
   const [newInstructions, setNewInstructions] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const [editedFields, setEditedFields] = useState<Record<string, { name: string; deal_text: string; instructions: string; min_checkins: string }>>({});
+  const [editedFields, setEditedFields] = useState<Record<string, { name: string; deal_text: string; instructions: string; min_checkins: string; min_hotspots: string }>>({});
+
+  const [hotspotCount, setHotspotCount] = useState<number | null>(null);
 
   const { canManage } = useIsOrganizer(venue?.id);
 
@@ -77,6 +83,7 @@ function VenueRewardsPageInner() {
         .catch((err) => {
           console.error('Failed to load venue:', err);
           setVenue(null);
+          setVenueLoadError(true);
         })
         .finally(() => setVenueLoading(false));
       return;
@@ -91,7 +98,7 @@ function VenueRewardsPageInner() {
       })
       .catch((err) => {
         console.error('Failed to load venues:', err);
-        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
+        fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
       })
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
@@ -103,8 +110,14 @@ function VenueRewardsPageInner() {
       .catch((err) => {
         console.error('Failed to load selected venue:', err);
         setVenue(null);
+        setVenueLoadError(true);
       });
   }, [selectedVenueId, paramLocationId]);
+
+  useEffect(() => {
+    if (!selectedVenueId) return;
+    fetchEventHotspots(selectedVenueId).then((l) => setHotspotCount(l.length)).catch(() => setHotspotCount(null));
+  }, [selectedVenueId]);
 
   const loadRewards = (locationId: string) => {
     setRewardsLoading(true);
@@ -120,6 +133,7 @@ function VenueRewardsPageInner() {
                 deal_text: r.deal_text ?? '',
                 instructions: r.instructions ?? '',
                 min_checkins: r.min_checkins != null ? String(r.min_checkins) : '',
+                min_hotspots: r.min_hotspots != null ? String(r.min_hotspots) : '',
               },
             ])
           )
@@ -143,6 +157,8 @@ function VenueRewardsPageInner() {
       </div>
     );
   }
+
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
 
   if (!venue || !canManage) {
     return (
@@ -186,17 +202,21 @@ function VenueRewardsPageInner() {
     const edited = editedFields[reward.id];
     if (!edited) return;
     const parsedMinCheckins = edited.min_checkins.trim() === '' ? null : parseInt(edited.min_checkins, 10);
+    const parsedMinHotspots = edited.min_hotspots.trim() === '' ? null : parseInt(edited.min_hotspots, 10);
+    const minHotspots = parsedMinHotspots == null || Number.isNaN(parsedMinHotspots) || parsedMinHotspots < 1 ? null : parsedMinHotspots;
     const nextFields: Partial<Reward> = {
       name: edited.name.trim() || reward.name,
       deal_text: edited.deal_text.trim() || null,
       instructions: edited.instructions.trim() || null,
       min_checkins: Number.isNaN(parsedMinCheckins as number) ? null : parsedMinCheckins,
+      min_hotspots: minHotspots,
     };
     const unchanged =
       nextFields.name === reward.name &&
       (nextFields.deal_text ?? null) === (reward.deal_text ?? null) &&
       (nextFields.instructions ?? null) === (reward.instructions ?? null) &&
-      (nextFields.min_checkins ?? null) === (reward.min_checkins ?? null);
+      (nextFields.min_checkins ?? null) === (reward.min_checkins ?? null) &&
+      (nextFields.min_hotspots ?? null) === (reward.min_hotspots ?? null);
     if (unchanged) return;
 
     setBusyId(reward.id);
@@ -301,7 +321,7 @@ function VenueRewardsPageInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
             {sorted.map((reward, i) => {
               const isBusy = busyId === reward.id;
-              const edited = editedFields[reward.id] ?? { name: reward.name, deal_text: '', instructions: '', min_checkins: '' };
+              const edited = editedFields[reward.id] ?? { name: reward.name, deal_text: '', instructions: '', min_checkins: '', min_hotspots: '' };
               return (
                 <div key={reward.id} style={{ backgroundColor: theme.surface, borderRadius: '16px', border: `1px solid ${theme.divider}`, padding: '14px', opacity: isBusy ? 0.6 : 1 }}>
                   <input
@@ -346,6 +366,28 @@ function VenueRewardsPageInner() {
                       style={{ ...inputStyle, width: '80px' }}
                     />
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <label htmlFor={`hs-${reward.id}`} style={{ color: theme.muted, fontSize: '12px', fontFamily: 'Montserrat, system-ui, sans-serif', whiteSpace: 'nowrap' }}>
+                      Hotspots to unlock:
+                    </label>
+                    <input
+                      id={`hs-${reward.id}`}
+                      type="number"
+                      min={1}
+                      value={edited.min_hotspots}
+                      onChange={(e) => setEditedFields((prev) => ({ ...prev, [reward.id]: { ...edited, min_hotspots: e.target.value } }))}
+                      onBlur={() => handleFieldBlur(reward)}
+                      disabled={isBusy}
+                      placeholder="None"
+                      style={{ ...inputStyle, width: '80px' }}
+                    />
+                  </div>
+                  {hotspotCount != null && (
+                    <p style={{ color: theme.muted, fontSize: '11px', margin: '0 0 10px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+                      This event has {hotspotCount} {hotspotCount === 1 ? 'hotspot' : 'hotspots'}.
+                      {Number(edited.min_hotspots) > hotspotCount ? ' That target is higher than the number of hotspots.' : ''}
+                    </p>
+                  )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <button

@@ -51,6 +51,10 @@ const idToStr = (n: number | null | undefined): string =>
 
 const strOr = (s: string | null | undefined): string => s ?? '';
 
+// affiliation, industry and role are text[] columns; the form edits one value.
+const firstOr = (a: string[] | string | null | undefined): string =>
+  Array.isArray(a) ? (a[0] ?? '') : (a ?? '');
+
 const boolOr = (b: boolean | null | undefined): boolean => b ?? true;
 
 export function profileToData(p: Partial<Profile> | null): OnboardingData {
@@ -62,9 +66,9 @@ export function profileToData(p: Partial<Profile> | null): OnboardingData {
     city: strOr(p.city),
     nationality: strOr(p.nationality),
     profession: strOr(p.profession),
-    affiliation: strOr(p.affiliation),
-    industry: strOr(p.industry),
-    role: strOr(p.role),
+    affiliation: firstOr(p.affiliation),
+    industry: firstOr(p.industry),
+    role: firstOr(p.role),
     favouriteDrink: strOr(p.fave_drink),
     fridayNight: strOr(p.friday_night),
     relationship: strOr(p.relationship),
@@ -78,6 +82,11 @@ export function profileToData(p: Partial<Profile> | null): OnboardingData {
 const trimOrNull = (s: string): string | null => {
   const t = s.trim();
   return t === '' ? null : t;
+};
+
+const arrOrNull = (s: string): string[] | null => {
+  const t = trimOrNull(s);
+  return t === null ? null : [t];
 };
 
 const idOrNull = (s: string): number | null => {
@@ -97,9 +106,9 @@ export function dataToProfilePatch(
     city: trimOrNull(d.city),
     nationality: trimOrNull(d.nationality),
     profession: trimOrNull(d.profession),
-    affiliation: trimOrNull(d.affiliation),
-    industry: trimOrNull(d.industry),
-    role: trimOrNull(d.role),
+    affiliation: arrOrNull(d.affiliation),
+    industry: arrOrNull(d.industry),
+    role: arrOrNull(d.role),
     fave_drink: trimOrNull(d.favouriteDrink),
     friday_night: trimOrNull(d.fridayNight),
     relationship: trimOrNull(d.relationship),

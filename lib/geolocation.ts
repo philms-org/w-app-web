@@ -1,26 +1,76 @@
 import { useStore } from '@/lib/store';
 
-// "Enable it in your browser settings" tells a blocked user THAT something
-// needs fixing but not HOW — the actual steps differ enough by platform
-// (no universal "reset this site's permission" API exists) that a vague
-// pointer just strands people. This gives the concrete path for their
-// platform instead.
-export function locationSettingsInstructions(): string {
-  if (typeof navigator === 'undefined') return 'Enable location for this site in your browser settings, then refresh.';
-  const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) {
-    return 'Open Settings → Safari → Location, set it to "Ask" or "Allow", then come back and refresh this page.';
-  }
-  if (/Android/.test(ua)) {
-    return 'Tap the lock icon next to the address bar → Permissions → Location → Allow, then refresh this page.';
-  }
-  return 'Click the lock icon in your address bar → Site settings → Location → Allow, then refresh this page.';
+export interface LocationFixSteps {
+  steps: string[];
+  // A fallback for when the main steps weren't enough.
+  extra?: string;
+  // In-app browsers can't be fixed from Settings; the way out is Safari.
+  openInSafari?: boolean;
 }
 
-// Same fallback center app/main/page.tsx's modal has always used when
-// geolocation is denied/unsupported — kept identical so behavior doesn't change.
-const FALLBACK_LOCATION = { lat: 40.7128, lng: -74.0060 };
+// "Enable it in your browser settings" tells a blocked user THAT something
+// needs fixing but not HOW — the actual steps differ enough by platform
+// (no web page can open Settings or reset its own permission) that a vague
+// pointer just strands people. This gives the concrete path for their
+// platform instead, shown step by step in LocationFixSheet.
+export function locationFixSteps(): LocationFixSteps {
+  const back = "Come back here — we'll pick it up automatically.";
+  if (typeof navigator === 'undefined') {
+    return { steps: ['Allow location for this site in your browser settings.', back] };
+  }
+  const ua = navigator.userAgent;
+  // iPadOS reports a Mac UA; touch support tells it apart from a real Mac.
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    // Other iOS browsers each get their own row under Location Services.
+    const otherBrowser = /CriOS/.test(ua) ? 'Chrome' : /FxiOS/.test(ua) ? 'Firefox' : /EdgiOS/.test(ua) ? 'Edge' : null;
+    // In-app browsers (Instagram, LinkedIn, Slack, …) are WKWebViews that
+    // inherit the host app's location permission, which usually isn't
+    // granted — no settings change in Safari fixes that.
+    if (!otherBrowser && (!/Safari\//.test(ua) || /FBAN|FBAV|Instagram|LinkedInApp|Line\//.test(ua))) {
+      return {
+        openInSafari: true,
+        steps: [
+          "This in-app browser can't share your location.",
+          'Tap ••• or the share icon, then "Open in Safari" (or copy the link below and paste it into Safari).',
+        ],
+      };
+    }
+    // The most common block is the system-wide switch, not Safari's
+    // per-site setting: Location Services → Safari Websites = "Never"
+    // denies every site instantly without ever showing a prompt.
+    return {
+      steps: [
+        'Open the Settings app.',
+        'Tap Privacy & Security → Location Services, and make sure it\'s on.',
+        `Scroll down to ${otherBrowser ?? 'Safari Websites'} and choose "While Using the App".`,
+        back,
+      ],
+      extra: otherBrowser ? undefined : 'Still blocked? Settings → Apps → Safari → Location → "Ask".',
+    };
+  }
+  if (/Android/.test(ua)) {
+    return {
+      steps: [
+        'Tap the icon at the left of the address bar.',
+        'Tap Permissions → Location → Allow.',
+        back,
+      ],
+      extra: "Still blocked? Make sure Location is on in your phone's quick settings.",
+    };
+  }
+  return {
+    steps: [
+      'Click the icon at the left of the address bar.',
+      'Open Site settings → Location → Allow.',
+      back,
+    ],
+  };
+}
 
+// On failure we never invent a position (this used to write NYC, which put
+// every skipped/blocked user in New York). Denied/unsupported clears it; a
+// timeout or GPS hiccup keeps the last real fix so a check-in isn't dropped.
 // Fetches a fresh position and writes it to the store. Used by the first-run
 // permission modal AND by every manual-refresh entry point (header button,
 // pull-to-refresh, "Enable Location" retry) — there is exactly one place
@@ -34,7 +84,7 @@ export function requestLocation(maximumAge = 0): Promise<void> {
 
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      setCurrentLocation(FALLBACK_LOCATION);
+      setCurrentLocation(null);
       setLocationDenied(true);
       setLocationPermissionBlocked(false);
       resolve();
@@ -43,15 +93,28 @@ export function requestLocation(maximumAge = 0): Promise<void> {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
         setLocationDenied(false);
         setLocationPermissionBlocked(false);
         resolve();
       },
       (error) => {
         console.error('Location error:', error);
-        setCurrentLocation(FALLBACK_LOCATION);
-        setLocationDenied(true);
+        if (error.code === error.PERMISSION_DENIED) {
+          setCurrentLocation(null);
+          setLocationDenied(true);
+        } else if (!useStore.getState().currentLocation) {
+          // Timed out / no signal with nothing to fall back on. Permission is
+          // fine, so the live watch keeps trying and clears this on its fix.
+          setLocationDenied(true);
+        }
+        // else: a slow refresh with a real fix already in hand isn't "off" —
+        // flagging it denied hid the in-range venues and stopped the live
+        // watch, so check-in silently stopped working after one slow read.
         // code 1 = PERMISSION_DENIED: the browser has this site blocked and
         // will keep failing instantly on every retry until the user changes
         // it in their browser's site settings — no in-app retry can fix it.
@@ -67,19 +130,29 @@ export function requestLocation(maximumAge = 0): Promise<void> {
   });
 }
 
-// A fresh, high-accuracy fix for server-verified actions (e.g. posting to a
-// venue feed, where create_venue_post re-checks the distance). Doesn't touch
-// the store. Rejects if location is unavailable or denied.
-export function getFreshPosition(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Location unavailable'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
+// A recent fix for server-verified actions (e.g. posting to a venue feed,
+// where create_venue_post re-checks the distance, allowing for `accuracy`).
+// Doesn't touch the store. Rejects if location is unavailable or denied.
+//
+// This used to demand a brand-new high-accuracy fix (maximumAge 0) within
+// 10s, which routinely timed out indoors — so people at the venue got
+// "Couldn't get your location" when posting. Now a fix up to 15s old is
+// fine, and a timeout falls back to a quicker low-accuracy read.
+export function getFreshPosition(): Promise<{ lat: number; lng: number; accuracy: number }> {
+  const read = (opts: PositionOptions) =>
+    new Promise<{ lat: number; lng: number; accuracy: number }>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+        reject,
+        opts,
+      );
+    });
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.reject(new Error('Location unavailable'));
+  }
+  return read({ enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }).catch((err: GeolocationPositionError) => {
+    if (err?.code === err?.PERMISSION_DENIED) throw err;
+    return read({ enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
   });
 }

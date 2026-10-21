@@ -46,6 +46,7 @@ export const STORAGE_KEYS = {
   LAST_LOCATION_ALERT: 'w_app_last_location_alert',
   LAST_LOCATION_NOTIFICATION: 'w_app_last_location_notification',
   ORGANIZER_WELCOME_SEEN: 'w_app_organizer_welcome_seen',
+  PENDING_VENUE_INVITE: 'w_app_pending_venue_invite',
 };
 
 // The fixed "The W App" system-sender profile used by the location-request

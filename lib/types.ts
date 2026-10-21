@@ -8,9 +8,10 @@ export interface Profile {
   email?: string | null;
   phone?: string | null;
   avatar_url?: string | null;
-  affiliation?: string | null;
-  industry?: string | null;
-  role?: string | null;
+  // text[] in Postgres (the iOS app stores a single-item array).
+  affiliation?: string[] | null;
+  industry?: string[] | null;
+  role?: string[] | null;
   city?: string | null;
   fave_drink?: string | null;
   friday_night?: string | null;
@@ -151,6 +152,33 @@ export interface Reward {
   // set unlocks once the member's location_checkins count at this venue
   // reaches it. Null means "no tier requirement" (visible to everyone).
   min_checkins?: number | null;
+  // Event hotspots (0034): unlocks once the member has visited this many
+  // distinct hotspots of the reward's event. Null = no hotspot requirement.
+  min_hotspots?: number | null;
+}
+
+// Event hotspots (0034): an organizer-recommended place attached to an event.
+export interface EventHotspot {
+  id: string;
+  event_id: string;
+  location_id: string;
+  note: string | null;
+  sort_order: number;
+  created_at: string;
+  place: Venue | null;
+}
+
+export interface HotspotCheckin {
+  location_id: string;
+  checked_in_at: string;
+}
+
+// Hotspot trail off switch (0038): while ended_at is null the event's trail is
+// paused; check-ins in [started_at, ended_at) never count.
+export interface HotspotTrailPause {
+  event_id: string;
+  started_at: string;
+  ended_at: string | null;
 }
 
 export interface Conversation {
@@ -162,6 +190,9 @@ export interface Conversation {
   last_message_at?: string | null;
   my_status: string;
   other_profile?: Profile | null;
+  // Latest message is newer than my last_read_at and someone else sent it
+  // (0043). Left unset on conversations just created client-side.
+  unread?: boolean;
 }
 
 export interface Message {
@@ -290,22 +321,6 @@ export interface VenueZone {
   center_lng: number;
   created_by?: string | null;
   created_at: string;
-}
-
-export interface ActivityMenuItem {
-  id: string;
-  location_id: string;
-  label: string;
-  sort_order: number;
-  created_by: string | null;
-  created_at: string;
-}
-
-export interface AttendeeActivityPick {
-  user_id: string;
-  location_id: string;
-  item_id: string;
-  picked_at: string;
 }
 
 // ---- Badges ----

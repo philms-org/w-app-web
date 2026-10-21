@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import { fetchConversations } from '@/lib/data';
+import { fetchConversations, markConversationRead } from '@/lib/data';
 import { Search, MessageCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
@@ -14,12 +14,15 @@ export default function MessagesTab() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, unread, groups
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadError, setLoadError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [openChat, setOpenChat] = useState<ChatConversation | null>(null);
 
   const loadConversations = useCallback(() => {
     fetchConversations()
       .then((rows) => {
         setLoadError(false);
+        setLoaded(true);
+        useStore.getState().setUnreadCount(rows.filter((c) => c.unread).length);
         setConversations(
           rows.map((c) => ({
             id: c.id,
@@ -28,7 +31,7 @@ export default function MessagesTab() {
             userImage: c.other_profile?.avatar_url ?? '',
             lastMessage: c.last_message ?? 'No messages yet',
             timestamp: c.last_message_at ?? '',
-            unread: false,
+            unread: c.unread,
             online: false,
             isGroup: !!c.is_group,
             myStatus: c.my_status ?? 'accepted',
@@ -68,6 +71,13 @@ export default function MessagesTab() {
 
   const handleOpenChat = (message: any) => {
     setActiveChat(message.id);
+    if (message.unread) {
+      // Clear it locally right away; the server marker follows.
+      setConversations((prev) => prev.map((c) => (c.id === message.id ? { ...c, unread: false } : c)));
+      const { unreadCount, setUnreadCount } = useStore.getState();
+      setUnreadCount(Math.max(0, unreadCount - 1));
+    }
+    markConversationRead(message.id).catch((err) => console.error('Failed to mark conversation read:', err));
     setOpenChat({
       id: message.id,
       userName: message.userName,
@@ -78,9 +88,13 @@ export default function MessagesTab() {
   };
 
   const handleCloseChat = () => {
+    const closedId = openChat?.id;
     setOpenChat(null);
     setActiveChat(null);
-    loadConversations(); // refresh previews after chatting
+    // Messages that arrived while the chat was open count as read too, so
+    // move the marker again before refreshing previews.
+    const markRead = closedId ? markConversationRead(closedId).catch(() => {}) : Promise.resolve();
+    markRead.finally(loadConversations);
   };
 
   const formatTimestamp = (iso: string) => {
@@ -307,7 +321,9 @@ export default function MessagesTab() {
               </div>
             </button>
           ))
-        ) : (
+        ) : conversations.length > 0 && (
+          // You have conversations, but the search or filter hides them all.
+          // (No conversations at all gets the "No Messages Yet" state below.)
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <div style={{
               width: '96px',
@@ -331,14 +347,20 @@ export default function MessagesTab() {
               fontSize: '14px',
               fontFamily: 'Montserrat, system-ui, sans-serif'
             }}>
-              {searchQuery ? 'Try a different search term' : 'Start a conversation by connecting with people at your location'}
+              {searchQuery
+                ? 'Try a different search term'
+                : activeFilter === 'unread'
+                  ? 'You’re all caught up'
+                  : 'No group chats yet'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Empty State (when no messages at all) */}
-      {!searchQuery && filteredMessages.length === 0 && (
+      {/* Empty State (when no messages at all). Waits for the first load so
+          it doesn't flash before conversations arrive or show under the
+          load-error message. */}
+      {loaded && !loadError && conversations.length === 0 && (
         <div style={{
           flex: 1,
           display: 'flex',

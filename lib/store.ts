@@ -52,7 +52,8 @@ interface AppState {
   isAuthenticated: boolean;
   
   // Location State
-  currentLocation: { lat: number; lng: number } | null;
+  // accuracy = the fix's reported error radius in meters, when known.
+  currentLocation: { lat: number; lng: number; accuracy?: number } | null;
   // True when the user denied geolocation (or it's unsupported) and we're
   // showing a fallback map center instead of their real position.
   locationDenied: boolean;
@@ -74,6 +75,9 @@ interface AppState {
   
   // UI State
   activeTab: string;
+  // Set by Home's "add a location" button: the Map tab opens with add mode
+  // already armed, then clears it.
+  mapAddRequested: boolean;
   isLoading: boolean;
   error: string | null;
   
@@ -87,7 +91,7 @@ interface AppState {
   setToken: (token: string | null) => void;
   logout: () => void;
   setHasHydrated: (value: boolean) => void;
-  setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
+  setCurrentLocation: (location: { lat: number; lng: number; accuracy?: number } | null) => void;
   setLocationDenied: (denied: boolean) => void;
   setLocationPermissionBlocked: (blocked: boolean) => void;
   setSelectedLocation: (location: Location | null) => void;
@@ -95,7 +99,9 @@ interface AppState {
   setInLocation: (inLocation: boolean) => void;
   addMessage: (message: Message) => void;
   setActiveChat: (chatId: string | null) => void;
+  setUnreadCount: (count: number) => void;
   setActiveTab: (tab: string) => void;
+  setMapAddRequested: (requested: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -117,6 +123,7 @@ export const useStore = create<AppState>()(
       unreadCount: 0,
       activeChat: null,
       activeTab: 'home',
+      mapAddRequested: false,
       isLoading: false,
       error: null,
       hasHydrated: false,
@@ -153,8 +160,12 @@ export const useStore = create<AppState>()(
       })),
       
       setActiveChat: (chatId) => set({ activeChat: chatId }),
+
+      setUnreadCount: (count) => set({ unreadCount: count }),
       
       setActiveTab: (tab) => set({ activeTab: tab }),
+
+      setMapAddRequested: (requested) => set({ mapAddRequested: requested }),
       
       setLoading: (loading) => set({ isLoading: loading }),
       

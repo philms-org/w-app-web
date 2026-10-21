@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Users, KeyRound } from 'lucide-react';
+import { Plus, Users, KeyRound, MessageCircle } from 'lucide-react';
 import { theme, radius, type as typeTokens } from '@/lib/theme';
 import { Button, Input } from '@/components/ui/primitives';
 import { fetchProfile, fetchTeams, joinTeamByCode, requestToJoinTeam } from '@/lib/data';
 import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
+import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import type { Profile, TeamNeed, TeamWithMembers } from '@/lib/types';
 import { CreateTeamSheet, TeamDetailSheet, NEED_LABEL } from './TeamSheets';
 
@@ -41,11 +42,14 @@ export default function TeamsView({
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [ownAffiliation, setOwnAffiliation] = useState<string | null>(null);
   const myAffiliation = affiliationProp ?? ownAffiliation;
+  // Owners, co-owners and master admins create teams for others and run any
+  // team here, checked in or not (0042).
+  const { canManage } = useIsOrganizer(locationId);
 
   // The sign-up "Team idea or company" answer is stored as affiliation.
   useEffect(() => {
     if (!myUserId) return;
-    fetchProfile(myUserId).then((p) => setOwnAffiliation(p.affiliation ?? null)).catch(() => {});
+    fetchProfile(myUserId).then((p) => setOwnAffiliation(p.affiliation?.[0] ?? null)).catch(() => {});
   }, [myUserId]);
 
   const load = useCallback(() => {
@@ -158,17 +162,19 @@ export default function TeamsView({
         </div>
       )}
 
-      {!myTeam && checkedIn && (
+      {(canManage || (!myTeam && checkedIn)) && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <Button style={{ minHeight: 48, flex: 1 }} onClick={() => setCreating(true)}>
             <Plus size={16} />&nbsp;Create a team
           </Button>
-          <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setCodeOpen((v) => !v)} aria-expanded={codeOpen}>
-            <KeyRound size={16} />&nbsp;Have a code?
-          </Button>
+          {!myTeam && checkedIn && (
+            <Button variant="secondary" style={{ minHeight: 48 }} onClick={() => setCodeOpen((v) => !v)} aria-expanded={codeOpen}>
+              <KeyRound size={16} />&nbsp;Have a code?
+            </Button>
+          )}
         </div>
       )}
-      {!checkedIn && (
+      {!checkedIn && !canManage && (
         <p style={{ color: theme.muted, fontSize: 13, margin: '0 0 12px' }}>Check in to create or join a team. You can still browse.</p>
       )}
 
@@ -225,7 +231,11 @@ export default function TeamsView({
               >
                 <span style={{ display: 'block', fontSize: 16, fontWeight: 700, color: theme.text }}>{t.name}</span>
                 <span style={{ display: 'block', fontSize: 13, color: theme.muted }}>
-                  {t.members.length} of {t.max_size} · {t.members[0]?.profile?.display_name ?? 'Owner'}
+                  {t.members.length} of {t.max_size}
+                  {t.kind === 'company' ? ' · Company' : ''}
+                </span>
+                <span style={{ display: 'block', fontSize: 13, color: theme.text, marginTop: 2 }}>
+                  {t.members.length === 0 ? 'No one yet' : t.members.map((m) => (m.user_id === myUserId ? 'You' : m.profile?.display_name ?? 'Someone')).join(', ')}
                 </span>
                 {t.idea && <span style={{ display: 'block', fontSize: 15, marginTop: 6, color: theme.text }}>{t.idea}</span>}
               </button>
@@ -242,6 +252,10 @@ export default function TeamsView({
                 {mine ? (
                   <Button variant="secondary" style={{ minHeight: 44 }} onClick={() => setOpenId(t.id)}>Open your team</Button>
                 ) : (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button variant="secondary" style={{ minHeight: 44 }} onClick={() => setOpenId(t.id)}>
+                    <MessageCircle size={14} />&nbsp;See members &amp; message
+                  </Button>
                   <Button
                     variant="secondary"
                     style={{ minHeight: 44 }}
@@ -252,6 +266,7 @@ export default function TeamsView({
                   >
                     {full ? 'Team is full' : requested ? 'Requested' : myTeam ? 'You’re on a team' : 'Ask to join'}
                   </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -262,7 +277,7 @@ export default function TeamsView({
       {creating && (
         <CreateTeamSheet
           locationId={locationId}
-          defaultName={myAffiliation ?? ''}
+          defaultName={canManage ? '' : myAffiliation ?? ''}
           onClose={() => setCreating(false)}
           onDone={(t) => { setCreating(false); load(); if (t) setOpenId(t.id); }}
         />
@@ -288,6 +303,7 @@ export default function TeamsView({
           onClose={() => setOpenId(null)}
           onChanged={load}
           onEdit={() => setEditing(openTeam)}
+          canManage={canManage}
         />
       )}
     </div>

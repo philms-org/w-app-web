@@ -10,16 +10,45 @@ import HomeTab from '@/components/tabs/HomeTab';
 import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
-import HistoryTab from '@/components/tabs/HistoryTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import { theme, elevation } from '@/lib/theme';
+import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
+import { useUnreadCount } from '@/lib/hooks/useUnreadCount';
+import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
+import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
+import LocationDebug from '@/components/shared/LocationDebug';
 import { MapPin } from 'lucide-react';
+
+const LOCATION_SNOOZE_KEY = 'w_app_location_snoozed_until';
+const LOCATION_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+function isLocationPromptSnoozed(): boolean {
+  try {
+    return Number(localStorage.getItem(LOCATION_SNOOZE_KEY) ?? 0) > Date.now();
+  } catch {
+    return false;
+  }
+}
 
 export default function MainPage() {
   const router = useRouter();
-  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setCurrentLocation, setLocationDenied } = useStore();
+  const { isAuthenticated, hasHydrated, activeTab, setActiveTab, unreadCount, currentLocation, setLocationDenied } = useStore();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
+  const [inviteError, dismissInviteError] = usePendingVenueInvite();
+  // Messages tab badge.
+  useUnreadCount(hasHydrated && isAuthenticated);
+  const locationDenied = useStore((s) => s.locationDenied);
+  const locationPermissionBlocked = useStore((s) => s.locationPermissionBlocked);
+  // Set once the location request has been answered. A first fix that
+  // times out indoors leaves us with no position, so the watch has to start
+  // from the grant itself, not from having a fix — otherwise one slow GPS
+  // read stranded people on "Location's off" until they pulled to refresh.
+  const [liveWanted, setLiveWanted] = useState(false);
+  // Keep following the device so walking into a venue registers.
+  useLiveLocation(!locationPermissionBlocked && (liveWanted || (!!currentLocation && !locationDenied)));
+  // Location blocked: pick up a fix made in Settings as soon as they're back.
+  useLocationRecovery();
 
   useEffect(() => {
     // Wait for the persisted store to rehydrate before deciding — otherwise
@@ -41,7 +70,41 @@ export default function MainPage() {
     // gate (components/LandingLocationGate.tsx) on the very first visit,
     // which silently disabled this prompt for every session after that.
     if (!currentLocation && !locationPermissionAsked) {
-      setShowLocationPrompt(true);
+      // Already granted in the browser: fetch quietly instead of asking again
+      // on every app open. Falls back to the prompt where the Permissions API
+      // is missing or the answer is "prompt"/"denied".
+      let cancelled = false;
+      const showPrompt = () => { if (!cancelled) setShowLocationPrompt(true); };
+      if (navigator.permissions?.query) {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then((status) => {
+            if (cancelled) return;
+            if (status.state === 'granted') {
+              setLocationPermissionAsked(true);
+              requestLocation().then(() => setLiveWanted(true));
+            } else if (status.state === 'denied') {
+              // Blocked in the browser: our Allow button can't change that,
+              // so skip the modal and let Home's location card explain how
+              // to turn it back on.
+              setLocationPermissionAsked(true);
+              setLocationDenied(true);
+              useStore.getState().setLocationPermissionBlocked(true);
+            } else if (isLocationPromptSnoozed()) {
+              setLocationPermissionAsked(true);
+              setLocationDenied(true);
+            } else {
+              showPrompt();
+            }
+          })
+          .catch(showPrompt);
+      } else if (isLocationPromptSnoozed()) {
+        setLocationPermissionAsked(true);
+        setLocationDenied(true);
+      } else {
+        showPrompt();
+      }
+      return () => { cancelled = true; };
     }
   }, [hasHydrated, isAuthenticated, router, currentLocation, locationPermissionAsked]);
 
@@ -49,15 +112,24 @@ export default function MainPage() {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
     setShowLocationPrompt(false);
-    requestLocation();
+    // Start watching only once the browser's prompt has been answered, so
+    // the watch can never raise a second prompt of its own.
+    requestLocation().then(() => setLiveWanted(true));
   };
 
   const handleDenyLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('w_app_location_permission_asked', 'true');
-    setCurrentLocation({ lat: 40.7128, lng: -74.0060 });
+    // Leave currentLocation empty: a made-up position (this used to be NYC)
+    // sorted search, map and distances around a city the user isn't in.
     setLocationDenied(true);
     setShowLocationPrompt(false);
+    // "Maybe Later" used to be forgotten on reload, so the modal came back
+    // on every app open. Hold it off for a day; Home's location card still
+    // offers to turn location on in the meantime.
+    try {
+      localStorage.setItem(LOCATION_SNOOZE_KEY, String(Date.now() + LOCATION_SNOOZE_MS));
+    } catch {}
   };
 
   const renderTab = () => {
@@ -70,8 +142,6 @@ export default function MainPage() {
         return <MessagesTab />;
       case 'profile':
         return <ProfileTab />;
-      case 'history':
-        return <HistoryTab />;
       default:
         return <HomeTab />;
     }
@@ -83,6 +153,7 @@ export default function MainPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
+      <LocationDebug />
       {activeTab === 'home' && <AppHeader />}
 
       {/* Main content */}
@@ -99,6 +170,22 @@ export default function MainPage() {
       />
 
       <ProfileSetupPrompt />
+
+      {inviteError && (
+        <div
+          role="alert"
+          onClick={dismissInviteError}
+          style={{
+            position: 'fixed', left: 16, right: 16, bottom: 'calc(80px + env(safe-area-inset-bottom))',
+            zIndex: 9998, maxWidth: 420, margin: '0 auto', padding: '12px 16px', borderRadius: 12,
+            backgroundColor: theme.surface, color: theme.text, boxShadow: elevation.glass,
+            fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 14, fontWeight: 600, textAlign: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          {inviteError}
+        </div>
+      )}
 
       {/* Location Permission Prompt */}
       {showLocationPrompt && (

@@ -24,7 +24,6 @@ import type {
   ContactMethodBreakdownEntry,
   EngagementStats,
   VenueZone,
-  ActivityMenuItem,
   Badge,
   ZoneAnalytics,
   CrossVenueMovementEntry,
@@ -304,7 +303,7 @@ export async function fetchFeed(locationId: string): Promise<FeedItem[]> {
 
 // History for one venue: its venue-feed posts (readable after you leave, RLS
 // 0030) merged with any older feed_posts, newest first, in the FeedItem shape
-// HistoryTab/HistoryPanel already render.
+// HistoryPanel already renders.
 export async function fetchVenueHistory(locationId: string): Promise<FeedItem[]> {
   const [venuePosts, legacy] = await Promise.all([
     fetchVenuePosts(locationId, 200),
@@ -345,18 +344,35 @@ export async function fetchPresence(locationId: string): Promise<Presence[]> {
   return data ?? [];
 }
 
+// Same 12h window as the 0007 cleanup: an open check-in older than this is a
+// forgotten session, not a current visit.
+const STALE_CHECKIN_MS = 12 * 60 * 60 * 1000;
+
 export async function checkIn(locationId: string): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) return;
   const { data: existing, error: existingError } = await supabase
     .from('location_checkins')
-    .select('id')
+    .select('id, checked_in_at')
     .eq('user_id', uid)
     .eq('location_id', locationId)
     .is('checked_out_at', null)
     .limit(1);
   if (existingError) throw existingError;
-  if (!existing || existing.length === 0) {
+  // A forgotten session (never checked out) would otherwise count as "already
+  // checked in" forever, blocking hotspot stamps and new visits. Close an open
+  // row older than STALE_CHECKIN_MS and start a fresh one.
+  const open = existing?.[0];
+  const isStale =
+    !!open && Date.now() - new Date(open.checked_in_at).getTime() > STALE_CHECKIN_MS;
+  if (open && isStale) {
+    const { error: closeError } = await supabase
+      .from('location_checkins')
+      .update({ checked_out_at: new Date().toISOString() })
+      .eq('id', open.id);
+    if (closeError) throw closeError;
+  }
+  if (!open || isStale) {
     const { error } = await supabase
       .from('location_checkins')
       .insert({ user_id: uid, location_id: locationId, mode: 'live' });
@@ -408,6 +424,40 @@ async function autoJoinVenueChatIfEnabled(locationId: string, uid: string): Prom
       { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
     );
   if (joinError) throw joinError;
+}
+
+// The venue I'm checked in at right now, if any. Same 12h window as the
+// 0007 cleanup, so a check-in forgotten yesterday doesn't count.
+export async function fetchMyOpenCheckinVenue(): Promise<Venue | null> {
+  const uid = await getCurrentUserId();
+  if (!uid) return null;
+  const since = new Date(Date.now() - STALE_CHECKIN_MS).toISOString();
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('location_id')
+    .eq('user_id', uid)
+    .is('checked_out_at', null)
+    .gte('checked_in_at', since)
+    .order('checked_in_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const locationId = data?.[0]?.location_id as string | undefined;
+  return locationId ? fetchVenue(locationId) : null;
+}
+
+export async function hasOpenCheckin(locationId: string): Promise<boolean> {
+  const uid = await getCurrentUserId();
+  if (!uid) return false;
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('location_id', locationId)
+    .is('checked_out_at', null)
+    .gte('checked_in_at', new Date(Date.now() - STALE_CHECKIN_MS).toISOString())
+    .limit(1);
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function checkOut(locationId: string): Promise<void> {
@@ -485,6 +535,26 @@ export async function fetchMyCheckinCount(locationId: string): Promise<number> {
   return count ?? 0;
 }
 
+// Profile header counts: connections (friendships rows), check-ins and the
+// distinct venues they were at (live location_checkins, the same rows the
+// attendance tiers count).
+export async function fetchMyProfileStats(): Promise<{ connections: number; locations: number; checkins: number }> {
+  const uid = await getCurrentUserId();
+  if (!uid) return { connections: 0, locations: 0, checkins: 0 };
+  const [friends, checkins] = await Promise.all([
+    supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+    supabase.from('location_checkins').select('location_id').eq('user_id', uid).eq('mode', 'live'),
+  ]);
+  if (friends.error) throw friends.error;
+  if (checkins.error) throw checkins.error;
+  const rows = (checkins.data ?? []) as { location_id: string }[];
+  return {
+    connections: friends.count ?? 0,
+    locations: new Set(rows.map((r) => r.location_id)).size,
+    checkins: rows.length,
+  };
+}
+
 // Highest-threshold reward a member with `checkinCount` visits has earned
 // at this venue, given the venue's active tiered rewards (min_checkins set).
 // Used by the Members roster to show each member's current tier badge.
@@ -529,7 +599,7 @@ export async function createReward(
 
 export async function updateReward(
   id: string,
-  fields: Partial<Pick<Reward, 'name' | 'deal_text' | 'instructions' | 'icon_type' | 'display_order' | 'is_active' | 'min_checkins'>>
+  fields: Partial<Pick<Reward, 'name' | 'deal_text' | 'instructions' | 'icon_type' | 'display_order' | 'is_active' | 'min_checkins' | 'min_hotspots'>>
 ): Promise<void> {
   const { error } = await supabase.from('rewards').update(fields).eq('id', id);
   if (error) throw error;
@@ -572,66 +642,6 @@ export async function updateVenueZone(
 
 export async function deleteVenueZone(id: string): Promise<void> {
   const { error } = await supabase.from('venue_zones').delete().eq('id', id);
-  if (error) throw error;
-}
-
-// ---- Activity menu (per-venue "activity words") ----
-
-export async function fetchActivityMenu(locationId: string): Promise<ActivityMenuItem[]> {
-  const { data, error } = await supabase
-    .from('activity_menu_items')
-    .select()
-    .eq('location_id', locationId)
-    .order('sort_order');
-  if (error) throw error;
-  return (data ?? []) as ActivityMenuItem[];
-}
-
-export async function createActivityMenuItem(
-  locationId: string,
-  label: string,
-  sortOrder: number,
-): Promise<ActivityMenuItem> {
-  const uid = await getCurrentUserId();
-  const { data, error } = await supabase
-    .from('activity_menu_items')
-    .insert({ location_id: locationId, label, sort_order: sortOrder, created_by: uid })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as ActivityMenuItem;
-}
-
-export async function updateActivityMenuItem(
-  id: string,
-  fields: Partial<Pick<ActivityMenuItem, 'label' | 'sort_order'>>,
-): Promise<void> {
-  const { error } = await supabase.from('activity_menu_items').update(fields).eq('id', id);
-  if (error) throw error;
-}
-
-export async function deleteActivityMenuItem(id: string): Promise<void> {
-  const { error } = await supabase.from('activity_menu_items').delete().eq('id', id);
-  if (error) throw error;
-}
-
-export async function fetchMyActivityPicks(locationId: string): Promise<string[]> {
-  const uid = await getCurrentUserId();
-  if (!uid) return [];
-  const { data, error } = await supabase
-    .from('attendee_activity_picks')
-    .select('item_id')
-    .eq('user_id', uid)
-    .eq('location_id', locationId);
-  if (error) throw error;
-  return (data ?? []).map((r) => (r as { item_id: string }).item_id);
-}
-
-export async function setMyActivityPicks(locationId: string, itemIds: string[]): Promise<void> {
-  const { error } = await supabase.rpc('set_activity_picks', {
-    p_location_id: locationId,
-    p_item_ids: itemIds,
-  });
   if (error) throw error;
 }
 
@@ -1185,7 +1195,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 
   const { data: rows, error } = await supabase
     .from('conversation_participants')
-    .select('conversation_id, status, conversations(id, is_group, name)')
+    .select('conversation_id, status, last_read_at, conversations(id, is_group, name)')
     .eq('user_id', uid);
   if (error) throw error;
 
@@ -1222,9 +1232,18 @@ export async function fetchConversations(): Promise<Conversation[]> {
       last_message_at: recent?.[0]?.created_at ?? null,
       my_status: row.status,
       other_profile: otherProfile,
+      unread: !!recent?.[0]
+        && recent[0].sender_id !== uid
+        && (!row.last_read_at || new Date(recent[0].created_at) > new Date(row.last_read_at)),
     });
   }
   return result;
+}
+
+// Moves my read marker on this conversation to now (0043).
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId });
+  if (error) throw error;
 }
 
 export async function fetchMessages(conversationId: string): Promise<Message[]> {
@@ -2073,6 +2092,94 @@ export async function canAnnounceAt(locationId: string): Promise<boolean> {
   return !!data;
 }
 
+// ---- Pre-arrival feed access (migration 0035) ----------------------------
+
+/** Server's feed read rule: checked in here before, or joined by invite link while it's on. */
+export async function canReadVenueFeed(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_read_venue_feed', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+/** Attending by link (or a guest) while that link is on (0037: no time limit). Can post/like/comment from anywhere. */
+export async function hasEarlyAccess(locationId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_early_access', { p_location_id: locationId });
+  if (error) throw error;
+  return !!data;
+}
+
+export type VenueInvite = {
+  token: string;
+  enabled: boolean;
+  guest_token: string | null;
+  guest_enabled: boolean;
+};
+
+/** Managers only (RLS): the venue's attendee link + guest pass state, or null if never set up. */
+export async function fetchVenueInvite(locationId: string): Promise<VenueInvite | null> {
+  const { data, error } = await supabase
+    .from('venue_invites')
+    .select('token, enabled, guest_token, guest_enabled')
+    .eq('location_id', locationId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Turn the attendee link on/off; `rotate` replaces it. Returns the current token. */
+export async function setVenueInvite(locationId: string, enabled: boolean, rotate = false): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_invite', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_event_starts_at: null, // 0037: attendee access no longer ends at the event start
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Turn the guest pass (investors / sponsors) on/off; `rotate` replaces it. Returns the current guest token. */
+export async function setVenueGuestPass(locationId: string, enabled: boolean, rotate = false): Promise<string> {
+  const { data, error } = await supabase.rpc('set_venue_guest_pass', {
+    p_location_id: locationId,
+    p_enabled: enabled,
+    p_rotate: rotate,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export type VenueAttendee = { profile: Profile; kind: 'attendee' | 'guest' };
+
+/**
+ * Everyone attending this venue by link (or by checking in while the link was
+ * on) plus guests, for anyone who can see its feed (0037). Whether they're in
+ * the room right now comes from fetchPresence, not from here.
+ */
+export async function fetchVenueAttendees(locationId: string): Promise<VenueAttendee[]> {
+  const { data: rows, error } = await supabase.rpc('venue_attendees', { p_location_id: locationId });
+  if (error) throw error;
+  const kinds = new Map(((rows ?? []) as { user_id: string; kind: VenueAttendee['kind'] }[]).map((r) => [r.user_id, r.kind]));
+  if (kinds.size === 0) return [];
+  const { data: profiles, error: pErr } = await supabase
+    .from(PUBLIC_PROFILE)
+    .select()
+    .in('id', Array.from(kinds.keys()));
+  if (pErr) throw pErr;
+  return ((profiles ?? []) as Profile[]).map((profile) => ({ profile, kind: kinds.get(profile.id) ?? 'attendee' }));
+}
+
+/** Redeem an invite link token; returns the venue id it opens. */
+export async function redeemVenueInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('redeem_venue_invite', { p_token: token });
+  if (error) throw error;
+  return data as string;
+}
+
+export function venueInviteUrl(token: string): string {
+  return `${window.location.origin}/join/${token}`;
+}
+
 export async function fetchVenueAnnouncerIds(locationId: string): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('venue_announcers')
@@ -2135,17 +2242,20 @@ export async function fetchConnectionsPosts(limit = 20): Promise<VenuePost[]> {
 // real id (and recognise the realtime INSERT echo of its own post).
 // Goes through create_venue_post() (0030), which re-checks on the server that
 // the caller is checked in AND within the venue's radius at (lat, lng).
+// Invitees with early access (0035) skip that check, so they pass nulls.
 export async function createVenuePost(
   locationId: string,
   body: string,
-  lat: number,
-  lng: number,
+  lat: number | null,
+  lng: number | null,
+  accuracy: number | null = null,
 ): Promise<VenuePost> {
   const { data, error } = await supabase.rpc('create_venue_post', {
     p_location_id: locationId,
     p_body: body.trim(),
     p_lat: lat,
     p_lng: lng,
+    p_accuracy: accuracy,
   });
   if (error) throw error;
   return data as VenuePost;
@@ -2412,6 +2522,12 @@ export async function removeTeamMember(teamId: string, userId: string): Promise<
   if (error) throw teamError(error, "Couldn't update the team. Try again.");
 }
 
+// Organizers only (0042). Members and requests go with the team.
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_team', { p_team_id: teamId });
+  if (error) throw teamError(error, "Couldn't delete the team. Try again.");
+}
+
 export async function updateTeam(
   teamId: string,
   fields: { name: string; idea?: string; needs?: TeamNeed[]; maxSize?: number },
@@ -2435,4 +2551,19 @@ export async function fetchCheckedInUserIds(locationId: string): Promise<string[
     .is('checked_out_at', null);
   if (error) throw error;
   return Array.from(new Set((data ?? []).map((r: { user_id: string }) => r.user_id)));
+}
+
+// People checked in right now at every venue, keyed by location id (map pins).
+export async function fetchCheckedInCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('location_checkins')
+    .select('location_id, user_id')
+    .is('checked_out_at', null);
+  if (error) throw error;
+  const users = new Map<string, Set<string>>();
+  for (const r of (data ?? []) as { location_id: string; user_id: string }[]) {
+    if (!users.has(r.location_id)) users.set(r.location_id, new Set());
+    users.get(r.location_id)!.add(r.user_id);
+  }
+  return Object.fromEntries(Array.from(users, ([id, set]) => [id, set.size]));
 }

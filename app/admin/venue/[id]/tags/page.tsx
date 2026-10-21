@@ -46,6 +46,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
         </p>
         <Link
           href="/admin"
+          replace
           style={{ color: theme.accent, fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}
         >
           Back to admin
@@ -64,6 +65,7 @@ export default function AdminVenueTagsPage({ params }: { params: Promise<{ id: s
       }}>
         <Link
           href="/admin"
+          replace
           style={{ color: theme.accent, fontSize: '13px', fontWeight: 600, fontFamily: 'Montserrat, system-ui, sans-serif', textDecoration: 'none' }}
         >
           Back to admin

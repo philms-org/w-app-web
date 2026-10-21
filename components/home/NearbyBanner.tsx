@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchVenues } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { requestLocation, locationSettingsInstructions } from '@/lib/geolocation';
+import { requestLocation } from '@/lib/geolocation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
-import { haversineMeters, DEFAULT_RADIUS_METERS } from '@/lib/geo';
+import { haversineMeters, isWithinGeofence, DEFAULT_RADIUS_METERS, venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import { MapPinPlus, Plus, RefreshCw, Search, Eye } from 'lucide-react';
 import VenuePeekModal from '@/components/home/VenuePeekModal';
+import LocationFixSheet from '@/components/shared/LocationFixSheet';
+import HotspotBadge from '@/components/hotspots/HotspotBadge';
+import { useActiveHotspotPlaces } from '@/lib/hooks/useActiveHotspotPlaces';
 
 const FONT = 'Montserrat, system-ui, sans-serif';
 // Teal outline from the founder's Home mock (2026-09-30) — the location card's
@@ -17,14 +20,26 @@ const FONT = 'Montserrat, system-ui, sans-serif';
 const CARD_EDGE = '#4FD1C5';
 // How many of the nearest out-of-range venues to list under the in-range ones.
 const NEARBY_LIMIT = 5;
+// A fix less precise than this is an estimate (Wi-Fi/IP), not GPS.
+const APPROXIMATE_METERS = 500;
+
+function formatDistance(meters: number): string {
+  return meters < 1000 ? `${Math.round(meters)} m` : `${Math.round(meters / 1000)} km`;
+}
 
 // Top-of-Home location card. Two states, per the founder's mock:
 //   - venues detected: a stacked menu of venue pills (tap to check in, or
 //     peek at nearby ones), with an add-location pin in the corner
 //   - not recognized / location off: "We don't recognize where you are —
 //     add this location/event or search", over a faded map
-export default function NearbyBanner() {
-  const { currentLocation, locationDenied, locationPermissionBlocked, setSelectedLocation } = useStore();
+export default function NearbyBanner({ checkedInVenueId = null }: {
+  // The venue you're still checked in at (back keeps you checked in), so its
+  // hotspots get marked on the pills even when it isn't a dated event.
+  checkedInVenueId?: string | null;
+} = {}) {
+  const { currentLocation, locationDenied, locationPermissionBlocked, selectedLocation, setSelectedLocation } = useStore();
+  // Flame / check marker on pills for places that are hotspots right now.
+  const activeHotspots = useActiveHotspotPlaces(selectedLocation?.id ?? checkedInVenueId);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -32,8 +47,7 @@ export default function NearbyBanner() {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState('');
   const [peekVenue, setPeekVenue] = useState<Venue | null>(null);
-  const [showComingSoon, setShowComingSoon] = useState(false);
-  const comingSoonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showLocationFix, setShowLocationFix] = useState(false);
 
   // A denied/timed-out/unsupported geolocation request still writes a
   // hardcoded fallback coordinate to the store (see lib/geolocation.ts), so
@@ -79,7 +93,7 @@ export default function NearbyBanner() {
     const nearbyList: Venue[] = [];
     for (const { venue, distance } of withDistance) {
       const radius = venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS;
-      if (distance <= radius) inRangeList.push(venue);
+      if (isWithinGeofence(distance, radius, currentLocation.accuracy)) inRangeList.push(venue);
       else nearbyList.push(venue);
     }
     return { inRange: inRangeList, nearby: nearbyList };
@@ -89,18 +103,7 @@ export default function NearbyBanner() {
     // Same Venue -> store Location conversion MapTab.tsx uses for its own
     // "Check In Here" button — CheckedInHero's geofence math depends on this
     // exact shape (latitude/longitude/radius, not lat/lng/geofence_radius_meters).
-    setSelectedLocation({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description ?? '',
-      latitude: venue.lat as number,
-      longitude: venue.lng as number,
-      radius: venue.geofence_radius_meters ?? DEFAULT_RADIUS_METERS,
-      count: 0,
-      category: 'venue',
-      isHot: false,
-      banner_image: venue.banner_image ?? null,
-    });
+    setSelectedLocation(venueToLocation(venue));
   };
 
   // Without a real fix, picking a venue sets it as your location (the old
@@ -116,25 +119,12 @@ export default function NearbyBanner() {
     setQuery('');
   };
 
-  // Adding a location isn't available yet on the live app (the request
-  // flow's table, migration 0020, isn't on prod), so + says so for now.
+  // Location requests (migration 0020) are live: + hands off to the Map
+  // tab's add flow, armed so the next map tap places the pin.
   const openAddLocation = () => {
-    setShowComingSoon(true);
-    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
-    comingSoonTimer.current = setTimeout(() => setShowComingSoon(false), 3000);
+    useStore.getState().setMapAddRequested(true);
+    useStore.getState().setActiveTab('map');
   };
-  useEffect(() => () => {
-    if (comingSoonTimer.current) clearTimeout(comingSoonTimer.current);
-  }, []);
-
-  const comingSoonNote = showComingSoon && (
-    <p role="status" style={{
-      margin: '30px auto 0', width: 'fit-content', padding: '8px 14px', borderRadius: 9999,
-      backgroundColor: theme.surface2, color: theme.text, fontSize: 13, fontWeight: 600, fontFamily: FONT,
-    }}>
-      Adding locations is coming soon
-    </p>
-  );
 
   const circleButton = (size: number): React.CSSProperties => ({
     width: size, height: size, borderRadius: 9999, border: 'none', flexShrink: 0,
@@ -167,11 +157,16 @@ export default function NearbyBanner() {
     </div>
   );
 
-  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => (
+  const venuePill = (venue: Venue, action: 'checkin' | 'peek') => {
+    const hotspot = activeHotspots.get(venue.id);
+    const hotspotLabel = hotspot
+      ? `, hotspot for ${hotspot.eventName}${hotspot.stamped ? ', stamped' : ''}`
+      : '';
+    return (
     <button
       key={venue.id}
       onClick={() => (action === 'checkin' ? handleCheckIn(venue) : setPeekVenue(venue))}
-      aria-label={action === 'checkin' ? `Check in at ${venue.name}` : `Peek at ${venue.name}`}
+      aria-label={`${action === 'checkin' ? 'Check in at' : 'Peek at'} ${venue.name}${hotspotLabel}`}
       style={{
         position: 'relative', flexShrink: 0, width: '100%', minHeight: 48, borderRadius: 9999,
         border: '1.5px solid rgba(0,0,0,0.55)', overflow: 'hidden', cursor: 'pointer',
@@ -186,9 +181,11 @@ export default function NearbyBanner() {
       }}
     >
       {action === 'peek' && <Eye aria-hidden style={{ width: 14, height: 14, flexShrink: 0 }} />}
+      {hotspot && <HotspotBadge stamped={hotspot.stamped} />}
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{venue.name}</span>
     </button>
-  );
+    );
+  };
 
   // ---------------------------------------------------------- venues detected
   if (hasRealLocation && !loading && inRange.length > 0) {
@@ -220,7 +217,6 @@ export default function NearbyBanner() {
             <MapPinPlus style={{ width: 20, height: 20, color: theme.onAccent }} />
           </button>
         </section>
-        {comingSoonNote}
         {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
       </div>
     );
@@ -230,13 +226,21 @@ export default function NearbyBanner() {
   const searchable = (hasRealLocation ? nearby : venues.filter((v) => v.lat != null && v.lng != null))
     .filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()));
 
+  // Laptops (and phones with Precise Location off) estimate position from
+  // Wi-Fi/IP, often miles off — saying "we don't recognize where you are"
+  // then reads like the app is broken, so name the real cause instead.
+  const accuracy = currentLocation?.accuracy;
+  const approximate = hasRealLocation && accuracy != null && accuracy > APPROXIMATE_METERS;
+
   const eyebrow = locationPermissionBlocked
     ? 'Location is blocked for this site'
     : !hasRealLocation
       ? "Location's off"
-      : loading
-        ? 'Finding venues near you…'
-        : "We don't recognize where you are";
+      : approximate
+        ? `Your location is approximate (±${formatDistance(accuracy)})`
+        : loading
+          ? 'Finding venues near you…'
+          : "We don't recognize where you are";
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -276,10 +280,24 @@ export default function NearbyBanner() {
           </button>
         </p>
 
-        {locationPermissionBlocked && (
+        {approximate && (
           <p style={{ fontSize: 12, lineHeight: 1.5, color: '#4A4D55', margin: '8px 8px 0' }}>
-            {locationSettingsInstructions()}
+            Your device is guessing from Wi-Fi, not GPS. Open the app on your phone with Precise
+            Location on, or search for your event.
           </p>
+        )}
+
+        {locationPermissionBlocked && (
+          <button
+            onClick={() => setShowLocationFix(true)}
+            style={{
+              marginTop: 10, minHeight: 36, padding: '8px 16px', borderRadius: 999, border: 'none',
+              backgroundColor: '#15161A', color: '#fff', fontSize: 13, fontWeight: 700,
+              fontFamily: FONT, cursor: 'pointer',
+            }}
+          >
+            Show me how to turn it on
+          </button>
         )}
 
         {showSearch && (
@@ -338,8 +356,8 @@ export default function NearbyBanner() {
           <Plus style={{ width: 26, height: 26, color: '#fff' }} strokeWidth={3} />
         </button>
       </section>
-      {comingSoonNote}
       {peekVenue && <VenuePeekModal venue={peekVenue} onClose={() => setPeekVenue(null)} />}
+      {showLocationFix && <LocationFixSheet onClose={() => setShowLocationFix(false)} />}
     </div>
   );
 }
