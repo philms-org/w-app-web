@@ -18,12 +18,24 @@ export default function EditLinkSheet({ slotOrder, existing, onSave, onClose }: 
   const [value, setValue] = useState(existing?.value ?? '');
   const [enabled, setEnabled] = useState(existing?.is_enabled ?? true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    const trimmed = value.trim();
+    if (!trimmed && enabled) {
+      setError('Add something first, or turn this one off.');
+      return;
+    }
     setSaving(true);
+    setError(null);
     try {
-      await onSave({ slot_order: slotOrder, type, value: value.trim(), is_enabled: enabled });
+      await onSave({ slot_order: slotOrder, type, value: trimmed, is_enabled: enabled });
       onClose();
+    } catch (err) {
+      // Previously swallowed, so a failed save looked like nothing happened.
+      console.error('Failed to save link:', err);
+      const msg = (err as { message?: string })?.message ?? '';
+      setError(msg ? `Couldn't save: ${msg}` : "Couldn't save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -67,9 +79,16 @@ export default function EditLinkSheet({ slotOrder, existing, onSave, onClose }: 
         <Input
           label="Value"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => { setValue(e.target.value); setError(null); }}
           placeholder={contactTypeMeta(type).hint}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode={type === 'phone' || type === 'whatsapp' ? 'tel' : type === 'email' ? 'email' : type === 'website' || type === 'linkedin' ? 'url' : 'text'}
         />
+        {error && (
+          <p role="alert" style={{ color: theme.accent2, fontSize: typeTokens.label.fontSize, margin: 0 }}>{error}</p>
+        )}
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: theme.text, fontSize: typeTokens.label.fontSize, fontWeight: 600, cursor: 'pointer' }}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} style={{ width: 18, height: 18, accentColor: theme.accent }} />
