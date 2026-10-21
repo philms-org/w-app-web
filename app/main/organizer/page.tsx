@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck, BarChart3, Flame } from 'lucide-react';
+import { ChevronLeft, Users, Megaphone, Image, Gift, FileText, MessageCircle, Map, Send, Settings, UserCheck, BarChart3, Flame, Lightbulb, Trophy, Ticket } from 'lucide-react';
 import { fetchMyVenues, fetchVenueMembers, fetchVenueReports, fetchVenueConversation, fetchPendingJoinRequests } from '@/lib/data';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
@@ -80,6 +80,9 @@ const TOOLS: Tool[] = [
   { label: 'Zones', icon: Map, href: (id) => `/main/venue/zones?locationId=${id}` },
   { label: 'Hotspots', icon: Flame, href: (id) => `/main/venue/hotspots?locationId=${id}` },
   { label: 'Titles', icon: UserCheck, href: (id) => `/admin/venue/${id}/tags` },
+  { label: 'Pitches', icon: Lightbulb, href: (id) => `/main/venue/pitches?locationId=${id}` },
+  { label: 'Judging', icon: Trophy, href: (id) => `/main/venue/judging?locationId=${id}` },
+  { label: 'Ticket list', icon: Ticket, href: (id) => `/main/venue/tickets?locationId=${id}` },
   { label: 'Edit Info', icon: Settings, href: (id) => `/main/venue/edit?locationId=${id}` },
 ];
 

@@ -8,6 +8,7 @@ import {
   fetchEventTrackingSummary,
   type EventTrackingSummary,
 } from '@/lib/eventTracking';
+import { fetchEventOutcomes, type EventOutcomes } from '@/lib/eventOutcomes';
 
 const font = 'Montserrat, system-ui, sans-serif';
 
@@ -27,6 +28,17 @@ export default function EventTrackingCard({ locationId }: { locationId: string }
         console.error('Failed to load event tracking:', err);
         if (!cancelled) setFailed(true);
       });
+    return () => { cancelled = true; };
+  }, [locationId]);
+
+  // Pitches, judging, survey and tickets (0047).
+  const [outcomes, setOutcomes] = useState<EventOutcomes | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setOutcomes(null);
+    fetchEventOutcomes(locationId)
+      .then((o) => { if (!cancelled) setOutcomes(o); })
+      .catch((err) => console.error('Failed to load event outcomes:', err));
     return () => { cancelled = true; };
   }, [locationId]);
 
@@ -120,6 +132,44 @@ export default function EventTrackingCard({ locationId }: { locationId: string }
                 </div>
               ))}
             </div>
+          )}
+
+          {outcomes && (
+            <>
+              <p style={sub}>Pitches and judging</p>
+              <p style={note}>
+                <Link href={`/main/venue/pitches?locationId=${locationId}`} style={linkStyle}>
+                  {outcomes.pitches} {outcomes.pitches === 1 ? 'pitch' : 'pitches'} · {outcomes.votes} votes
+                </Link>
+                {' · '}
+                <Link href={`/main/venue/judging?locationId=${locationId}`} style={linkStyle}>
+                  {outcomes.teams_scored} {outcomes.teams_scored === 1 ? 'team' : 'teams'} scored by {outcomes.judges} {outcomes.judges === 1 ? 'judge' : 'judges'}
+                </Link>
+              </p>
+
+              <p style={sub}>After the event</p>
+              {outcomes.survey.answered + outcomes.survey.skipped === 0 ? (
+                <p style={note}>
+                  {summary.dates_set
+                    ? 'The survey goes out the first time attendees open the app after your last day.'
+                    : 'The survey needs event dates to know when the event ends.'}
+                </p>
+              ) : (
+                <p style={{ ...note, color: theme.text }}>
+                  {outcomes.survey.nps !== null && <>Recommend score <strong>{outcomes.survey.nps > 0 ? '+' : ''}{outcomes.survey.nps}</strong> from {outcomes.survey.nps_responses} · </>}
+                  {outcomes.survey.answered} answered, {outcomes.survey.skipped} skipped ·{' '}
+                  <strong>{outcomes.survey.still_going}</strong> say their team is still going
+                  {outcomes.survey.answered_30 > 0 && <> (<strong>{outcomes.survey.still_going_30}</strong> at 30 days)</>}
+                </p>
+              )}
+
+              <p style={sub}>Ticket list</p>
+              <p style={note}>
+                <Link href={`/main/venue/tickets?locationId=${locationId}`} style={linkStyle}>
+                  {outcomes.tickets > 0 ? `${outcomes.tickets} tickets imported · see who showed up` : 'Upload your ticket CSV to see who showed up'}
+                </Link>
+              </p>
+            </>
           )}
         </>
       )}
