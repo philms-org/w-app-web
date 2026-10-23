@@ -8,6 +8,20 @@ import { useIsOrganizer } from '@/lib/hooks/useIsOrganizer';
 import { theme } from '@/lib/theme';
 import type { Venue } from '@/lib/types';
 import VenueInviteCard from '@/components/organizer/VenueInviteCard';
+import { fetchEventSettings, updateEventSettings } from '@/lib/eventTracking';
+
+// Stored as timestamptz; edited as local calendar days. The end day counts in
+// full (check-ins last until it ends, PR #51).
+function isoToDay(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function dayToIso(day: string): string | null {
+  return day ? new Date(`${day}T00:00:00`).toISOString() : null;
+}
 
 export default function VenueEditPage() {
   return (
@@ -42,7 +56,16 @@ function VenueEditPageInner() {
     whatsapp: '',
   });
 
+  const [eventForm, setEventForm] = useState({ start: '', end: '', askRole: false });
+
   const { canManage } = useIsOrganizer(locationId || null);
+
+  useEffect(() => {
+    if (!locationId) return;
+    fetchEventSettings(locationId)
+      .then((s) => setEventForm({ start: isoToDay(s.event_date), end: isoToDay(s.event_end_date), askRole: s.ask_event_role }))
+      .catch((err) => console.error('Failed to load event settings:', err));
+  }, [locationId]);
 
   useEffect(() => {
     if (!locationId) return;
@@ -66,10 +89,23 @@ function VenueEditPageInner() {
 
   const handleSave = async () => {
     if (!venue) return;
-    setSaving(true);
     setError(null);
     setSaved(false);
+    if (!!eventForm.start !== !!eventForm.end) {
+      setError('Set both the first and last day of the event, or clear both.');
+      return;
+    }
+    if (eventForm.start && eventForm.end < eventForm.start) {
+      setError("The last day can't be before the first day.");
+      return;
+    }
+    setSaving(true);
     try {
+      await updateEventSettings(locationId, {
+        event_date: dayToIso(eventForm.start),
+        event_end_date: dayToIso(eventForm.end),
+        ask_event_role: eventForm.askRole,
+      });
       await updateVenueInfo(locationId, {
         name: form.name.trim() || undefined,
         description: form.description.trim() || undefined,
@@ -169,6 +205,53 @@ function VenueEditPageInner() {
             <div>
               <label style={labelStyle}>WhatsApp / Contact</label>
               <input value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} style={inputStyle} placeholder="+1 555 000 0000" />
+            </div>
+
+            <div style={{ borderTop: `1px solid ${theme.divider}`, paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <p style={{ ...labelStyle, marginBottom: 0 }}>Event</p>
+              {!eventForm.start && (
+                <p style={{ color: theme.text, fontSize: '13px', margin: 0, padding: '10px 12px', borderRadius: '12px', backgroundColor: theme.surface2, border: `1px solid ${theme.divider}` }}>
+                  Running an event here? Set its dates so check-ins last the whole event and your report counts the right days.
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label htmlFor="event-start" style={labelStyle}>First day</label>
+                  <input
+                    id="event-start"
+                    type="date"
+                    value={eventForm.start}
+                    onChange={(e) => setEventForm((f) => ({ ...f, start: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label htmlFor="event-end" style={labelStyle}>Last day</label>
+                  <input
+                    id="event-end"
+                    type="date"
+                    value={eventForm.end}
+                    min={eventForm.start || undefined}
+                    onChange={(e) => setEventForm((f) => ({ ...f, end: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <label htmlFor="event-ask-role" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  id="event-ask-role"
+                  type="checkbox"
+                  checked={eventForm.askRole}
+                  onChange={(e) => setEventForm((f) => ({ ...f, askRole: e.target.checked }))}
+                  style={{ width: '20px', height: '20px', marginTop: '1px', accentColor: theme.accent }}
+                />
+                <span style={{ color: theme.text, fontSize: '14px' }}>
+                  Ask attendees their role at check-in
+                  <span style={{ display: 'block', color: theme.muted, fontSize: '12px' }}>
+                    Developer, designer, business or something else. Shows up in your report.
+                  </span>
+                </span>
+              </label>
             </div>
 
             {error && <p style={{ color: theme.accent2, fontSize: '13px' }}>{error}</p>}

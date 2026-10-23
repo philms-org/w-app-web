@@ -38,6 +38,10 @@ import TitleRosterCard from '@/components/venue/TitleRosterCard';
 import type { Profile, VerificationTag, Banner } from '@/lib/types';
 import { haversineMeters, isWithinGeofence, venueToLocation } from '@/lib/geo';
 import HotspotStrip from '@/components/hotspots/HotspotStrip';
+import EventRoleSheet from '@/components/venue/EventRoleSheet';
+import { fetchEventRolePrompt, reportEventPresence, reportSlideEvent } from '@/lib/eventTracking';
+import PitchesView from '@/components/venue/PitchesView';
+import { amIJudge, fetchPitchVoting, type PitchVoting } from '@/lib/eventOutcomes';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
 // banner) plus a "Connections" card built from VenueFeed (posts + presence,
@@ -65,7 +69,11 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
-  const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
+  const [roomView, setRoomView] = useState<'people' | 'teams' | 'pitches'>('people');
+  // Pitch voting and judging (0047): the Pitches tab shows while the
+  // organizer has pitches on; judges get a Score teams button.
+  const [pitchVoting, setPitchVotingState] = useState<PitchVoting>('off');
+  const [isJudge, setIsJudge] = useState(false);
   const [showOrganizerSheet, setShowOrganizerSheet] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
@@ -273,6 +281,8 @@ export default function CheckedInHero() {
     const meters = haversineMeters(fix.lat, fix.lng, selectedLocation.latitude, selectedLocation.longitude);
     const clearlyOutside = meters > selectedLocation.radius + Math.max(30, fix.accuracy);
     outsideFixes.current = clearlyOutside ? outsideFixes.current + 1 : 0;
+    // Daily presence for organizers (0046); the server re-checks the geofence.
+    if (checkedIn && !clearlyOutside) reportEventPresence(selectedLocation.id, fix);
     if (checkedIn && outsideFixes.current >= 2) {
       outsideFixes.current = 0;
       setCheckedIn(false);
@@ -282,6 +292,44 @@ export default function CheckedInHero() {
       checkOut(selectedLocation.id).catch((err) => console.error('Auto check-out failed:', err));
     }
   });
+
+  // Opening the venue while checked in and inside counts as being here today,
+  // even before the position watch delivers its next fix.
+  useEffect(() => {
+    if (!selectedId || !checkedIn || !withinGeofence || !currentLocation) return;
+    reportEventPresence(selectedId, currentLocation);
+  }, [selectedId, checkedIn, withinGeofence, currentLocation]);
+
+  useEffect(() => {
+    setPitchVotingState('off');
+    setIsJudge(false);
+    if (!selectedId) return;
+    let cancelled = false;
+    fetchPitchVoting(selectedId)
+      .then((s) => { if (!cancelled) setPitchVotingState(s); })
+      .catch((err) => console.error('Failed to load pitch voting:', err));
+    amIJudge(selectedId)
+      .then((j) => { if (!cancelled) setIsJudge(j); })
+      .catch((err) => console.error('Failed to load judge status:', err));
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (pitchVoting === 'off' && roomView === 'pitches') setRoomView('people');
+  }, [pitchVoting, roomView]);
+
+  // Role at the event (0046): asked once, right after check-in, when the
+  // organizer turned it on for this venue.
+  const [askRole, setAskRole] = useState(false);
+  useEffect(() => {
+    setAskRole(false);
+    if (!selectedId || !checkedIn) return;
+    let cancelled = false;
+    fetchEventRolePrompt(selectedId)
+      .then(({ ask, role }) => { if (!cancelled) setAskRole(ask && !role); })
+      .catch((err) => console.error('Failed to load event role prompt:', err));
+    return () => { cancelled = true; };
+  }, [selectedId, checkedIn]);
 
   // Back returns Home and keeps you checked in (Home shows "You're at …" to
   // come back in). Checking out is its own explicit action.
@@ -361,6 +409,8 @@ export default function CheckedInHero() {
         title={selectedLocation.name}
         onBack={handleBack}
         onEngage={(el) => checkedIn && contributeCarousel(selectedLocation.id, el)}
+        onSlideShown={(i) => { if (banners[i]) reportSlideEvent(banners[i].id, 'view'); }}
+        onSlideLinkOpen={(i) => { if (banners[i]) reportSlideEvent(banners[i].id, 'tap'); }}
       />
 
       {/* Venue screen per the approved feed mockup (v4): carousel, one status
@@ -570,7 +620,7 @@ export default function CheckedInHero() {
               backgroundColor: theme.surface2, border: `1px solid ${theme.divider}`,
             }}
           >
-            {(['people', 'teams'] as const).map((v) => (
+            {(pitchVoting === 'off' ? (['people', 'teams'] as const) : (['people', 'teams', 'pitches'] as const)).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -584,12 +634,27 @@ export default function CheckedInHero() {
                   color: roomView === v ? theme.bg : theme.muted,
                 }}
               >
-                {v === 'people' ? 'People' : 'Teams'}
+                {v === 'people' ? 'People' : v === 'teams' ? 'Teams' : 'Pitches'}
               </button>
             ))}
           </div>
 
-          {roomView === 'teams' ? (
+          {isJudge && (
+            <Link
+              href={`/main/venue/judging?locationId=${selectedLocation.id}`}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, marginBottom: 12,
+                borderRadius: 14, fontSize: 14, fontWeight: 700, textDecoration: 'none',
+                backgroundColor: theme.accent, color: theme.onAccent, fontFamily: 'Montserrat, system-ui, sans-serif',
+              }}
+            >
+              Score teams
+            </Link>
+          )}
+
+          {roomView === 'pitches' ? (
+            <PitchesView locationId={selectedLocation.id} />
+          ) : roomView === 'teams' ? (
             <TeamsView
               locationId={selectedLocation.id}
               myUserId={user?.id}
@@ -709,6 +774,14 @@ export default function CheckedInHero() {
 
       {showOrganizerWelcome && (
         <OrganizerWelcomeModal onClose={() => setShowOrganizerWelcome(false)} />
+      )}
+
+      {askRole && (
+        <EventRoleSheet
+          locationId={selectedLocation.id}
+          venueName={selectedLocation.name}
+          onDone={() => setAskRole(false)}
+        />
       )}
     </div>
   );
