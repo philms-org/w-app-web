@@ -40,3 +40,8 @@ create policy banners_storage_write on storage.objects
     bucket_id = 'banners'
     and is_venue_manager((storage.foldername(name))[1]::uuid, auth.uid())
   );
+
+-- Prod's `banners` bucket was created private (public = false), so
+-- getPublicUrl() links 404'd even once uploads worked. QA was already
+-- public. Applied to prod 2026-10-01 along with the policies above.
+update storage.buckets set public = true where id = 'banners';

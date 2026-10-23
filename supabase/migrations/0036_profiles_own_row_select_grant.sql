@@ -1,0 +1,25 @@
+-- Restore table-level SELECT on `profiles` for signed-in sessions.
+--
+-- 0024_profiles_pii_lockdown.sql revoked SELECT on public.profiles from
+-- anon and authenticated, routing every read through profiles_public.
+-- 0026_profiles_public_view.sql then replaced that approach with RLS:
+-- profiles_select_own (id = auth.uid()) and profiles_select_master_admin.
+-- Those policies only do anything if the role can SELECT the table at all,
+-- and nothing re-granted it — so on a database built from these migrations
+-- fetchOwnProfile() (lib/data.ts, used by login and profile setup since #21)
+-- fails with "permission denied for table profiles".
+--
+-- Prod never hit this: found 2026-10-01 during a prod-vs-repo audit, prod
+-- still has the grant (0024's revoke was evidently undone there by hand).
+-- This migration makes the repo match prod for `authenticated`, which is a
+-- no-op on prod. Row access stays limited by the 0026 policies; other
+-- people's profiles are still only readable through profiles_public.
+--
+-- anon is deliberately NOT granted: no profiles policy targets anon, and
+-- guest visitors use an anonymous auth session (role `authenticated`).
+-- Prod's leftover anon grant is inert (RLS returns zero rows) and is left
+-- alone here.
+--
+-- Safe to re-run.
+
+grant select on public.profiles to authenticated;
