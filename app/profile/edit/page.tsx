@@ -57,6 +57,14 @@ export default function ProfileEditPage() {
     setImagePreview(user.image ?? '');
   }, [user]);
 
+  // Register sends people here when their signup photo failed to upload.
+  // Read from window (not useSearchParams) so the page needs no Suspense.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('photo') === 'failed') {
+      setError('Your account is ready, but your photo didn’t upload. Tap the photo above to try again.');
+    }
+  }, []);
+
   // Once we know the store is hydrated and there's still no user, they're
   // actually logged out — same destination handleSave falls back to.
   useEffect(() => {
