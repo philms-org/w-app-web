@@ -21,12 +21,11 @@ import {
   fetchAllProfiles,
 } from '@/lib/data';
 import { theme } from '@/lib/theme';
+import LoadErrorScreen from '@/components/shared/LoadErrorScreen';
 import type { Venue, Banner, LocationManager, Profile } from '@/lib/types';
 import HeroCarousel from '@/components/HeroCarousel';
 import VenueSwitcher from '@/components/shared/VenueSwitcher';
 import PersonPicker from '@/components/shared/PersonPicker';
-
-const MAX_BANNERS = 5;
 
 export default function VenueCarouselPage() {
   return (
@@ -51,11 +50,14 @@ function VenueCarouselPageInner() {
   const [myVenues, setMyVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(paramLocationId);
   const [venue, setVenue] = useState<Venue | null>(null);
+  // A failed load is not "no access": show a retry instead of the not-authorized screen.
+  const [venueLoadError, setVenueLoadError] = useState(false);
   const [venueLoading, setVenueLoading] = useState(true);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannersLoading, setBannersLoading] = useState(true);
   const [editedLinks, setEditedLinks] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [managers, setManagers] = useState<LocationManager[]>([]);
@@ -75,6 +77,7 @@ function VenueCarouselPageInner() {
         .catch((err) => {
           console.error('Failed to load venue:', err);
           setVenue(null);
+          setVenueLoadError(true);
         })
         .finally(() => setVenueLoading(false));
       return;
@@ -91,7 +94,7 @@ function VenueCarouselPageInner() {
         console.error('Failed to load venues:', err);
         // Fall back to the single-venue lookup in case fetchMyVenues fails
         // for a reason fetchMyVenue wouldn't (defensive, shouldn't normally hit).
-        fetchMyVenue().then(setVenue).catch(() => setVenue(null));
+        fetchMyVenue().then(setVenue).catch(() => { setVenue(null); setVenueLoadError(true); });
       })
       .finally(() => setVenueLoading(false));
   }, [paramLocationId]);
@@ -103,6 +106,7 @@ function VenueCarouselPageInner() {
       .catch((err) => {
         console.error('Failed to load selected venue:', err);
         setVenue(null);
+        setVenueLoadError(true);
       });
   }, [selectedVenueId, paramLocationId]);
 
@@ -160,21 +164,32 @@ function VenueCarouselPageInner() {
     if (venue) loadBanners(venue.id);
   }, [venue]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Any number of slides; pick several at once. They upload one at a time,
+  // in the order picked, so createBanner numbers them in that order.
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!file || !venue) return;
+    if (files.length === 0 || !venue) return;
 
     setUploading(true);
     setError(null);
-    uploadBannerImage(file, venue.id)
-      .then((url) => createBanner(venue.id, url, null))
-      .then(() => loadBanners(venue.id))
-      .catch((err) => {
+    const failed: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress(files.length > 1 ? `Uploading ${i + 1} of ${files.length}…` : 'Uploading…');
+      try {
+        const url = await uploadBannerImage(files[i], venue.id);
+        await createBanner(venue.id, url, null);
+      } catch (err) {
         console.error('Failed to upload banner:', err);
-        setError("Couldn't upload banner — try again");
-      })
-      .finally(() => setUploading(false));
+        failed.push(files[i].name);
+      }
+    }
+    loadBanners(venue.id);
+    if (failed.length > 0) {
+      setError(`Couldn't upload ${failed.length === 1 ? failed[0] : `${failed.length} images`}. Try ${failed.length === 1 ? 'it' : 'them'} again.`);
+    }
+    setUploadProgress(null);
+    setUploading(false);
   };
 
   const handleLinkBlur = (banner: Banner) => {
@@ -264,6 +279,8 @@ function VenueCarouselPageInner() {
     );
   }
 
+  if (venueLoadError && !venue) return <LoadErrorScreen what="this venue" />;
+
   if (!venue || !canManage) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: theme.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '16px' }}>
@@ -283,7 +300,6 @@ function VenueCarouselPageInner() {
   const sortedBanners = [...banners].sort((a, b) => a.display_order - b.display_order);
   const previewImages = sortedBanners.map((b) => b.image_url);
   const previewLinks = sortedBanners.map((b) => b.link ?? null);
-  const atCap = banners.length >= MAX_BANNERS;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -339,7 +355,7 @@ function VenueCarouselPageInner() {
           <p style={{ color: theme.muted, fontFamily: 'Montserrat, system-ui, sans-serif' }}>Loading banners...</p>
         ) : sortedBanners.length === 0 ? (
           <p style={{ color: theme.muted, fontSize: '14px', fontFamily: 'Montserrat, system-ui, sans-serif', marginBottom: '20px' }}>
-            No banners yet — add up to {MAX_BANNERS} photos for your venue&apos;s carousel.
+            No slides yet. Add your event graphics: schedule, mentors, judges, sponsors. You can pick several at once and reorder them after.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
@@ -470,37 +486,32 @@ function VenueCarouselPageInner() {
           </div>
         )}
 
-        {atCap ? (
-          <p style={{ color: theme.muted, fontSize: '13px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
-            You&apos;ve reached the {MAX_BANNERS}-banner limit — remove one to add another.
-          </p>
-        ) : (
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            backgroundColor: theme.accent,
-            color: theme.onAccent,
-            borderRadius: '12px',
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: 700,
-            fontFamily: 'Montserrat, system-ui, sans-serif',
-            cursor: uploading ? 'default' : 'pointer',
-            opacity: uploading ? 0.6 : 1,
-          }}>
-            <Plus style={{ width: '18px', height: '18px' }} />
-            {uploading ? 'Uploading...' : 'Add banner'}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleUpload}
-              disabled={uploading}
-              style={{ display: 'none' }}
-            />
-          </label>
-        )}
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          backgroundColor: theme.accent,
+          color: theme.onAccent,
+          borderRadius: '12px',
+          padding: '12px 20px',
+          fontSize: '14px',
+          fontWeight: 700,
+          fontFamily: 'Montserrat, system-ui, sans-serif',
+          cursor: uploading ? 'default' : 'pointer',
+          opacity: uploading ? 0.6 : 1,
+        }}>
+          <Plus style={{ width: '18px', height: '18px' }} />
+          {uploading ? (uploadProgress ?? 'Uploading…') : 'Add slides'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleUpload}
+            disabled={uploading}
+            style={{ display: 'none' }}
+          />
+        </label>
 
         {(isPrimaryOwner || isMasterAdmin) && (
           <div style={{

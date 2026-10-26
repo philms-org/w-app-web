@@ -7,6 +7,7 @@ import { theme, radius, type as typeTokens, elevation, glassBlur } from '@/lib/t
 import { SectionHeader } from '@/components/ui/primitives';
 import type { VenuePost } from '@/lib/types';
 import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
+import LinkifiedText from '@/components/shared/LinkifiedText';
 
 function timeAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -76,7 +77,7 @@ export default function ConnectionsPosts({ excludeLocationId }: { excludeLocatio
                 </div>
               )}
               <p style={{ margin: '6px 0 0', color: theme.text, fontSize: typeTokens.body.fontSize, wordBreak: 'break-word' }}>
-                {p.body}
+                <LinkifiedText text={p.body} />
               </p>
               {!!p.like_count && (
                 <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: theme.countRest }}>

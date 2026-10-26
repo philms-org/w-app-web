@@ -130,19 +130,29 @@ export function requestLocation(maximumAge = 0): Promise<void> {
   });
 }
 
-// A fresh, high-accuracy fix for server-verified actions (e.g. posting to a
-// venue feed, where create_venue_post re-checks the distance). Doesn't touch
-// the store. Rejects if location is unavailable or denied.
-export function getFreshPosition(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Location unavailable'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
+// A recent fix for server-verified actions (e.g. posting to a venue feed,
+// where create_venue_post re-checks the distance, allowing for `accuracy`).
+// Doesn't touch the store. Rejects if location is unavailable or denied.
+//
+// This used to demand a brand-new high-accuracy fix (maximumAge 0) within
+// 10s, which routinely timed out indoors — so people at the venue got
+// "Couldn't get your location" when posting. Now a fix up to 15s old is
+// fine, and a timeout falls back to a quicker low-accuracy read.
+export function getFreshPosition(): Promise<{ lat: number; lng: number; accuracy: number }> {
+  const read = (opts: PositionOptions) =>
+    new Promise<{ lat: number; lng: number; accuracy: number }>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+        reject,
+        opts,
+      );
+    });
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.reject(new Error('Location unavailable'));
+  }
+  return read({ enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }).catch((err: GeolocationPositionError) => {
+    if (err?.code === err?.PERMISSION_DENIED) throw err;
+    return read({ enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
   });
 }

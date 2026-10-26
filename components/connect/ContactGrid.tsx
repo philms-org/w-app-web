@@ -12,7 +12,8 @@ interface ContactGridProps {
   onLinkOpen?: (type: string) => void;
 }
 
-const SLOTS = [0, 1, 2, 3, 4, 5];
+// contact_methods has CHECK (slot_order between 1 and 6), shared with iOS.
+const SLOTS = [1, 2, 3, 4, 5, 6];
 
 const tileBase: React.CSSProperties = {
   display: 'flex',
