@@ -1,4 +1,4 @@
--- Rolled-back behaviour checks for 0047. One DO block that ends by raising
+-- Rolled-back behaviour checks for 0048. One DO block that ends by raising
 -- the results, so nothing persists. Needs 3 QA profiles besides the two below.
 -- Run: supabase db query --linked --project-ref <QA ref> -f <this file>
 do $$
@@ -15,7 +15,7 @@ declare
   ok boolean;
 begin
   insert into locations (name, lat, lng, geofence_radius_meters, owner_id, is_event, event_date, event_end_date)
-  values ('0047 test venue', 36.0999, -80.2442, 100, m, false, now() - interval '3 days', now() - interval '2 days')
+  values ('0048 test venue', 36.0999, -80.2442, 100, m, false, now() - interval '3 days', now() - interval '2 days')
   returning id into v;
   insert into location_checkins (user_id, location_id, mode) values (a, v, 'live');
   insert into event_pitches (location_id, pitcher_id, title) values (v, m, 'Pitch One') returning id into p1;
@@ -144,8 +144,8 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   n := public.import_event_tickets(v, jsonb_build_array(
          jsonb_build_object('email', ' ' || upper(e) || ' ', 'name', 'Attendee'),
-         jsonb_build_object('email', 'nobody-0047@example.com', 'name', 'Never joined'),
-         jsonb_build_object('email', 'nobody-0047@example.com'),
+         jsonb_build_object('email', 'nobody-0048@example.com', 'name', 'Never joined'),
+         jsonb_build_object('email', 'nobody-0048@example.com'),
          jsonb_build_object('email', 'not-an-email')));
   res := res || E'\n' || case when n = 2 then 'ok  ' else 'FAIL' end || ' 19 import trims, lowercases, dedupes, drops bad rows (rows=' || n || ')';
   j := public.ticket_match(v);

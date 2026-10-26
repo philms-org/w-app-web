@@ -21,7 +21,7 @@ const STATE_LABEL: Record<PitchVoting, string> = {
   done: 'Voting closed',
 };
 
-// Friday-night pitch list (0047). Attendees add one pitch and get 3 votes
+// Friday-night pitch list (0048). Attendees add one pitch and get 3 votes
 // while the organizer has voting open; totals appear once it closes.
 // Organizers see totals throughout, open/close voting and turn pitches into
 // teams.

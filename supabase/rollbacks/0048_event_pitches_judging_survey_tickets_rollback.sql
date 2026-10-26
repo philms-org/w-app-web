@@ -1,4 +1,4 @@
--- Rollback for 0047. Drops pitches, votes, judge scores, survey answers and
+-- Rollback for 0048. Drops pitches, votes, judge scores, survey answers and
 -- ticket lists collected since it was applied.
 do $$
 begin

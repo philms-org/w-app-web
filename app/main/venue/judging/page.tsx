@@ -14,7 +14,7 @@ import {
 
 const font = 'Montserrat, system-ui, sans-serif';
 
-// Sunday finals (0047): judges score each team 1-5 on Startup Weekend's three
+// Sunday finals (0048): judges score each team 1-5 on Startup Weekend's three
 // criteria; organizers see the averaged leaderboard. Judges are people the
 // organizer marked "Judge" on the Members page.
 export default function JudgingPage() {

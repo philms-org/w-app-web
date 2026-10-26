@@ -1,4 +1,4 @@
--- 0047: Startup Weekend readout, P1 batch B (founder approved the mockup
+-- 0048: Startup Weekend readout, P1 batch B (founder approved the mockup
 -- defaults 2026-10-20). Builds on 0046 (event_staff gives judges).
 --
 --   1. Pitch voting: event_pitches + event_pitch_votes. The organizer opens

@@ -70,7 +70,7 @@ export default function CheckedInHero() {
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
   const [roomView, setRoomView] = useState<'people' | 'teams' | 'pitches'>('people');
-  // Pitch voting and judging (0047): the Pitches tab shows while the
+  // Pitch voting and judging (0048): the Pitches tab shows while the
   // organizer has pitches on; judges get a Score teams button.
   const [pitchVoting, setPitchVotingState] = useState<PitchVoting>('off');
   const [isJudge, setIsJudge] = useState(false);

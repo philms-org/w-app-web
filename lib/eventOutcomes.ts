@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { getCurrentUserId } from './auth';
 
-// Pitch voting, judging, post-event survey and ticket match (migration 0047).
+// Pitch voting, judging, post-event survey and ticket match (migration 0048).
 // Every write is a SECURITY DEFINER RPC that checks the rules server-side and
 // raises a short, readable message on refusal.
 
@@ -107,7 +107,7 @@ export async function submitJudgeScore(teamId: string, scores: Scores, note: str
   if (error) throw rpcError(error, "Couldn't save the score.");
 }
 
-// Whether I'm marked as a judge here (event_staff, own row readable since 0047).
+// Whether I'm marked as a judge here (event_staff, own row readable since 0048).
 export async function amIJudge(locationId: string): Promise<boolean> {
   const uid = await getCurrentUserId();
   if (!uid) return false;

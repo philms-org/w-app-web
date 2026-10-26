@@ -21,7 +21,7 @@ export default function TicketsPage() {
   );
 }
 
-// Ticket list vs W accounts (0047). The CSV is read in the browser; only
+// Ticket list vs W accounts (0048). The CSV is read in the browser; only
 // email + name go to the server, matched to sign-in emails, and deleted 30
 // days after the event.
 function TicketsView({ locationId }: { locationId: string }) {

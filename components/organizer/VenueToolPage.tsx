@@ -16,7 +16,7 @@ interface VenueToolPageProps {
   children: (locationId: string) => React.ReactNode;
 }
 
-// Shell for the 0047 event tools (?locationId=…): back button, title,
+// Shell for the 0048 event tools (?locationId=…): back button, title,
 // organizer gate.
 export default function VenueToolPage(props: VenueToolPageProps) {
   return (

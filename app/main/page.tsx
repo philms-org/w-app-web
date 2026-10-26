@@ -172,7 +172,7 @@ export default function MainPage() {
 
       <ProfileSetupPrompt />
 
-      {/* After an event someone attended: once, skippable (0047). */}
+      {/* After an event someone attended: once, skippable (0048). */}
       <EventSurveySheet />
 
       {inviteError && (

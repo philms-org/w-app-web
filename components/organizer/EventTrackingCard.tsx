@@ -31,7 +31,7 @@ export default function EventTrackingCard({ locationId }: { locationId: string }
     return () => { cancelled = true; };
   }, [locationId]);
 
-  // Pitches, judging, survey and tickets (0047).
+  // Pitches, judging, survey and tickets (0048).
   const [outcomes, setOutcomes] = useState<EventOutcomes | null>(null);
   useEffect(() => {
     let cancelled = false;
