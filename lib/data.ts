@@ -195,6 +195,7 @@ export async function createVenue(fields: {
   geofence_radius_meters: number;
   description?: string;
   ownerId?: string | null;
+  isLive?: boolean;
 }): Promise<Venue> {
   const uid = await getCurrentUserId();
   const { data, error } = await supabase
@@ -208,12 +209,21 @@ export async function createVenue(fields: {
       geofence_radius_meters: fields.geofence_radius_meters,
       description: fields.description ?? null,
       is_event: false,
+      // Only sent for test mode, so live venues still save on a database
+      // that doesn't have migration 0044 yet.
+      ...(fields.isLive === false ? { is_live: false } : {}),
       owner_id: fields.ownerId ?? uid ?? null,
     })
     .select()
     .single();
   if (error) throw error;
   return data;
+}
+
+// Take a venue out of / back into test mode (migration 0044).
+export async function setVenueLive(locationId: string, isLive: boolean): Promise<void> {
+  const { error } = await supabase.from('locations').update({ is_live: isLive }).eq('id', locationId);
+  if (error) throw error;
 }
 
 export async function createEvent(
