@@ -146,7 +146,9 @@ export default function ProfileTab() {
               border: 'none',
               cursor: 'pointer'
             }}>
-              <Camera style={{ width: '16px', height: '16px', color: theme.accent }} />
+              {/* Fixed ink on the fixed white button: theme.accent is light in
+                  the dark theme, which left the icon invisible. */}
+              <Camera style={{ width: '16px', height: '16px', color: '#231E20' }} />
             </button>
           </div>
 

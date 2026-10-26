@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Phone, Mail, Instagram, MessageCircle, Linkedin, Ghost, Twitter, Send, Globe, Link2,
+  Phone, Mail, Instagram, MessageCircle, Linkedin, Ghost, Twitter, Send, Globe, Link2, Facebook,
 } from 'lucide-react';
 
 export interface ContactTypeMeta {
@@ -41,6 +41,15 @@ export const CONTACT_TYPES: ContactTypeMeta[] = [
     } },
   { type: 'custom', label: 'Custom', icon: Link2, hint: 'anything',
     buildLink: () => null },
+  // iOS vocabulary, so rows saved from the iOS app render and open here too.
+  { type: 'facebook', label: 'Facebook', icon: Facebook, hint: 'facebook.com/you',
+    buildLink: (v) => (v.trim() ? `https://facebook.com/${stripHost(v, 'facebook.com')}` : null) },
+  { type: 'link', label: 'Link', icon: Link2, hint: 'example.com',
+    buildLink: (v) => {
+      const t = v.trim();
+      if (!t) return null;
+      return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+    } },
 ];
 
 const FALLBACK = (type: string): ContactTypeMeta => ({
