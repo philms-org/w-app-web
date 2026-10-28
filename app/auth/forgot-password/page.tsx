@@ -107,8 +107,8 @@ export default function ForgotPasswordPage() {
 
             {error && (
               <div style={{
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
+                backgroundColor: `color-mix(in srgb, ${theme.accent2} 10%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${theme.accent2} 35%, transparent)`,
                 color: theme.accent2,
                 padding: '12px 16px',
                 borderRadius: '12px',
