@@ -11,6 +11,7 @@ import MapTab from '@/components/tabs/MapTab';
 import MessagesTab from '@/components/tabs/MessagesTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
 import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
+import EventSurveySheet from '@/components/home/EventSurveySheet';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount';
@@ -170,6 +171,9 @@ export default function MainPage() {
       />
 
       <ProfileSetupPrompt />
+
+      {/* After an event someone attended: once, skippable (0048). */}
+      <EventSurveySheet />
 
       {inviteError && (
         <div

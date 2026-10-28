@@ -96,6 +96,14 @@ export default function PrivacyPage() {
         </div>
 
         <div style={sectionStyle}>
+          <h2 style={headingStyle}>Event ticket lists</h2>
+          <p style={bodyStyle}>
+            If an event organizer uploads their ticket list, we use ticket emails only to show the
+            organizer who has joined W and who attended. We delete them 30 days after the event.
+          </p>
+        </div>
+
+        <div style={sectionStyle}>
           <h2 style={headingStyle}>Your controls</h2>
           <p style={bodyStyle}>
             You can deny or revoke location access at any time in your browser or device settings.

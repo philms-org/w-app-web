@@ -40,6 +40,8 @@ import { haversineMeters, isWithinGeofence, venueToLocation } from '@/lib/geo';
 import HotspotStrip from '@/components/hotspots/HotspotStrip';
 import EventRoleSheet from '@/components/venue/EventRoleSheet';
 import { fetchEventRolePrompt, reportEventPresence, reportSlideEvent } from '@/lib/eventTracking';
+import PitchesView from '@/components/venue/PitchesView';
+import { amIJudge, fetchPitchVoting, type PitchVoting } from '@/lib/eventOutcomes';
 
 // Shows the checked-in venue (reusing HeroCarousel unchanged for the photo
 // banner) plus a "Connections" card built from VenueFeed (posts + presence,
@@ -67,7 +69,11 @@ export default function CheckedInHero() {
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [venueHasZones, setVenueHasZones] = useState(false);
-  const [roomView, setRoomView] = useState<'people' | 'teams'>('people');
+  const [roomView, setRoomView] = useState<'people' | 'teams' | 'pitches'>('people');
+  // Pitch voting and judging (0048): the Pitches tab shows while the
+  // organizer has pitches on; judges get a Score teams button.
+  const [pitchVoting, setPitchVotingState] = useState<PitchVoting>('off');
+  const [isJudge, setIsJudge] = useState(false);
   const [showOrganizerSheet, setShowOrganizerSheet] = useState(false);
 
   const { canManage } = useIsOrganizer(selectedLocation?.id);
@@ -293,6 +299,24 @@ export default function CheckedInHero() {
     if (!selectedId || !checkedIn || !withinGeofence || !currentLocation) return;
     reportEventPresence(selectedId, currentLocation);
   }, [selectedId, checkedIn, withinGeofence, currentLocation]);
+
+  useEffect(() => {
+    setPitchVotingState('off');
+    setIsJudge(false);
+    if (!selectedId) return;
+    let cancelled = false;
+    fetchPitchVoting(selectedId)
+      .then((s) => { if (!cancelled) setPitchVotingState(s); })
+      .catch((err) => console.error('Failed to load pitch voting:', err));
+    amIJudge(selectedId)
+      .then((j) => { if (!cancelled) setIsJudge(j); })
+      .catch((err) => console.error('Failed to load judge status:', err));
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (pitchVoting === 'off' && roomView === 'pitches') setRoomView('people');
+  }, [pitchVoting, roomView]);
 
   // Role at the event (0046): asked once, right after check-in, when the
   // organizer turned it on for this venue.
@@ -596,7 +620,7 @@ export default function CheckedInHero() {
               backgroundColor: theme.surface2, border: `1px solid ${theme.divider}`,
             }}
           >
-            {(['people', 'teams'] as const).map((v) => (
+            {(pitchVoting === 'off' ? (['people', 'teams'] as const) : (['people', 'teams', 'pitches'] as const)).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -610,12 +634,27 @@ export default function CheckedInHero() {
                   color: roomView === v ? theme.bg : theme.muted,
                 }}
               >
-                {v === 'people' ? 'People' : 'Teams'}
+                {v === 'people' ? 'People' : v === 'teams' ? 'Teams' : 'Pitches'}
               </button>
             ))}
           </div>
 
-          {roomView === 'teams' ? (
+          {isJudge && (
+            <Link
+              href={`/main/venue/judging?locationId=${selectedLocation.id}`}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, marginBottom: 12,
+                borderRadius: 14, fontSize: 14, fontWeight: 700, textDecoration: 'none',
+                backgroundColor: theme.accent, color: theme.onAccent, fontFamily: 'Montserrat, system-ui, sans-serif',
+              }}
+            >
+              Score teams
+            </Link>
+          )}
+
+          {roomView === 'pitches' ? (
+            <PitchesView locationId={selectedLocation.id} />
+          ) : roomView === 'teams' ? (
             <TeamsView
               locationId={selectedLocation.id}
               myUserId={user?.id}
