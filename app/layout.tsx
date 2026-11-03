@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 import { ThemeScript } from "@/components/ThemeScript";
 import { ThemeProvider } from "@/lib/hooks/useTheme";
 import "./globals.css";
+import ProfileSheet from '@/components/shared/ProfileSheet';
 
 const montserrat = Montserrat({ 
   subsets: ["latin"],
@@ -67,6 +68,7 @@ export default function RootLayout({
         <ThemeScript />
         <ThemeProvider>
           {children}
+          <ProfileSheet />
         </ThemeProvider>
         <Analytics />
       </body>

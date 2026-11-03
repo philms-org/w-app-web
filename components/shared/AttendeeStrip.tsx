@@ -3,6 +3,7 @@
 import { theme } from '@/lib/theme';
 import type { Profile, VerificationTag } from '@/lib/types';
 import TagBadge from '@/components/shared/TagBadge';
+import { openProfile } from '@/lib/profileSheet';
 
 interface AttendeeStripProps {
   attendees: Profile[];
@@ -21,7 +22,8 @@ export default function AttendeeStrip({ attendees, selectedId, onSelect, tagsByU
         return (
           <button
             key={attendee.id}
-            onClick={() => onSelect(attendee.id === selectedId ? null : attendee.id)}
+            aria-label={`View ${attendee.display_name ?? 'this person'}'s profile`}
+            onClick={() => openProfile(attendee.id, { onMessage: () => onSelect(attendee.id) })}
             style={{
               display: 'flex',
               flexDirection: 'column',

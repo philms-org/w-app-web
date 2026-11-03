@@ -6,6 +6,7 @@ import { theme } from '@/lib/theme';
 import { FeedRow } from '@/components/ui/primitives';
 import { fetchMyConnectionCount, fetchFriendsActivity } from '@/lib/data';
 import type { FriendActivityEntry } from '@/lib/types';
+import ProfileAvatarButton from '@/components/shared/ProfileAvatarButton';
 
 const REQUIRED_CONNECTIONS = 3;
 const FONT = 'Montserrat, system-ui, sans-serif';
@@ -132,9 +133,14 @@ export default function FriendsActivityFeed({ onAddFriends }: { onAddFriends?: (
             key={`${e.user_id}-${e.checked_in_at}`}
             style={{ background: 'transparent', padding: '10px 0' }}
             avatar={
-              e.avatar_url ?? (
-                <div style={{ width: 40, height: 40, borderRadius: 999, backgroundColor: theme.surface2 }} />
-              )
+              <ProfileAvatarButton userId={e.user_id} name={e.name}>
+                {e.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- matches existing avatar convention
+                  <img src={e.avatar_url} alt="" width={40} height={40} style={{ borderRadius: 999, objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ width: 40, height: 40, borderRadius: 999, backgroundColor: theme.surface2 }} />
+                )}
+              </ProfileAvatarButton>
             }
             title={e.name ?? 'Someone'}
             subtitle={`${e.is_active ? 'At' : 'Was at'} ${e.venue_name} · ${fmtShortDate(e.checked_in_at)}`}
