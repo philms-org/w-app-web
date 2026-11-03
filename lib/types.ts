@@ -95,6 +95,9 @@ export interface Venue {
   lng?: number | null;
   geofence_radius_meters?: number | null;
   is_event?: boolean | null;
+  // false = test mode (migration 0044): only its owner, co-managers and
+  // W staff can see it or check in there.
+  is_live?: boolean | null;
   event_date?: string | null;
   event_end_date?: string | null;
   event_status?: string | null;
