@@ -12,8 +12,11 @@ import { useStore } from '@/lib/store';
 export function useLiveLocation(enabled: boolean) {
   useEffect(() => {
     if (!enabled || typeof navigator === 'undefined' || !navigator.geolocation) return;
-    const id = navigator.geolocation.watchPosition(
+    let gotFix = false;
+    let id: number;
+    const watch = (enableHighAccuracy: boolean) => navigator.geolocation.watchPosition(
       (pos) => {
+        gotFix = true;
         const store = useStore.getState();
         store.setCurrentLocation({
           lat: pos.coords.latitude,
@@ -24,17 +27,25 @@ export function useLiveLocation(enabled: boolean) {
         store.setLocationPermissionBlocked(false);
       },
       (err) => {
-        // Blocked in Settings: hand over to useLocationRecovery. Anything
-        // else is transient — keep the last good fix and keep watching.
+        // Blocked in Settings: hand over to useLocationRecovery.
         if (err.code === err.PERMISSION_DENIED) {
           const store = useStore.getState();
           store.setCurrentLocation(null);
           store.setLocationDenied(true);
           store.setLocationPermissionBlocked(true);
+          return;
+        }
+        // GPS-only never got a fix (no precise location, or stuck indoors):
+        // fall back to Wi-Fi/cell positioning rather than staying "off".
+        // Anything later is transient — keep the last good fix and watch.
+        if (enableHighAccuracy && !gotFix) {
+          navigator.geolocation.clearWatch(id);
+          id = watch(false);
         }
       },
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
+      { enableHighAccuracy, maximumAge: 15000, timeout: 30000 },
     );
+    id = watch(true);
     return () => navigator.geolocation.clearWatch(id);
   }, [enabled]);
 }
