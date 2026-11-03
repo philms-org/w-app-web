@@ -3,9 +3,10 @@
 import { useState, useEffect, type CSSProperties } from 'react';
 import { fetchLastVisited, fetchVenueHistory, fetchAttendeeHistory } from '@/lib/data';
 import { useStore } from '@/lib/store';
+import { venueToLocation } from '@/lib/geo';
 import { theme } from '@/lib/theme';
 import type { Venue, FeedItem, Profile } from '@/lib/types';
-import { ChevronRight, ChevronLeft, Clock, User, BadgeCheck } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Clock, User, BadgeCheck, MessageSquare } from 'lucide-react';
 import AttendeeStrip from '@/components/shared/AttendeeStrip';
 import InlineMessageComposer from '@/components/shared/InlineMessageComposer';
 
@@ -35,7 +36,7 @@ function groupByDay(items: FeedItem[]): DayGroup[] {
 // below QuickAccessRow on the Home tab (no tab-level back navigation — the
 // venue detail collapses back into the list within the same panel).
 export default function HistoryPanel() {
-  const { setActiveTab } = useStore();
+  const { setActiveTab, setSelectedLocation } = useStore();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -117,6 +118,33 @@ export default function HistoryPanel() {
             {selectedVenue.address}
           </p>
         )}
+
+        {/* Back into the live venue feed — readable once you've checked in
+            there, whether or not you're in the room now. */}
+        <button
+          type="button"
+          onClick={() => setSelectedLocation(venueToLocation(selectedVenue))}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            width: '100%',
+            minHeight: '44px',
+            marginBottom: '16px',
+            borderRadius: '12px',
+            border: 'none',
+            backgroundColor: theme.accent,
+            color: theme.onAccent,
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'Montserrat, system-ui, sans-serif'
+          }}
+        >
+          <MessageSquare style={{ width: '16px', height: '16px' }} />
+          Open venue feed
+        </button>
 
         {attendees.length > 0 && (
           <div style={{ marginBottom: '16px' }}>

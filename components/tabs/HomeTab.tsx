@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
-import { fetchMyOpenCheckinVenue } from '@/lib/data';
+import { fetchMyCurrentVenue } from '@/lib/data';
 import { venueToLocation } from '@/lib/geo';
 import type { Venue } from '@/lib/types';
 import { Clock, Trophy, QrCode, ChevronRight } from 'lucide-react';
@@ -22,18 +22,21 @@ type PanelId = 'history' | 'rewards' | 'connect';
 // Two screens. Inside a venue (selectedLocation set): just the venue — its
 // carousel, people and feed. Home (no venue open): the location card, the
 // History/Rewards/Connect tiles, and the locked friends'-activity card, plus a
-// "You're at …" pill back into the venue you're still checked in at.
+// "You're at …" pill back into your current event — still there after you walk
+// out of the room, until the check-in expires.
 export default function HomeTab() {
   const { selectedLocation, setSelectedLocation } = useStore();
   const [activePanel, setActivePanel] = useState<PanelId | null>(null);
-  const [checkedInVenue, setCheckedInVenue] = useState<Venue | null>(null);
+  const [current, setCurrent] = useState<{ venue: Venue; checkedIn: boolean } | null>(null);
+  const checkedInVenue = current?.venue ?? null;
 
-  // Re-read on every return to Home: back keeps you checked in, check-out clears it.
+  // Re-read on every return to Home: back keeps you checked in; walking out
+  // (or checking out) turns the green dot off but keeps the way back in.
   useEffect(() => {
     if (selectedLocation) return;
     let cancelled = false;
-    fetchMyOpenCheckinVenue()
-      .then((venue) => { if (!cancelled) setCheckedInVenue(venue); })
+    fetchMyCurrentVenue()
+      .then((result) => { if (!cancelled) setCurrent(result); })
       .catch((err) => console.error('Failed to load current check-in:', err));
     return () => { cancelled = true; };
   }, [selectedLocation]);
@@ -96,9 +99,11 @@ export default function HomeTab() {
             fontFamily: 'Montserrat, system-ui, sans-serif',
           }}
         >
-          <span aria-hidden style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: theme.green, flexShrink: 0 }} />
+          <span aria-hidden style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: current?.checkedIn ? theme.green : theme.muted, flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', color: theme.muted, fontSize: '12px' }}>You&apos;re at</span>
+            <span style={{ display: 'block', color: theme.muted, fontSize: '12px' }}>
+              {current?.checkedIn ? <>You&apos;re at</> : 'Your event · away from the room'}
+            </span>
             <span style={{ display: 'block', color: theme.text, fontSize: '16px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {checkedInVenue.name}
             </span>
