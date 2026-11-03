@@ -14,6 +14,7 @@ import ProfileSetupPrompt from '@/components/onboarding/ProfileSetupPrompt';
 import EventSurveySheet from '@/components/home/EventSurveySheet';
 import { theme, elevation } from '@/lib/theme';
 import { usePendingVenueInvite } from '@/lib/hooks/usePendingVenueInvite';
+import { usePendingConnect } from '@/lib/hooks/usePendingConnect';
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount';
 import { useLiveLocation } from '@/lib/hooks/useLiveLocation';
 import { useLocationRecovery } from '@/lib/hooks/useLocationRecovery';
@@ -37,6 +38,7 @@ export default function MainPage() {
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [inviteError, dismissInviteError] = usePendingVenueInvite();
+  usePendingConnect();
   // Messages tab badge.
   useUnreadCount(hasHydrated && isAuthenticated);
   const locationDenied = useStore((s) => s.locationDenied);

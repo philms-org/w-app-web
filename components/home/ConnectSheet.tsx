@@ -5,13 +5,15 @@ import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useStore } from '@/lib/store';
 import { theme } from '@/lib/theme';
-import { mintConnectToken } from '@/lib/data';
+import { mintConnectToken, fetchMyConnectionCount } from '@/lib/data';
 import { encodeConnectPayload, connectErrorMessage } from '@/lib/connect';
 import { Camera } from 'lucide-react';
 
-// Token TTL is 90s (migration 0019); re-mint every 60s so the code on screen
-// always has >= 30s of validity.
+// Tokens last 5 minutes and work for many scans (migration 0044). Re-mint
+// every 60s so the code on screen is always fresh. The connection-count poll
+// is only for the "Connected!" confirmation while the sheet is visible.
 const REMINT_MS = 60_000;
+const POLL_MS = 3_000;
 
 export default function ConnectSheet() {
   const { user } = useStore();
@@ -19,6 +21,7 @@ export default function ConnectSheet() {
   // Shown instead of an endless "LOADING" when minting fails (dropped
   // network, a session that lapsed while the phone slept, not signed in).
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [justConnected, setJustConnected] = useState(false);
   const cancelledRef = useRef(false);
   const refreshRef = useRef<() => Promise<void>>(async () => {});
 
@@ -78,17 +81,36 @@ export default function ConnectSheet() {
     };
     refreshRef.current = refresh;
 
+    let lastCount: number | null = null;
+    const poll = async () => {
+      if (document.hidden) return;
+      try {
+        const n = await fetchMyConnectionCount();
+        if (cancelledRef.current) return;
+        if (lastCount !== null && n > lastCount) {
+          setJustConnected(true);
+          setTimeout(() => { if (!cancelledRef.current) setJustConnected(false); }, 3000);
+        }
+        lastCount = n;
+      } catch {
+        // Best-effort; the timer re-mint still covers us.
+      }
+    };
+
     void refresh();
-    const id = setInterval(() => void refresh(), REMINT_MS);
+    void poll();
+    const id = setInterval(() => { if (!document.hidden) void refresh(); }, REMINT_MS);
+    const pollId = setInterval(() => void poll(), POLL_MS);
     // Timers are frozen while the phone is locked, so after unlocking the
     // code on screen could be past its 90s TTL. Re-mint as soon as we're back.
     const onVisibility = () => {
-      if (!document.hidden) void refresh();
+      if (!document.hidden) { void refresh(); void poll(); }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       cancelledRef.current = true;
       clearInterval(id);
+      clearInterval(pollId);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
@@ -121,7 +143,12 @@ export default function ConnectSheet() {
         overflow: 'hidden',
       }}>
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt="Your connect code" style={{ width: '164px', height: '164px', display: 'block' }} />
+          <img
+            src={qrDataUrl}
+            alt="Your connect code. Tap for a fresh one."
+            onClick={() => void refreshRef.current()}
+            style={{ width: '164px', height: '164px', display: 'block', cursor: 'pointer' }}
+          />
         ) : loadError ? (
           <div style={{ padding: '0 14px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
             <p style={{ color: '#0d0d0f', fontSize: '12px', lineHeight: 1.4, marginBottom: '10px' }}>{loadError}</p>
@@ -139,8 +166,11 @@ export default function ConnectSheet() {
         )}
       </div>
 
-      <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+      <p style={{ color: theme.text, fontSize: '14px', fontWeight: 600, marginBottom: '4px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
         {user?.name ?? 'Your profile'}
+      </p>
+      <p style={{ color: justConnected ? theme.accent : theme.muted, fontSize: '12px', marginBottom: '16px', fontFamily: 'Montserrat, system-ui, sans-serif' }}>
+        {justConnected ? 'Connected!' : 'Scan with a phone camera or the W App.'}
       </p>
 
       <Link
