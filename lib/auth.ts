@@ -112,7 +112,8 @@ async function accountDeleteRequest(init: RequestInit = {}) {
 // What the user has to hand off before they can delete their account.
 export async function fetchAccountDeletionBlockers(): Promise<AccountDeletionBlockers> {
   const res = await accountDeleteRequest();
-  if (!res.ok) throw new Error('blockers_unavailable');
+  if (res.status === 401) throw new Error('not_signed_in');
+  if (!res.ok) throw new Error(`blockers_unavailable (${res.status})`);
   return ((await res.json()) as { blockers: AccountDeletionBlockers }).blockers;
 }
 

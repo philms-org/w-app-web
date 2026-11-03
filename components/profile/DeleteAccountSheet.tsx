@@ -16,7 +16,8 @@ const DANGER = '#D52600';
 // to hand off. Otherwise they type DELETE to permanently delete everything.
 export default function DeleteAccountSheet({ onClose, onDeleted }: { onClose: () => void; onDeleted: () => void }) {
   const [blockers, setBlockers] = useState<AccountDeletionBlockers | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<'session' | 'unavailable' | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [typed, setTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +26,13 @@ export default function DeleteAccountSheet({ onClose, onDeleted }: { onClose: ()
     let cancelled = false;
     fetchAccountDeletionBlockers()
       .then((b) => { if (!cancelled) setBlockers(b); })
-      .catch(() => { if (!cancelled) setLoadError(true); });
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        console.error('DeleteAccountSheet: blockers check failed', e);
+        setLoadError(e instanceof Error && e.message === 'not_signed_in' ? 'session' : 'unavailable');
+      });
     return () => { cancelled = true; };
-  }, []);
+  }, [attempt]);
 
   const handleDelete = async () => {
     if (typed.trim() !== 'DELETE') {
@@ -53,7 +58,7 @@ export default function DeleteAccountSheet({ onClose, onDeleted }: { onClose: ()
     <div
       onClick={() => !deleting && onClose()}
       style={{
-        position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 50,
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 100, // above TabBar (50)
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
     >
@@ -77,9 +82,16 @@ export default function DeleteAccountSheet({ onClose, onDeleted }: { onClose: ()
           <>
             <h3 id="delete-account-title" style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 8px' }}>Delete account</h3>
             <p style={{ color: theme.muted, fontSize: '15px', margin: '0 0 20px' }}>
-              Couldn&apos;t load your account details. Try again in a moment.
+              {loadError === 'session'
+                ? 'Your session has expired. Log out and back in, then try again.'
+                : <>Couldn&apos;t load your account details. Try again in a moment.</>}
             </p>
-            <SheetButton onClick={onClose}>Close</SheetButton>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <SheetButton onClick={onClose}>Close</SheetButton>
+              {loadError === 'unavailable' && (
+                <SheetButton onClick={() => { setLoadError(null); setAttempt((n) => n + 1); }}>Try again</SheetButton>
+              )}
+            </div>
           </>
         )}
 
